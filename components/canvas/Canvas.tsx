@@ -2,13 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Brush,
-  Circle,
-  Eraser,
-  Minus,
-  MousePointer2,
   PencilRuler,
-  Square,
   Trash2,
   Undo2,
 } from "lucide-react";
@@ -16,6 +10,7 @@ import {
 interface CanvasProps {
   content: object | null;
   onUpdate?: (content: object) => void;
+  compact?: boolean;
 }
 
 type Tool = "select" | "brush" | "eraser" | "line" | "rect" | "ellipse";
@@ -232,7 +227,7 @@ function renderShape(layer: ShapeLayer) {
   );
 }
 
-export function Canvas({ content, onUpdate }: CanvasProps) {
+export function Canvas({ content, onUpdate, compact = false }: CanvasProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const [layers, setLayers] = useState<CanvasLayer[]>([]);
   const [tool, setTool] = useState<Tool>("brush");
@@ -246,6 +241,12 @@ export function Canvas({ content, onUpdate }: CanvasProps) {
     const normalized = normalizeLegacyContent(content);
     setLayers(normalized.layers);
   }, [content]);
+
+  useEffect(() => {
+    if (compact) {
+      setTool("brush");
+    }
+  }, [compact]);
 
   const persistLayers = (nextLayers: CanvasLayer[]) => {
     setLayers(nextLayers);
@@ -386,92 +387,8 @@ export function Canvas({ content, onUpdate }: CanvasProps) {
     return activeLayer ? [...layers, activeLayer] : layers;
   }, [activeLayer, layers]);
 
-  const tools: Array<{
-    value: Tool;
-    label: string;
-    icon: React.ReactNode;
-  }> = [
-    { value: "select", label: "Pan", icon: <MousePointer2 className="h-4 w-4" /> },
-    { value: "brush", label: "Brush", icon: <Brush className="h-4 w-4" /> },
-    { value: "eraser", label: "Eraser", icon: <Eraser className="h-4 w-4" /> },
-    { value: "line", label: "Line", icon: <Minus className="h-4 w-4" /> },
-    { value: "rect", label: "Rect", icon: <Square className="h-4 w-4" /> },
-    { value: "ellipse", label: "Ellipse", icon: <Circle className="h-4 w-4" /> },
-  ];
-
   return (
     <div className="flex h-full flex-col bg-white dark:bg-[#111110]">
-      <div className="flex flex-wrap items-center gap-3 border-b border-zinc-200 bg-zinc-50 px-3 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="flex flex-wrap items-center gap-2">
-          {tools.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              onClick={() => setTool(item.value)}
-              className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-                tool === item.value
-                  ? "bg-[#2E7D45] text-white"
-                  : "bg-white text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-              }`}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="mx-2 hidden h-8 w-px bg-zinc-200 dark:bg-zinc-700 md:block" />
-
-        <div className="flex items-center gap-2">
-          {PALETTE.map((swatch) => (
-            <button
-              key={swatch}
-              type="button"
-              onClick={() => setColor(swatch)}
-              className={`h-7 w-7 rounded-full border-2 transition ${
-                color === swatch
-                  ? "scale-110 border-zinc-900 dark:border-white"
-                  : "border-transparent"
-              }`}
-              style={{ backgroundColor: swatch }}
-              aria-label={`Select color ${swatch}`}
-            />
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2 rounded-md bg-white px-3 py-2 dark:bg-zinc-800">
-          <PencilRuler className="h-4 w-4 text-zinc-400" />
-          <input
-            type="range"
-            min={2}
-            max={24}
-            value={size}
-            onChange={(event) => setSize(Number(event.target.value))}
-          />
-          <span className="w-7 text-xs text-zinc-500 dark:text-zinc-400">{size}</span>
-        </div>
-
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleUndo}
-            disabled={history.length === 0}
-            className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            <Undo2 className="h-4 w-4" />
-            Undo
-          </button>
-          <button
-            type="button"
-            onClick={handleClear}
-            className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-          >
-            <Trash2 className="h-4 w-4" />
-            Clear
-          </button>
-        </div>
-      </div>
-
       <div
         ref={boardRef}
         className={`relative flex-1 overflow-hidden ${
@@ -482,6 +399,57 @@ export function Canvas({ content, onUpdate }: CanvasProps) {
         onPointerUp={finishDrawing}
         onPointerLeave={finishDrawing}
       >
+        <div className="absolute left-3 right-3 top-3 z-10 flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-200 bg-white/92 px-3 py-3 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/92">
+          <div className="flex items-center gap-2">
+            {PALETTE.map((swatch) => (
+              <button
+                key={swatch}
+                type="button"
+                onClick={() => setColor(swatch)}
+                className={`h-7 w-7 rounded-full border-2 transition ${
+                  color === swatch
+                    ? "scale-110 border-zinc-900 dark:border-white"
+                    : "border-transparent"
+                }`}
+                style={{ backgroundColor: swatch }}
+                aria-label={`Select color ${swatch}`}
+              />
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-800">
+            <PencilRuler className="h-4 w-4 text-zinc-400" />
+            <input
+              type="range"
+              min={2}
+              max={24}
+              value={size}
+              onChange={(event) => setSize(Number(event.target.value))}
+            />
+            <span className="w-7 text-xs text-zinc-500 dark:text-zinc-400">{size}</span>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleUndo}
+              disabled={history.length === 0}
+              className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-600 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              <Undo2 className="h-4 w-4" />
+              {compact ? <span className="hidden sm:inline">Undo</span> : "Undo"}
+            </button>
+            <button
+              type="button"
+              onClick={handleClear}
+              className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+            >
+              <Trash2 className="h-4 w-4" />
+              {compact ? <span className="hidden sm:inline">Clear</span> : "Clear"}
+            </button>
+          </div>
+        </div>
+
         <div
           className="absolute inset-0"
           style={{

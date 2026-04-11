@@ -4,6 +4,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { DatabaseBlock } from "@/components/editor/extensions/DatabaseBlock";
+import { CanvasBlock } from "@/components/editor/extensions/CanvasBlock";
 
 interface EditorProps {
   content: object | null;
@@ -11,6 +12,7 @@ interface EditorProps {
   onUpdate?: (content: object) => void;
   placeholder?: string;
   workspaceId?: string;
+  pageId?: string;
 }
 
 export function Editor({
@@ -19,6 +21,7 @@ export function Editor({
   onUpdate,
   placeholder = "Type something...",
   workspaceId,
+  pageId,
 }: EditorProps) {
   const editor = useEditor({
     extensions: [
@@ -28,6 +31,11 @@ export function Editor({
       }),
       DatabaseBlock.configure({
         workspaceId,
+        pageId,
+      }),
+      CanvasBlock.configure({
+        workspaceId,
+        pageId,
       }),
     ],
     content: content || {

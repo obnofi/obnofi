@@ -89,6 +89,43 @@ function sanitizeNode(
     };
   }
 
+  if (record.type === "canvasEmbed") {
+    const attrs =
+      record.attrs && typeof record.attrs === "object"
+        ? (record.attrs as Record<string, JsonValue>)
+        : {};
+    const referencedPageId =
+      typeof attrs.pageId === "string" ? attrs.pageId : null;
+
+    if (referencedPageId && publicPageIds.has(referencedPageId)) {
+      const referencedPage = Array.from(publicTitleMap.values()).find(
+        (page) => page.id === referencedPageId
+      );
+
+      return {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: referencedPage
+              ? `Embedded canvas: ${referencedPage.title}`
+              : "Embedded canvas",
+          },
+        ],
+      };
+    }
+
+    return {
+      type: "paragraph",
+      content: [
+        {
+          type: "text",
+          text: "Embedded canvas hidden because it is not public.",
+        },
+      ],
+    };
+  }
+
   const next: Record<string, JsonValue> = {};
   for (const [key, entry] of Object.entries(record)) {
     next[key] = sanitizeNode(entry, publicTitleMap, publicPageIds);

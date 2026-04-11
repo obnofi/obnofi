@@ -18,6 +18,7 @@ interface TableViewProps {
     columnId: string,
     value: PropertyValueData
   ) => void;
+  compact?: boolean;
 }
 
 export function TableView({
@@ -28,6 +29,7 @@ export function TableView({
   onOpenRow,
   onUpdateRowTitle,
   onUpdatePropertyValue,
+  compact = false,
 }: TableViewProps) {
   const [isCreatingColumn, setIsCreatingColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
@@ -49,15 +51,25 @@ export function TableView({
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex-1 overflow-auto">
         <table className="min-w-full border-separate border-spacing-0">
-          <thead className="sticky top-0 z-10 bg-white dark:bg-[#111110]">
+          <thead
+            className={`z-10 bg-white dark:bg-[#111110] ${
+              compact ? "" : "sticky top-0"
+            }`}
+          >
             <tr>
-              <th className="min-w-64 border-b border-r border-zinc-200 px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+              <th
+                className={`border-b border-r border-zinc-200 px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400 ${
+                  compact ? "min-w-40" : "min-w-64"
+                }`}
+              >
                 Title
               </th>
               {columns.map((column) => (
                 <th
                   key={column.id}
-                  className="min-w-48 border-b border-r border-zinc-200 px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400"
+                  className={`border-b border-r border-zinc-200 px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400 ${
+                    compact ? "min-w-32" : "min-w-48"
+                  }`}
                 >
                   <div className="flex flex-col gap-1">
                     <span>{column.name}</span>
@@ -102,7 +114,7 @@ export function TableView({
                     className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    Column
+                    {compact ? "Add" : "Column"}
                   </button>
                 )}
               </th>
@@ -124,7 +136,7 @@ export function TableView({
                       onClick={() => onOpenRow(row.id)}
                       className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
                     >
-                      Open
+                      {compact ? "View" : "Open"}
                     </button>
                   </div>
                 </td>
@@ -151,25 +163,24 @@ export function TableView({
                 <td className="border-b border-zinc-200 dark:border-zinc-800" />
               </tr>
             ))}
+            <tr className="bg-white dark:bg-[#111110]">
+              <td
+                colSpan={columns.length + 2}
+                className="border-b border-zinc-200 px-2 py-1.5 dark:border-zinc-800"
+              >
+                <button
+                  onClick={onCreateRow}
+                  className="inline-flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                >
+                  <Plus className="h-4 w-4" />
+                  {compact ? "New row" : "Add a row"}
+                </button>
+              </td>
+            </tr>
           </tbody>
         </table>
-
-        {rows.length === 0 && (
-          <div className="flex h-48 items-center justify-center text-sm text-zinc-500 dark:text-zinc-400">
-            No rows yet
-          </div>
-        )}
       </div>
 
-      <div className="border-t border-zinc-200 p-2 dark:border-zinc-800">
-        <button
-          onClick={onCreateRow}
-          className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900"
-        >
-          <Plus className="h-4 w-4" />
-          New row
-        </button>
-      </div>
     </div>
   );
 }
