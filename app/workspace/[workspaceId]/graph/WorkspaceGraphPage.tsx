@@ -19,6 +19,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { ArrowLeft, Loader2, Orbit, Plus, Trash2 } from "lucide-react";
 import { CustomNoteNode } from "@/components/graph/CustomNoteNode";
+import { Sidebar } from "@/components/sidebar/Sidebar";
 import { buildGraphData, type GraphEdge, type GraphNode } from "@/lib/graph-utils";
 import { Page } from "@/types";
 
@@ -124,6 +125,8 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
 
   return (
     <div className="flex h-screen bg-white dark:bg-[#111110]">
+      <Sidebar workspaceId={workspaceId} />
+
       <div className="flex-1 overflow-hidden">
         <header className="flex items-center justify-between border-b border-zinc-200 px-5 py-3 dark:border-zinc-800">
           <div className="flex items-center gap-3">
