@@ -108,11 +108,18 @@ function CanvasBlockView(props: ReactNodeViewProps) {
 
   return (
     <NodeViewWrapper className="my-4">
-      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 not-prose dark:border-zinc-800 dark:bg-zinc-900/70">
+      <div
+        data-testid="inline-canvas-embed"
+        data-state={
+          isLoading ? "loading" : canvasPage ? "ready" : isCreating ? "creating" : "empty"
+        }
+        className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 not-prose dark:border-zinc-800 dark:bg-zinc-900/70"
+      >
         <div className="flex items-center justify-end gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
             {workspaceId && canvasPage ? (
               <button
                 type="button"
+                data-testid="inline-canvas-open"
                 onClick={() => router.push(`/workspace/${workspaceId}?page=${canvasPage.id}`)}
                 className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
               >
@@ -123,11 +130,11 @@ function CanvasBlockView(props: ReactNodeViewProps) {
         </div>
 
         {isLoading ? (
-          <div className="flex h-64 items-center justify-center">
+          <div data-testid="inline-canvas-loading" className="flex h-64 items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-[#2E7D45]" />
           </div>
         ) : canvasPage ? (
-          <div className="h-[420px]">
+          <div data-testid="inline-canvas-ready" className="h-[420px]">
             <Canvas
               content={canvasPage.content}
               onUpdate={handleUpdateContent}
@@ -135,7 +142,7 @@ function CanvasBlockView(props: ReactNodeViewProps) {
             />
           </div>
         ) : (
-          <div className="px-4 py-8 text-sm text-zinc-500 dark:text-zinc-400">
+          <div data-testid="inline-canvas-empty" className="px-4 py-8 text-sm text-zinc-500 dark:text-zinc-400">
             {isCreating
               ? "Creating canvas..."
               : props.editor.isEditable

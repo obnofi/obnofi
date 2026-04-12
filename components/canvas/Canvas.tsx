@@ -388,9 +388,10 @@ export function Canvas({ content, onUpdate, compact = false }: CanvasProps) {
   }, [activeLayer, layers]);
 
   return (
-    <div className="flex h-full flex-col bg-white dark:bg-[#111110]">
+    <div data-testid={compact ? "inline-canvas" : "workspace-canvas"} className="flex h-full flex-col bg-white dark:bg-[#111110]">
       <div
         ref={boardRef}
+        data-testid="canvas-board"
         className={`relative flex-1 overflow-hidden ${
           tool === "select" ? "cursor-default" : "cursor-crosshair"
         }`}

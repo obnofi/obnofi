@@ -1,23 +1,84 @@
-// tests/editor.spec.ts
-import { test, expect } from '@playwright/test'
+import { test, expect } from "@playwright/test";
 
-test('Tiptap 블록 에디터 기본 동작', async ({ page }) => {
-    await page.goto('http://localhost:3000')
-    await page.click('.editor')
-    await page.keyboard.type('테스트 노트')
-    await expect(page.locator('.editor')).toContainText('테스트 노트')
-})
+const workspacePagePath = "/workspace/ws-1?page=page-1";
+const editorText = `playwright-note-${Date.now()}`;
+const nextTitle = `Playwright Title ${Date.now()}`;
 
-test('/ 입력시 블록 메뉴 표시', async ({ page }) => {
-    await page.goto('http://localhost:3000')
-    await page.click('.editor')
-    await page.keyboard.type('/')
-    await expect(page.locator('.block-menu')).toBeVisible()
-})
+async function gotoWorkspaceDocument(page: import("@playwright/test").Page) {
+  await page.goto(workspacePagePath);
+  await expect(page.getByTestId("workspace-editor")).toBeVisible();
+}
 
-test('캔버스 삽입', async ({ page }) => {
-    await page.goto('http://localhost:3000')
-    await page.click('.editor')
-    await page.keyboard.type('/canvas')
-    await expect(page.locator('.tldraw')).toBeVisible()
-})
+async function focusEditorTail(page: import("@playwright/test").Page) {
+  const editor = page.getByTestId("workspace-editor-input");
+  const lastParagraph = editor.locator("p").last();
+
+  await expect(editor).toBeVisible();
+  await expect(lastParagraph).toBeVisible();
+  await lastParagraph.click();
+
+  return editor;
+}
+
+test("Tiptap 블록 에디터 기본 동작", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  const editor = await focusEditorTail(page);
+  await page.keyboard.type(editorText);
+
+  await expect(editor).toContainText(editorText);
+});
+
+test("워크스페이스 진입 후 에디터가 표시된다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  await expect(page.getByTestId("workspace-editor")).toBeVisible();
+  await expect(page.getByTestId("workspace-editor-input")).toBeVisible();
+  await expect(page.getByTestId("workspace-page-title")).toHaveValue(/.+/);
+});
+
+test("문서 제목을 수정할 수 있다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  const titleInput = page.getByTestId("workspace-page-title");
+  await titleInput.fill(nextTitle);
+
+  await expect(titleInput).toHaveValue(nextTitle);
+  await expect(page.getByTestId("workspace-sidebar")).toContainText(nextTitle);
+});
+
+test("/canvas 입력시 인라인 캔버스가 삽입된다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  const editor = await focusEditorTail(page);
+  await page.keyboard.type("/canvas");
+
+  const canvasEmbed = page.getByTestId("inline-canvas-embed");
+  await expect(canvasEmbed).toHaveAttribute("data-state", "ready");
+  await expect(page.getByTestId("inline-canvas-open")).toBeVisible();
+  await expect(page.getByTestId("inline-canvas")).toBeVisible();
+  await expect(page.getByTestId("canvas-board")).toBeVisible();
+});
+
+test("/database 입력시 인라인 데이터베이스가 삽입된다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  await focusEditorTail(page);
+  await page.keyboard.type("/database");
+
+  const databaseEmbed = page.getByTestId("inline-database-embed").last();
+  await expect(databaseEmbed).toHaveAttribute("data-state", "ready");
+  await expect(page.getByTestId("inline-database-open").last()).toBeVisible();
+  await expect(page.getByTestId("inline-database-ready").last()).toBeVisible();
+});
+
+test("그래프 뷰에서도 사이드바가 유지된다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  await page.getByTestId("graph-view-link").click();
+
+  await expect(page.getByTestId("workspace-graph-page")).toBeVisible();
+  await expect(page.getByTestId("workspace-sidebar")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Graph View" })).toBeVisible();
+  await expect(page.getByTestId("graph-back-link")).toBeVisible();
+});

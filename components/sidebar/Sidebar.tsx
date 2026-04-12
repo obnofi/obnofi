@@ -169,7 +169,10 @@ export function Sidebar({ workspaceId, currentPageId }: SidebarProps) {
   }
 
   return (
-    <div className="w-64 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111110] flex flex-col h-full">
+    <div
+      data-testid="workspace-sidebar"
+      className="w-64 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111110] flex flex-col h-full"
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-2">
@@ -205,6 +208,7 @@ export function Sidebar({ workspaceId, currentPageId }: SidebarProps) {
         <div className="mb-2">
           <Link
             href={`/workspace/${workspaceId}/graph`}
+            data-testid="graph-view-link"
             className="flex w-full items-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-[#111110] transition hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-800"
           >
             <Orbit className="w-4 h-4 text-[#2E7D45]" />

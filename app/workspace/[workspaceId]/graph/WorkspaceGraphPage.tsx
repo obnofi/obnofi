@@ -124,7 +124,7 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
   }, [setEdges]);
 
   return (
-    <div className="flex h-screen bg-white dark:bg-[#111110]">
+    <div data-testid="workspace-graph-page" className="flex h-screen bg-white dark:bg-[#111110]">
       <Sidebar workspaceId={workspaceId} />
 
       <div className="flex-1 overflow-hidden">
@@ -132,6 +132,7 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
           <div className="flex items-center gap-3">
             <Link
               href={`/workspace/${workspaceId}`}
+              data-testid="graph-back-link"
               className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
             >
               <ArrowLeft className="h-4 w-4" />

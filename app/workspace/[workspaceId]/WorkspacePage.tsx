@@ -185,6 +185,7 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
             <div className="h-full overflow-y-auto">
               <div className="mx-auto max-w-4xl px-4 py-8 sm:px-8 sm:py-12">
                 <input
+                  data-testid="workspace-page-title"
                   type="text"
                   value={title}
                   onChange={(e) => handleTitleChange(e.target.value)}

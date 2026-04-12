@@ -44,6 +44,12 @@ export function Editor({
     },
     editable,
     immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        "data-testid": "workspace-editor-input",
+        "aria-label": "Document editor",
+      },
+    },
     onUpdate: ({ editor }) => {
       if (onUpdate) {
         onUpdate(editor.getJSON());
@@ -57,6 +63,7 @@ export function Editor({
 
   return (
     <div
+      data-testid="workspace-editor"
       className={`editor prose prose-zinc dark:prose-invert max-w-none ${
         editable ? "cursor-text" : ""
       }`}
