@@ -9,17 +9,23 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.52",
     "@tiptap/extension-placeholder": "^3.22.3",
     "@tiptap/react": "^3.22.3",
     "@tiptap/starter-kit": "^3.22.3",
+    "@tiptap/suggestion": "^3.22.3",
     "@xyflow/react": "^12.10.2",
+    "ai": "^6.0.158",
     "bcryptjs": "^3.0.3",
     "d3-force": "^3.0.0",
     "lucide-react": "^1.7.0",
     "nanoid": "^5.1.7",
     "next": "^14.2.35",
+    "openai": "^6.34.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "tippy.js": "^6.3.7",
+    "zod": "^4.3.6",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

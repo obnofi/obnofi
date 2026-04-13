@@ -5,6 +5,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { DatabaseBlock } from "@/components/editor/extensions/DatabaseBlock";
 import { CanvasBlock } from "@/components/editor/extensions/CanvasBlock";
+import { SlashCommandExtension } from "@/components/editor/extensions/SlashCommandExtension";
 
 interface EditorProps {
   content: object | null;
@@ -34,6 +35,10 @@ export function Editor({
         pageId,
       }),
       CanvasBlock.configure({
+        workspaceId,
+        pageId,
+      }),
+      SlashCommandExtension.configure({
         workspaceId,
         pageId,
       }),

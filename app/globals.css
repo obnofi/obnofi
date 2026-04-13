@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tippy.js/dist/tippy.css";
 
 :root {
   --background: #ffffff;
@@ -35,6 +36,29 @@ body {
   color: #9ca3af;
   pointer-events: none;
   height: 0;
+}
+
+.tippy-box[data-theme~="slash-command"] {
+  background-color: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.tippy-box[data-theme~="slash-command"] > .tippy-content {
+  padding: 0;
+}
+
+.tippy-box[data-theme~="slash-command"] > .tippy-arrow {
+  display: none;
+}
+
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
 }
 
 /* Prose styles for content */
