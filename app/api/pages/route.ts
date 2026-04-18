@@ -62,9 +62,9 @@ export async function POST(request: NextRequest) {
         name: "Status",
         type: "select",
         options: [
-          { id: `opt-${Date.now()}-todo`, label: "To Do", color: "#E3E2E0" },
-          { id: `opt-${Date.now()}-progress`, label: "In Progress", color: "#FDECC8" },
-          { id: `opt-${Date.now()}-done`, label: "Done", color: "#DBEDDB" },
+          { id: `opt-${Date.now()}-todo`, label: "To Do", color: "gray" },
+          { id: `opt-${Date.now()}-progress`, label: "In Progress", color: "yellow" },
+          { id: `opt-${Date.now()}-done`, label: "Done", color: "green" },
         ],
       });
       mockDb.columns.create({
