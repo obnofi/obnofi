@@ -3,8 +3,9 @@ import {
   PropertyValueData,
   SelectOption,
   SelectOptionColor,
-  Property,
-} from "@/types";
+  SELECT_OPTION_COLORS,
+  SELECT_OPTION_TEXT_COLORS,
+} from "@/types/database";
 
 // All available property types
 export const ALL_PROPERTY_TYPES: PropertyType[] = [
@@ -43,9 +44,6 @@ export const BASIC_PROPERTY_TYPES: PropertyType[] = [
   "email",
   "phone",
 ];
-
-// Legacy export for backward compatibility
-export const DATABASE_COLUMN_TYPES = BASIC_PROPERTY_TYPES;
 
 // Get display label for property type
 export function getPropertyTypeLabel(type: PropertyType): string {
@@ -92,9 +90,6 @@ export function getPropertyTypeLabel(type: PropertyType): string {
       return type;
   }
 }
-
-// Legacy alias for backward compatibility
-export const getColumnTypeLabel = getPropertyTypeLabel;
 
 // Get Lucide icon name for property type
 export function getPropertyTypeIcon(type: PropertyType): string {
@@ -183,13 +178,6 @@ export function createDefaultValue(type: PropertyType): PropertyValueData {
   }
 }
 
-// Legacy alias for backward compatibility
-export function createDefaultPropertyValue(
-  column: Pick<Property, "type">
-): PropertyValueData {
-  return createDefaultValue(column.type);
-}
-
 // Format property value for display
 export function formatPropertyValue(
   value: PropertyValueData | undefined,
@@ -248,34 +236,6 @@ export function formatPropertyValue(
       return "";
   }
 }
-
-// Color values for UI rendering
-export const SELECT_OPTION_COLORS: Record<SelectOptionColor, string> = {
-  default: "#E3E2E0",
-  gray: "#E3E2E0",
-  brown: "#EEE0DA",
-  orange: "#FADEC9",
-  yellow: "#FDECC8",
-  green: "#DBEDDB",
-  blue: "#D3E5EF",
-  purple: "#E8DEEE",
-  pink: "#F4E0E9",
-  red: "#FFE2DD",
-};
-
-// Darker text colors for better contrast
-export const SELECT_OPTION_TEXT_COLORS: Record<SelectOptionColor, string> = {
-  default: "#37352F",
-  gray: "#37352F",
-  brown: "#43302B",
-  orange: "#594A3C",
-  yellow: "#594A3C",
-  green: "#2E4435",
-  blue: "#364954",
-  purple: "#443A57",
-  pink: "#533B4C",
-  red: "#5C3B39",
-};
 
 // Generate a random color for select options
 export function getRandomOptionColor(): SelectOptionColor {
@@ -363,18 +323,6 @@ export function validatePropertyValue(
 // Check if property type requires options configuration
 export function requiresOptions(type: PropertyType): boolean {
   return type === "select" || type === "multi_select" || type === "status";
-}
-
-// Check if property type is computed (read-only)
-export function isComputedType(type: PropertyType): boolean {
-  return [
-    "created_time",
-    "created_by",
-    "last_edited_time",
-    "last_edited_by",
-    "formula",
-    "rollup",
-  ].includes(type);
 }
 
 // Get input placeholder for property type

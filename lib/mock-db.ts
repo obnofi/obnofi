@@ -6,7 +6,9 @@ import {
   Page,
   PropertyValue,
   SelectOption,
+  View,
 } from "@/types";
+import { ViewType } from "@/types/database";
 
 const mockPages: Map<string, Page> = new Map([
   [
@@ -221,10 +223,15 @@ const mockDatabases: Map<string, Database> = new Map([
       id: "db-1",
       pageId: "page-3",
       columns: [],
+      properties: [],
       rows: [],
+      views: [],
     },
   ],
 ]);
+
+// Mock Views Storage
+const mockViews: Map<string, View> = new Map([]);
 
 const mockColumns: Map<string, Column> = new Map([
   [
@@ -236,9 +243,9 @@ const mockColumns: Map<string, Column> = new Map([
       type: "select",
       order: 0,
       options: [
-        { id: "opt-1", label: "To Do", color: "#E3E2E0" },
-        { id: "opt-2", label: "In Progress", color: "#FDECC8" },
-        { id: "opt-3", label: "Done", color: "#DBEDDB" },
+        { id: "opt-1", label: "To Do", color: "gray" },
+        { id: "opt-2", label: "In Progress", color: "yellow" },
+        { id: "opt-3", label: "Done", color: "green" },
       ],
     },
   ],
@@ -251,9 +258,9 @@ const mockColumns: Map<string, Column> = new Map([
       type: "select",
       order: 1,
       options: [
-        { id: "opt-4", label: "Low", color: "#E3E2E0" },
-        { id: "opt-5", label: "Medium", color: "#FDECC8" },
-        { id: "opt-6", label: "High", color: "#FFE2DD" },
+        { id: "opt-4", label: "Low", color: "gray" },
+        { id: "opt-5", label: "Medium", color: "yellow" },
+        { id: "opt-6", label: "High", color: "red" },
       ],
     },
   ],
@@ -286,6 +293,7 @@ const mockPropertyValues: Map<string, PropertyValue> = new Map([
       id: "pv-1",
       pageId: "page-5",
       columnId: "col-1",
+      propertyId: "col-1",
       value: { type: "select", optionId: "opt-2" },
     },
   ],
@@ -295,6 +303,7 @@ const mockPropertyValues: Map<string, PropertyValue> = new Map([
       id: "pv-2",
       pageId: "page-5",
       columnId: "col-2",
+      propertyId: "col-2",
       value: { type: "select", optionId: "opt-6" },
     },
   ],
@@ -304,6 +313,7 @@ const mockPropertyValues: Map<string, PropertyValue> = new Map([
       id: "pv-3",
       pageId: "page-6",
       columnId: "col-1",
+      propertyId: "col-1",
       value: { type: "select", optionId: "opt-1" },
     },
   ],
@@ -313,6 +323,7 @@ const mockPropertyValues: Map<string, PropertyValue> = new Map([
       id: "pv-4",
       pageId: "page-6",
       columnId: "col-2",
+      propertyId: "col-2",
       value: { type: "select", optionId: "opt-5" },
     },
   ],
@@ -324,9 +335,9 @@ function createDefaultColumns(databaseId: string) {
     name: "Status",
     type: "select",
     options: [
-      { id: `opt-${Date.now()}-todo`, label: "To Do", color: "#E3E2E0" },
-      { id: `opt-${Date.now()}-progress`, label: "In Progress", color: "#FDECC8" },
-      { id: `opt-${Date.now()}-done`, label: "Done", color: "#DBEDDB" },
+      { id: `opt-${Date.now()}-todo`, label: "To Do", color: "gray" },
+      { id: `opt-${Date.now()}-progress`, label: "In Progress", color: "yellow" },
+      { id: `opt-${Date.now()}-done`, label: "Done", color: "green" },
     ],
   });
 
@@ -412,14 +423,17 @@ export const mockDb = {
         .sort((a, b) => a.order - b.order);
       
       const rows = mockDb.pages.getByDatabase(id);
+      const views = mockDb.views.getByDatabase(id);
       
       return {
         ...db,
         columns,
+        properties: columns,
         rows: rows.map((row) => ({
           ...row,
           propertyValues: mockDb.propertyValues.getByPage(row.id),
         })),
+        views,
       };
     },
     getByPageId: (pageId: string): Database | undefined => {
@@ -433,6 +447,7 @@ export const mockDb = {
         id,
         pageId,
         columns: [],
+        properties: [],
         rows: [],
       };
       mockDatabases.set(id, database);
@@ -451,7 +466,52 @@ export const mockDb = {
       mockDb.pages.getByDatabase(id).forEach((row) => {
         mockDb.pages.delete(row.id);
       });
+      mockDb.views.getByDatabase(id).forEach((view) => {
+        mockDb.views.delete(view.id);
+      });
       return mockDatabases.delete(id);
+    },
+  },
+
+  views: {
+    get: (id: string): View | undefined => mockViews.get(id),
+    getByDatabase: (databaseId: string): View[] => {
+      return Array.from(mockViews.values())
+        .filter((v) => v.databaseId === databaseId)
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    },
+    create: (data: {
+      databaseId: string;
+      name: string;
+      type: ViewType;
+      config?: View["config"];
+    }): View => {
+      const id = `view-${Date.now()}`;
+      const now = new Date().toISOString();
+      const view: View = {
+        ...data,
+        id,
+        config: data.config || {
+          visibleProperties: [],
+          propertyWidths: {},
+          sorts: [],
+          filters: [],
+        },
+        createdAt: now,
+        updatedAt: now,
+      };
+      mockViews.set(id, view);
+      return view;
+    },
+    update: (id: string, data: Partial<Omit<View, "id" | "createdAt">>): View | undefined => {
+      const view = mockViews.get(id);
+      if (!view) return undefined;
+      const updated = { ...view, ...data, updatedAt: new Date().toISOString() };
+      mockViews.set(id, updated);
+      return updated;
+    },
+    delete: (id: string): boolean => {
+      return mockViews.delete(id);
     },
   },
 
@@ -519,6 +579,7 @@ export const mockDb = {
       const id = `pv-${Date.now()}`;
       const propertyValue: PropertyValue = {
         ...data,
+        propertyId: data.columnId,
         id,
       };
       mockPropertyValues.set(id, propertyValue);
@@ -531,12 +592,12 @@ export const mockDb = {
       mockPropertyValues.set(id, updated);
       return updated;
     },
-    upsert: (pageId: string, columnId: string, value: PropertyValue["value"]): PropertyValue => {
-      const existing = mockDb.propertyValues.getByPageAndColumn(pageId, columnId);
+    upsert: (pageId: string, propertyId: string, value: PropertyValue["value"]): PropertyValue => {
+      const existing = mockDb.propertyValues.getByPageAndColumn(pageId, propertyId);
       if (existing) {
         return mockDb.propertyValues.update(existing.id, { value })!;
       }
-      return mockDb.propertyValues.create({ pageId, columnId, value });
+      return mockDb.propertyValues.create({ pageId, columnId: propertyId, value });
     },
     delete: (id: string): boolean => {
       return mockPropertyValues.delete(id);
