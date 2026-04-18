@@ -10,7 +10,8 @@ import type { SlashCommandItem } from "./SlashCommandExtension";
 
 export function createSlashSuggestion(
   workspaceId?: string,
-  pageId?: string
+  pageId?: string,
+  onLinkDatabase?: () => void
 ) {
   return () => {
     let component: ReactRenderer | null = null;
@@ -26,6 +27,7 @@ export function createSlashSuggestion(
             range: props.range,
             workspaceId,
             pageId,
+            onLinkDatabase,
           },
           editor: props.editor,
         });
@@ -61,6 +63,9 @@ export function createSlashSuggestion(
           command: props.command,
           editor: props.editor,
           range: props.range,
+          workspaceId,
+          pageId,
+          onLinkDatabase,
         });
 
         const clientRect = props.clientRect?.();

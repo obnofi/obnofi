@@ -154,6 +154,7 @@ interface SlashCommandListProps {
   range: { from: number; to: number };
   workspaceId?: string;
   pageId?: string;
+  onLinkDatabase?: () => void;
 }
 
 type ItemWithIndex = SlashCommandItem & { globalIndex: number };
@@ -167,6 +168,7 @@ export function SlashCommandList({
   items,
   editor,
   range,
+  onLinkDatabase,
 }: SlashCommandListProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -241,6 +243,13 @@ export function SlashCommandList({
           break;
         case "canvas":
           chain.insertCanvasEmbed().run();
+          break;
+        case "button":
+          chain.insertButtonBlock().run();
+          break;
+        case "linkDatabase":
+          chain.deleteRange(range).run();
+          onLinkDatabase?.();
           break;
         default:
           chain.run();

@@ -252,6 +252,15 @@ export const slashCommands: SlashCommandItem[] = [
     keywords: ["database", "table", "표", "데이터베이스"],
   },
   {
+    id: "linkDatabase",
+    title: "데이터베이스 연결",
+    description: "기존 데이터베이스를 현재 페이지에 연결",
+    icon: "Database",
+    category: "database",
+    isObnofi: true,
+    keywords: ["link", "database", "연결", "데이터베이스", "링크"],
+  },
+  {
     id: "dbBoard",
     title: "보드 보기",
     description: "칸반 보드 보기",
@@ -421,7 +430,6 @@ export const slashCommands: SlashCommandItem[] = [
     description: "클릭 가능한 버튼",
     icon: "Square",
     category: "advanced",
-    isDisabled: true,
     keywords: ["button", "버튼"],
   },
   {
@@ -537,11 +545,12 @@ export const SlashCommandExtension = Extension.create({
     return {
       workspaceId: undefined as string | undefined,
       pageId: undefined as string | undefined,
+      onLinkDatabase: undefined as (() => void) | undefined,
     };
   },
 
   addProseMirrorPlugins() {
-    const { workspaceId, pageId } = this.options;
+    const { workspaceId, pageId, onLinkDatabase } = this.options;
     return [
       Suggestion({
         editor: this.editor,
@@ -549,7 +558,7 @@ export const SlashCommandExtension = Extension.create({
         allowSpaces: false,
         startOfLine: false,
         items: ({ query }) => getSlashCommandItems(query),
-        render: createSlashSuggestion(workspaceId, pageId),
+        render: createSlashSuggestion(workspaceId, pageId, onLinkDatabase),
       }),
     ];
   },

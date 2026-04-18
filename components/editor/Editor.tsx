@@ -1,11 +1,16 @@
 "use client";
 
+import { useState, useCallback, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { DatabaseBlock } from "@/components/editor/extensions/DatabaseBlock";
 import { CanvasBlock } from "@/components/editor/extensions/CanvasBlock";
+import { ButtonBlock } from "@/components/editor/extensions/ButtonBlock";
+import { LinkedDatabaseBlock } from "@/components/editor/extensions/LinkedDatabaseBlock";
 import { SlashCommandExtension } from "@/components/editor/extensions/SlashCommandExtension";
+import { LinkDatabaseModal } from "@/components/editor/extensions/LinkDatabaseModal";
+import type { Editor as TiptapEditor } from "@tiptap/core";
 
 interface EditorProps {
   content: object | null;
@@ -24,6 +29,34 @@ export function Editor({
   workspaceId,
   pageId,
 }: EditorProps) {
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const editorRef = useRef<TiptapEditor | null>(null);
+
+  const handleDatabaseSelect = useCallback(
+    (databaseId: string, selectedPageId: string) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: "linkedDatabaseEmbed",
+          attrs: {
+            databaseId,
+            pageId: selectedPageId,
+            workspaceId: workspaceId ?? null,
+          },
+        })
+        .run();
+    },
+    [workspaceId]
+  );
+
+  const handleOpenLinkModal = useCallback(() => {
+    setIsLinkModalOpen(true);
+  }, []);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -38,9 +71,15 @@ export function Editor({
         workspaceId,
         pageId,
       }),
+      ButtonBlock,
+      LinkedDatabaseBlock.configure({
+        workspaceId,
+        pageId,
+      }),
       SlashCommandExtension.configure({
         workspaceId,
         pageId,
+        onLinkDatabase: handleOpenLinkModal,
       }),
     ],
     content: content || {
@@ -62,21 +101,32 @@ export function Editor({
     },
   });
 
+  editorRef.current = editor ?? null;
+
   if (!editor) {
     return null;
   }
 
   return (
-    <div
-      data-testid="workspace-editor"
-      className={`editor prose prose-zinc dark:prose-invert max-w-none ${
-        editable ? "cursor-text" : ""
-      }`}
-    >
-      <EditorContent
-        editor={editor}
-        className="[&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[200px] [&_.ProseMirror-focused]:outline-none [&_.ProseMirror-placeholder]:text-zinc-400 [&_.ProseMirror-placeholder]:before:content-[attr(data-placeholder)] [&_.ProseMirror-placeholder]:before:pointer-events-none"
+    <>
+      <div
+        data-testid="workspace-editor"
+        className={`editor prose prose-zinc dark:prose-invert max-w-none ${
+          editable ? "cursor-text" : ""
+        }`}
+      >
+        <EditorContent
+          editor={editor}
+          className="[&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[200px] [&_.ProseMirror-focused]:outline-none [&_.ProseMirror-placeholder]:text-zinc-400 [&_.ProseMirror-placeholder]:before:content-[attr(data-placeholder)] [&_.ProseMirror-placeholder]:before:pointer-events-none"
+        />
+      </div>
+
+      <LinkDatabaseModal
+        isOpen={isLinkModalOpen}
+        onClose={() => setIsLinkModalOpen(false)}
+        onSelect={handleDatabaseSelect}
+        workspaceId={workspaceId ?? ""}
       />
-    </div>
+    </>
   );
 }
