@@ -2,49 +2,69 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { Column, ColumnType, Page, PropertyValueData } from "@/types";
+import {
+  Property,
+  PropertyType,
+  Page,
+  PropertyValueData,
+  SelectOption,
+} from "@/types";
 import { PropertyCell } from "@/components/database/PropertyCell";
-import { DATABASE_COLUMN_TYPES, getColumnTypeLabel } from "@/lib/database-utils";
+import { PropertyHeader } from "@/components/database/PropertyHeader";
+import { PropertyTypeSelector } from "@/components/database/PropertyTypeSelector";
 
 interface TableViewProps {
-  columns: Column[];
+  properties: Property[];
   rows: Page[];
   onCreateRow: () => void;
-  onCreateColumn: (input: { name: string; type: ColumnType }) => void;
+  onCreateProperty: (input: { name: string; type: PropertyType; options?: SelectOption[] }) => void;
+  onUpdateProperty: (propertyId: string, input: { name?: string; type?: PropertyType; options?: SelectOption[] }) => void;
+  onDeleteProperty: (propertyId: string) => void;
   onOpenRow: (rowId: string) => void;
   onUpdateRowTitle: (rowId: string, title: string) => void;
   onUpdatePropertyValue: (
     rowId: string,
-    columnId: string,
+    propertyId: string,
     value: PropertyValueData
   ) => void;
+  onMoveProperty?: (propertyId: string, direction: "left" | "right") => void;
   compact?: boolean;
 }
 
 export function TableView({
-  columns,
+  properties,
   rows,
   onCreateRow,
-  onCreateColumn,
+  onCreateProperty,
+  onUpdateProperty,
+  onDeleteProperty,
   onOpenRow,
   onUpdateRowTitle,
   onUpdatePropertyValue,
+  onMoveProperty,
   compact = false,
 }: TableViewProps) {
-  const [isCreatingColumn, setIsCreatingColumn] = useState(false);
-  const [newColumnName, setNewColumnName] = useState("");
-  const [newColumnType, setNewColumnType] = useState<ColumnType>("text");
+  const [isCreatingProperty, setIsCreatingProperty] = useState(false);
+  const [newPropertyName, setNewPropertyName] = useState("");
+  const [newPropertyType, setNewPropertyType] = useState<PropertyType>("text");
 
-  const handleSubmitColumn = () => {
-    const trimmedName = newColumnName.trim();
+  const handleSubmitProperty = () => {
+    const trimmedName = newPropertyName.trim();
     if (!trimmedName) {
       return;
     }
 
-    onCreateColumn({ name: trimmedName, type: newColumnType });
-    setNewColumnName("");
-    setNewColumnType("text");
-    setIsCreatingColumn(false);
+    onCreateProperty({ name: trimmedName, type: newPropertyType });
+    setNewPropertyName("");
+    setNewPropertyType("text");
+    setIsCreatingProperty(false);
+  };
+
+  // Sort properties by order
+  const sortedProperties = [...properties].sort((a, b) => a.order - b.order);
+
+  const handleMoveProperty = (propertyId: string, direction: "left" | "right") => {
+    onMoveProperty?.(propertyId, direction);
   };
 
   return (
@@ -64,45 +84,48 @@ export function TableView({
               >
                 Title
               </th>
-              {columns.map((column) => (
+              {sortedProperties.map((property, index) => (
                 <th
-                  key={column.id}
-                  className={`border-b border-r border-zinc-200 px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400 ${
+                  key={property.id}
+                  className={`border-b border-r border-zinc-200 p-0 text-left dark:border-zinc-800 ${
                     compact ? "min-w-32" : "min-w-48"
                   }`}
                 >
-                  <div className="flex flex-col gap-1">
-                    <span>{column.name}</span>
-                    <span className="text-[10px] font-medium normal-case tracking-normal text-zinc-400 dark:text-zinc-500">
-                      {getColumnTypeLabel(column.type)}
-                    </span>
-                  </div>
+                  <PropertyHeader
+                    property={property}
+                    onRename={(name) => onUpdateProperty(property.id, { name })}
+                    onChangeType={(type) => onUpdateProperty(property.id, { type })}
+                    onUpdateOptions={(options) => onUpdateProperty(property.id, { options })}
+                    onDelete={() => onDeleteProperty(property.id)}
+                    onMove={(direction) => handleMoveProperty(property.id, direction)}
+                    canMoveLeft={index > 0}
+                    canMoveRight={index < sortedProperties.length - 1}
+                  />
                 </th>
               ))}
               <th className="border-b border-zinc-200 px-2 py-2 dark:border-zinc-800">
-                {isCreatingColumn ? (
+                {isCreatingProperty ? (
                   <div className="flex min-w-56 items-center gap-2 rounded-lg border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-950">
                     <input
-                      value={newColumnName}
-                      onChange={(event) => setNewColumnName(event.target.value)}
+                      value={newPropertyName}
+                      onChange={(event) => setNewPropertyName(event.target.value)}
                       placeholder="Property name"
                       className="min-w-0 flex-1 rounded-md border border-zinc-200 bg-transparent px-2 py-1.5 text-xs text-[#111110] outline-none dark:border-zinc-800 dark:text-zinc-100"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSubmitProperty();
+                        if (e.key === "Escape") {
+                          setIsCreatingProperty(false);
+                          setNewPropertyName("");
+                        }
+                      }}
                     />
-                    <select
-                      value={newColumnType}
-                      onChange={(event) =>
-                        setNewColumnType(event.target.value as ColumnType)
-                      }
-                      className="rounded-md border border-zinc-200 bg-transparent px-2 py-1.5 text-xs text-[#111110] outline-none dark:border-zinc-800 dark:text-zinc-100"
-                    >
-                      {DATABASE_COLUMN_TYPES.map((type) => (
-                        <option key={type} value={type}>
-                          {getColumnTypeLabel(type)}
-                        </option>
-                      ))}
-                    </select>
+                    <PropertyTypeSelector
+                      value={newPropertyType}
+                      onChange={setNewPropertyType}
+                    />
                     <button
-                      onClick={handleSubmitColumn}
+                      onClick={handleSubmitProperty}
                       className="rounded-md bg-[#2E7D45] px-2 py-1.5 text-xs font-medium text-white"
                     >
                       Add
@@ -110,11 +133,11 @@ export function TableView({
                   </div>
                 ) : (
                   <button
-                    onClick={() => setIsCreatingColumn(true)}
+                    onClick={() => setIsCreatingProperty(true)}
                     className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    {compact ? "Add" : "Column"}
+                    {compact ? "Add" : "Property"}
                   </button>
                 )}
               </th>
@@ -140,21 +163,22 @@ export function TableView({
                     </button>
                   </div>
                 </td>
-                {columns.map((column) => {
+                {sortedProperties.map((property) => {
                   const propertyValue = row.propertyValues?.find(
-                    (value) => value.columnId === column.id
+                    (value) => value.propertyId === property.id || value.columnId === property.id
                   );
 
                   return (
                     <td
-                      key={column.id}
+                      key={property.id}
                       className="border-b border-r border-zinc-200 px-1 py-1 align-middle dark:border-zinc-800"
                     >
                       <PropertyCell
-                        column={column}
+                        property={property}
                         value={propertyValue?.value}
+                        options={property.options}
                         onChange={(value) =>
-                          onUpdatePropertyValue(row.id, column.id, value)
+                          onUpdatePropertyValue(row.id, property.id, value)
                         }
                       />
                     </td>
@@ -165,7 +189,7 @@ export function TableView({
             ))}
             <tr className="bg-white dark:bg-[#111110]">
               <td
-                colSpan={columns.length + 2}
+                colSpan={sortedProperties.length + 2}
                 className="border-b border-zinc-200 px-2 py-1.5 dark:border-zinc-800"
               >
                 <button
@@ -180,7 +204,6 @@ export function TableView({
           </tbody>
         </table>
       </div>
-
     </div>
   );
 }
