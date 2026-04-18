@@ -72,6 +72,20 @@ test("/database 입력시 인라인 데이터베이스가 삽입된다", async (
   await expect(page.getByTestId("inline-database-ready").last()).toBeVisible();
 });
 
+test("/button 입력시 버튼 블록이 삽입된다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  await focusEditorTail(page);
+  await page.keyboard.type("/button");
+  await page.keyboard.press("Enter");
+
+  const buttonBlock = page.getByTestId("button-block").last();
+  await expect(buttonBlock).toBeVisible();
+  await expect(page.getByTestId("button-block-preview").last()).toContainText("Button");
+  await expect(page.getByTestId("button-block-label").last()).toHaveValue("Button");
+  await expect(page.getByTestId("button-block-url").last()).toHaveValue("");
+});
+
 test("그래프 뷰에서도 사이드바가 유지된다", async ({ page }) => {
   await gotoWorkspaceDocument(page);
 
