@@ -40,3 +40,11 @@ ai/.env
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+
+# test artifacts
+/test-results/
