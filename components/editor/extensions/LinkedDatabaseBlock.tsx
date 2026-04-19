@@ -7,8 +7,7 @@ import {
   type ReactNodeViewProps,
 } from "@tiptap/react";
 import { useRouter } from "next/navigation";
-import { DatabaseTableCard } from "@/components/database/DatabaseTableCard";
-import { useDatabasePage } from "@/hooks/useDatabasePage";
+import { DatabasePageCard } from "@/components/database/DatabasePageCard";
 
 interface LinkedDatabaseBlockExtensionOptions {
   workspaceId?: string;
@@ -25,27 +24,20 @@ function LinkedDatabaseBlockView(props: ReactNodeViewProps) {
   const router = useRouter();
   const attrs = props.node.attrs as LinkedDatabaseBlockAttrs;
   const { pageId, workspaceId } = attrs;
-  const {
-    databasePage,
-    isLoading,
-    setDatabasePage,
-  } = useDatabasePage(pageId);
 
   return (
     <NodeViewWrapper className="my-4">
-      <DatabaseTableCard
+      <DatabasePageCard
+        pageId={pageId}
         containerTestId="linked-database-embed"
         loadingTestId="linked-database-loading"
         readyTestId="linked-database-ready"
         emptyTestId="linked-database-empty"
-        databasePage={databasePage}
-        isLoading={isLoading}
-        onDatabaseChange={setDatabasePage}
         onOpenRow={(rowId) => router.push(`/workspace/${workspaceId}?page=${rowId}`)}
         headerLabel="연결된 데이터베이스"
         onOpenDatabase={
-          workspaceId && databasePage
-            ? () => router.push(`/workspace/${workspaceId}?page=${databasePage.id}`)
+          workspaceId && pageId
+            ? () => router.push(`/workspace/${workspaceId}?page=${pageId}`)
             : undefined
         }
         emptyMessage="데이터베이스를 불러올 수 없습니다."

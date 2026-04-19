@@ -8,8 +8,7 @@ import {
   type ReactNodeViewProps,
 } from "@tiptap/react";
 import { useRouter } from "next/navigation";
-import { DatabaseTableCard } from "@/components/database/DatabaseTableCard";
-import { useDatabasePage } from "@/hooks/useDatabasePage";
+import { DatabasePageCard } from "@/components/database/DatabasePageCard";
 import { Page } from "@/types";
 
 interface DatabaseBlockExtensionOptions {
@@ -31,11 +30,6 @@ function DatabaseBlockView(props: ReactNodeViewProps) {
   const { databaseId, pageId, workspaceId, parentPageId, autoCreate } = attrs;
   const [databasePages, setDatabasePages] = useState<Page[]>([]);
   const [isCreating, setIsCreating] = useState(false);
-  const {
-    databasePage,
-    isLoading,
-    setDatabasePage,
-  } = useDatabasePage(pageId);
 
   const loadDatabasePages = useCallback(async () => {
     if (!workspaceId) {
@@ -111,14 +105,12 @@ function DatabaseBlockView(props: ReactNodeViewProps) {
 
   return (
     <NodeViewWrapper className="my-4">
-      <DatabaseTableCard
+      <DatabasePageCard
+        pageId={pageId}
         containerTestId="inline-database-embed"
         loadingTestId="inline-database-loading"
         readyTestId="inline-database-ready"
         emptyTestId="inline-database-empty"
-        databasePage={databasePage}
-        isLoading={isLoading}
-        onDatabaseChange={setDatabasePage}
         onOpenRow={(rowId) => router.push(`/workspace/${workspaceId}?page=${rowId}`)}
         selection={
           props.editor.isEditable
@@ -136,12 +128,15 @@ function DatabaseBlockView(props: ReactNodeViewProps) {
                     autoCreate: false,
                   });
                 },
+                onCreate: () => {
+                  void createDatabasePage();
+                },
               }
             : undefined
         }
         onOpenDatabase={
-          workspaceId && databasePage
-            ? () => router.push(`/workspace/${workspaceId}?page=${databasePage.id}`)
+          workspaceId && pageId
+            ? () => router.push(`/workspace/${workspaceId}?page=${pageId}`)
             : undefined
         }
         emptyMessage={
@@ -152,7 +147,7 @@ function DatabaseBlockView(props: ReactNodeViewProps) {
             : "Database preview unavailable."
         }
         state={
-          isLoading ? "loading" : databasePage ? "ready" : isCreating ? "creating" : "empty"
+          pageId ? undefined : isCreating ? "creating" : "empty"
         }
       />
     </NodeViewWrapper>
