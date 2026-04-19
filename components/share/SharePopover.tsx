@@ -77,10 +77,10 @@ export function SharePopover({
       {isOpen && (
         <>
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[99998]"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800 z-50 p-4">
+          <div className="absolute right-0 top-full z-[99999] mt-2 w-80 rounded-lg border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-[#111110] dark:text-zinc-100">
                 Share to web

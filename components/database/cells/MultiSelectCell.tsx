@@ -83,7 +83,7 @@ export function MultiSelectCell({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-full max-w-xs rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="absolute left-0 top-full z-[99999] mt-1 min-w-full max-w-xs rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
           {options.length === 0 ? (
             <div className="px-3 py-2 text-sm text-zinc-400">
               No options available

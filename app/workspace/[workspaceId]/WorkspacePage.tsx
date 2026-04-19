@@ -340,7 +340,7 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
               <Plus className="w-4 h-4" />New page
             </button>
             {showNewPageMenu && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+              <div className="absolute top-full left-0 right-0 z-[99999] mt-1 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
                 {(["document", "database"] as PageType[]).map((type) => (
                   <button
                     key={type}

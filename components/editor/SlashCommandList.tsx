@@ -127,7 +127,7 @@ function showToast(message: string) {
     borderRadius: "8px",
     fontSize: "13px",
     fontWeight: "500",
-    zIndex: "99999",
+    zIndex: "100000",
     pointerEvents: "none",
     opacity: "0",
     transition: "opacity 0.15s ease",
@@ -300,7 +300,7 @@ export function SlashCommandList({
   if (flatItems.length === 0) return null;
 
   return (
-    <div className="scrollbar-hidden z-50 w-80 max-h-[22rem] overflow-y-auto rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-2xl py-1">
+    <div className="scrollbar-hidden z-[100000] max-h-[22rem] w-80 overflow-y-auto rounded-xl border border-zinc-200 bg-white py-1 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
       {groups.map((group) => (
         <div key={group.id}>
           {/* Category header */}

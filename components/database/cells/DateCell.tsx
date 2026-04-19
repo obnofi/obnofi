@@ -65,7 +65,7 @@ export function DateCell({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="absolute left-0 top-full z-[99999] mt-1 w-64 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
           <div className="space-y-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-zinc-500">

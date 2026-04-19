@@ -164,7 +164,7 @@ export function PropertyTypeSelector({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-zinc-200 bg-white py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="absolute left-0 top-full z-[99999] mt-1 w-64 rounded-lg border border-zinc-200 bg-white py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
           <div className="px-2 pb-2">
             <div className="flex items-center gap-2 rounded-md bg-zinc-100 px-2 py-1.5 dark:bg-zinc-800">
               <Search className="h-3.5 w-3.5 text-zinc-400" />

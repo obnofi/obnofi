@@ -192,7 +192,7 @@ export function AiCommandList({
   return (
     <div
       ref={containerRef}
-      className="z-50 w-72 max-h-80 overflow-y-auto rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg py-1"
+      className="z-[99999] max-h-80 w-72 overflow-y-auto rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
     >
       <div className="px-3 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 border-b border-zinc-100 dark:border-zinc-800 mb-1">
         AI 명령

@@ -162,7 +162,7 @@ export function DatabaseView({
           </button>
 
           {showNewMenu && (
-            <div className="absolute top-full right-0 mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg z-50 py-1 w-40">
+            <div className="absolute top-full right-0 z-[99999] mt-1 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
               {(["document", "canvas", "database"] as PageType[]).map(
                 (type) => (
                   <button
