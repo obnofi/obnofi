@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Table,
   LayoutGrid,
@@ -53,6 +54,11 @@ export function ViewTabs({
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [addMenuPosition, setAddMenuPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
 
   const views: View[] = databasePage.database.views || [];
 
@@ -284,10 +290,37 @@ export function ViewTabs({
     }
   }, [views.length, isCreating]);
 
+  useEffect(() => {
+    if (!showAddMenu) {
+      return;
+    }
+
+    const updatePosition = () => {
+      const rect = addButtonRef.current?.getBoundingClientRect();
+      if (!rect) {
+        return;
+      }
+
+      setAddMenuPosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [showAddMenu]);
+
   return (
     <div className="flex h-full flex-col">
       {/* View Tabs */}
-      <div className="flex items-center gap-1 border-b border-zinc-200 px-4 dark:border-zinc-800">
+      <div className="flex items-center gap-1 border-b border-gray-200 px-4 dark:border-zinc-800">
         {views.map((view) => {
           const Icon = viewIcons[view.type];
           const isActive = activeViewId === view.id;
@@ -296,10 +329,10 @@ export function ViewTabs({
             <button
               key={view.id}
               onClick={() => setActiveViewId(view.id)}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-t px-3 py-2 text-[13px] font-medium transition-colors ${
                 isActive
-                  ? "border-b-2 border-[#2E7D45] text-[#2E7D45]"
-                  : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  ? "border-b-2 border-gray-900 text-gray-900 dark:border-zinc-100 dark:text-zinc-100"
+                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -311,47 +344,59 @@ export function ViewTabs({
         {/* Add View Button */}
         <div className="relative">
           <button
+            ref={addButtonRef}
             onClick={() => setShowAddMenu(!showAddMenu)}
             disabled={isCreating}
-            className="ml-2 flex items-center gap-1 rounded-md p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            className="ml-2 flex items-center gap-1 rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
           >
             <Plus className="h-4 w-4" />
           </button>
-
-          {showAddMenu && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setShowAddMenu(false)}
-              />
-              <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
-                <div className="px-3 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  Add a view
-                </div>
-                {(Object.keys(viewIcons) as ViewType[]).map((type) => {
-                  const Icon = viewIcons[type];
-                  return (
-                    <button
-                      key={type}
-                      onClick={() => handleCreateView(type)}
-                      disabled={isCreating}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                    >
-                      <Icon className="h-4 w-4" />
-                      {viewLabels[type]}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
         </div>
       </div>
+
+      {showAddMenu && addMenuPosition
+        ? createPortal(
+            <>
+              <div
+                className="fixed inset-0 z-[99998]"
+                onClick={() => setShowAddMenu(false)}
+              />
+              <div
+                className="fixed z-[99999] w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
+                style={{
+                  top: addMenuPosition.top,
+                  left: addMenuPosition.left,
+                }}
+              >
+                <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-zinc-400">
+                  Add a view
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  {(Object.keys(viewIcons) as ViewType[]).map((type) => {
+                    const Icon = viewIcons[type];
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => handleCreateView(type)}
+                        disabled={isCreating}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                      >
+                        <Icon className="h-4 w-4" />
+                        {viewLabels[type]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>,
+            document.body
+          )
+        : null}
 
       {/* View Content */}
       <div className="flex-1 overflow-hidden">
         {!activeView ? (
-          <div className="flex h-full items-center justify-center text-zinc-500 dark:text-zinc-400">
+          <div className="flex h-full items-center justify-center text-gray-500 dark:text-zinc-400">
             Select or create a view
           </div>
         ) : activeView.type === "table" ? (
@@ -368,12 +413,12 @@ export function ViewTabs({
             compact={compact}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-zinc-500 dark:text-zinc-400">
+          <div className="flex h-full items-center justify-center text-gray-500 dark:text-zinc-400">
             <div className="text-center">
-              <p className="text-lg font-medium">
+              <p className="text-lg font-medium text-gray-900 dark:text-zinc-100">
                 {viewLabels[activeView.type]} View
               </p>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-gray-400 dark:text-zinc-500">
                 Coming soon in P1
               </p>
             </div>

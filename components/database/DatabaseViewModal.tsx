@@ -125,6 +125,10 @@ export function DatabaseViewModal() {
             <ViewTabs
               databasePage={databasePage}
               onDatabaseChange={setDatabasePage}
+              onOpenRow={(rowId) => {
+                // Open row in new tab
+                window.open(`/workspace/${databasePage.workspaceId || ""}?page=${rowId}`, "_blank");
+              }}
             />
           ) : (
             <div className="flex h-full items-center justify-center text-zinc-500 dark:text-zinc-400">

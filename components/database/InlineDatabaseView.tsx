@@ -109,6 +109,10 @@ export function InlineDatabaseView({
         <ViewTabs
           databasePage={databasePage}
           onDatabaseChange={setDatabasePage}
+          onOpenRow={(rowId) => {
+            // Open row in new tab
+            window.open(`/workspace/${databasePage.workspaceId || ""}?page=${rowId}`, "_blank");
+          }}
         />
       </div>
     </div>

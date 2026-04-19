@@ -70,15 +70,15 @@ export function TableView({
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex-1 overflow-auto">
-        <table className="min-w-full border-separate border-spacing-0">
+        <table className="min-w-full">
           <thead
-            className={`z-10 bg-white dark:bg-[#111110] ${
+            className={`z-10 bg-gray-50 dark:bg-[#18181b] ${
               compact ? "" : "sticky top-0"
             }`}
           >
             <tr>
               <th
-                className={`border-b border-r border-zinc-200 px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400 ${
+                className={`border-b border-gray-200 px-3 py-2 text-left text-[13px] font-medium text-gray-600 dark:border-zinc-800 dark:text-zinc-400 ${
                   compact ? "min-w-40" : "min-w-64"
                 }`}
               >
@@ -87,7 +87,7 @@ export function TableView({
               {sortedProperties.map((property, index) => (
                 <th
                   key={property.id}
-                  className={`border-b border-r border-zinc-200 p-0 text-left dark:border-zinc-800 ${
+                  className={`border-b border-gray-200 p-0 text-left dark:border-zinc-800 ${
                     compact ? "min-w-32" : "min-w-48"
                   }`}
                 >
@@ -103,14 +103,14 @@ export function TableView({
                   />
                 </th>
               ))}
-              <th className="border-b border-zinc-200 px-2 py-2 dark:border-zinc-800">
+              <th className="border-b border-gray-200 px-2 py-2 dark:border-zinc-800">
                 {isCreatingProperty ? (
-                  <div className="flex min-w-56 items-center gap-2 rounded-lg border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-950">
+                  <div className="flex min-w-56 items-center gap-2 rounded-lg border border-gray-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-950">
                     <input
                       value={newPropertyName}
                       onChange={(event) => setNewPropertyName(event.target.value)}
                       placeholder="Property name"
-                      className="min-w-0 flex-1 rounded-md border border-zinc-200 bg-transparent px-2 py-1.5 text-xs text-[#111110] outline-none dark:border-zinc-800 dark:text-zinc-100"
+                      className="min-w-0 flex-1 rounded-md border border-gray-200 bg-transparent px-2 py-1.5 text-xs text-[#111110] outline-none dark:border-zinc-800 dark:text-zinc-100"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleSubmitProperty();
@@ -134,7 +134,7 @@ export function TableView({
                 ) : (
                   <button
                     onClick={() => setIsCreatingProperty(true)}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-600 transition hover:bg-gray-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     {compact ? "Add" : "Property"}
@@ -145,19 +145,19 @@ export function TableView({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.id} className="bg-white dark:bg-[#111110]">
-                <td className="border-b border-r border-zinc-200 px-2 py-1.5 align-middle dark:border-zinc-800">
+              <tr key={row.id} className="border-b border-gray-100 bg-white hover:bg-gray-50 dark:border-zinc-900 dark:bg-[#111110] dark:hover:bg-zinc-950">
+                <td className="px-3 py-2 align-middle">
                   <div className="flex items-center gap-2">
                     <input
                       value={row.title}
                       onChange={(event) =>
                         onUpdateRowTitle(row.id, event.target.value)
                       }
-                      className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm font-medium text-[#111110] outline-none transition focus:border-zinc-300 focus:bg-white dark:text-zinc-100 dark:focus:border-zinc-700 dark:focus:bg-zinc-900"
+                      className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-0 py-0 text-[14px] text-gray-900 outline-none transition focus:border-zinc-300 focus:bg-white focus:px-2 focus:py-1.5 dark:text-zinc-100 dark:focus:border-zinc-700 dark:focus:bg-zinc-900"
                     />
                     <button
                       onClick={() => onOpenRow(row.id)}
-                      className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+                      className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
                     >
                       {compact ? "View" : "Open"}
                     </button>
@@ -171,7 +171,7 @@ export function TableView({
                   return (
                     <td
                       key={property.id}
-                      className="border-b border-r border-zinc-200 px-1 py-1 align-middle dark:border-zinc-800"
+                      className="px-2 py-1.5 align-middle"
                     >
                       <PropertyCell
                         property={property}
@@ -184,17 +184,17 @@ export function TableView({
                     </td>
                   );
                 })}
-                <td className="border-b border-zinc-200 dark:border-zinc-800" />
+                <td className="px-2 py-1.5" />
               </tr>
             ))}
             <tr className="bg-white dark:bg-[#111110]">
               <td
                 colSpan={sortedProperties.length + 2}
-                className="border-b border-zinc-200 px-2 py-1.5 dark:border-zinc-800"
+                className="border-t border-gray-200 px-2 py-1.5 dark:border-zinc-800"
               >
                 <button
                   onClick={onCreateRow}
-                  className="inline-flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                  className="inline-flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-900"
                 >
                   <Plus className="h-4 w-4" />
                   {compact ? "New row" : "Add a row"}
