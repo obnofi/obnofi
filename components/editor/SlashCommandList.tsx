@@ -236,7 +236,9 @@ export function SlashCommandList({
           chain.setHorizontalRule().run();
           break;
         case "codeBlock":
-          chain.toggleCodeBlock().run();
+          (chain as typeof chain & { insertCodeBlock: () => typeof chain })
+            .insertCodeBlock()
+            .run();
           break;
         case "dbTable":
           chain.insertDatabaseEmbed().run();

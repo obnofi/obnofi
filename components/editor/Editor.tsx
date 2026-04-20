@@ -7,6 +7,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { DatabaseBlock } from "@/components/editor/extensions/DatabaseBlock";
 import { CanvasBlock } from "@/components/editor/extensions/CanvasBlock";
 import { ButtonBlock } from "@/components/editor/extensions/ButtonBlock";
+import { CodeBlock } from "@/components/editor/extensions/CodeBlock";
 import { LinkedDatabaseBlock } from "@/components/editor/extensions/LinkedDatabaseBlock";
 import { SlashCommandExtension } from "@/components/editor/extensions/SlashCommandExtension";
 import { LinkDatabaseModal } from "@/components/editor/extensions/LinkDatabaseModal";
@@ -72,6 +73,7 @@ export function Editor({
         pageId,
       }),
       ButtonBlock,
+      CodeBlock,
       LinkedDatabaseBlock.configure({
         workspaceId,
         pageId,

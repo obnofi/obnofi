@@ -252,15 +252,6 @@ export const slashCommands: SlashCommandItem[] = [
     keywords: ["database", "table", "표", "데이터베이스"],
   },
   {
-    id: "linkDatabase",
-    title: "데이터베이스 연결",
-    description: "기존 데이터베이스를 현재 페이지에 연결",
-    icon: "Database",
-    category: "database",
-    isObnofi: true,
-    keywords: ["link", "database", "연결", "데이터베이스", "링크"],
-  },
-  {
     id: "dbBoard",
     title: "보드 보기",
     description: "칸반 보드 보기",
