@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mockDb } from "@/lib/mock-db";
 import { PageType } from "@/types";
+import { getExampleDatabaseColumns } from "@/lib/database-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -57,21 +58,17 @@ export async function POST(request: NextRequest) {
 
     if (type === "database") {
       const database = mockDb.databases.create(newPage.id);
-      mockDb.columns.create({
-        databaseId: database.id,
-        name: "Status",
-        type: "select",
-        options: [
-          { id: `opt-${Date.now()}-todo`, label: "To Do", color: "gray" },
-          { id: `opt-${Date.now()}-progress`, label: "In Progress", color: "yellow" },
-          { id: `opt-${Date.now()}-done`, label: "Done", color: "green" },
-        ],
+      getExampleDatabaseColumns().forEach((column) => {
+        mockDb.columns.create({
+          databaseId: database.id,
+          name: column.name,
+          type: column.type,
+          options: column.options,
+        });
       });
-      mockDb.columns.create({
-        databaseId: database.id,
-        name: "Notes",
-        type: "text",
-      });
+
+      const updatedPage = mockDb.pages.get(newPage.id);
+      return NextResponse.json(updatedPage, { status: 201 });
     }
 
     return NextResponse.json(newPage, { status: 201 });

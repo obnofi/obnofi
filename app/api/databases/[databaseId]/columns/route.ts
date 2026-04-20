@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mockDb } from "@/lib/mock-db";
-import { createDefaultPropertyValue, DATABASE_COLUMN_TYPES } from "@/lib/database-utils";
+import {
+  createDefaultPropertyValue,
+  DATABASE_COLUMN_TYPES,
+  normalizePropertyOptions,
+} from "@/lib/database-utils";
 
 export async function POST(
   request: NextRequest,
@@ -27,11 +31,13 @@ export async function POST(
       return NextResponse.json({ error: "Invalid column type" }, { status: 400 });
     }
 
+    const normalizedOptions = normalizePropertyOptions(type, name, options);
+
     const column = mockDb.columns.create({
       databaseId,
       name,
       type,
-      options,
+      options: normalizedOptions,
     });
 
     database.rows.forEach((row) => {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mockDb } from "@/lib/mock-db";
+import { getExampleDatabaseColumns } from "@/lib/database-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,16 +26,12 @@ export async function POST(request: NextRequest) {
 
     const database = mockDb.databases.create(pageId);
     
-    const defaultColumns = [
-      { name: "Status", type: "select" as const },
-      { name: "Priority", type: "select" as const },
-    ];
-
-    defaultColumns.forEach((col) => {
+    getExampleDatabaseColumns().forEach((col) => {
       mockDb.columns.create({
         databaseId: database.id,
         name: col.name,
         type: col.type,
+        options: col.options,
       });
     });
 
