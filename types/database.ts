@@ -171,6 +171,8 @@ export interface Task {
   date: string;
   startDate: string;
   endDate: string;
+  description?: string;
+  coverUrl?: string;
 }
 
 // Database view types
