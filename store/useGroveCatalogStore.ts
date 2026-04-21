@@ -1,7 +1,13 @@
 "use client";
 
 import { create } from "zustand";
-import type { DatabasePage, Property, PropertyValue, PropertyValueData } from "@/types";
+import type {
+  DatabasePage,
+  Property,
+  PropertyValue,
+  PropertyValueData,
+  View,
+} from "@/types";
 
 interface GroveCatalogState {
   grovePages: Record<string, DatabasePage>;
@@ -12,19 +18,24 @@ interface GroveCatalogState {
   replaceGroveProperty: (pageId: string, property: Property) => void;
   removeGroveProperty: (pageId: string, propertyId: string) => void;
   patchGroveSeedTitle: (pageId: string, rowId: string, title: string) => void;
+  appendGroveView: (pageId: string, view: View) => void;
   patchGroveCellValue: (
     pageId: string,
     rowId: string,
     propertyId: string,
-    value: PropertyValueData | PropertyValue
+    value: PropertyValueData | PropertyValue | undefined
   ) => void;
 }
 
 function normalizePropertyValue(
   rowId: string,
   propertyId: string,
-  value: PropertyValueData | PropertyValue
-): PropertyValue {
+  value: PropertyValueData | PropertyValue | undefined
+): PropertyValue | null {
+  if (!value) {
+    return null;
+  }
+
   if ("pageId" in value && "propertyId" in value) {
     return value;
   }
@@ -162,6 +173,32 @@ export const useGroveCatalogStore = create<GroveCatalogState>((set) => ({
       };
     }),
 
+  appendGroveView: (pageId, view) =>
+    set((state) => {
+      const grovePage = state.grovePages[pageId];
+      if (!grovePage) {
+        return state;
+      }
+
+      const currentViews = grovePage.database.views ?? [];
+      const nextViews = currentViews.some((current) => current.id === view.id)
+        ? currentViews
+        : [...currentViews, view];
+
+      return {
+        grovePages: {
+          ...state.grovePages,
+          [pageId]: {
+            ...grovePage,
+            database: {
+              ...grovePage.database,
+              views: nextViews,
+            },
+          },
+        },
+      };
+    }),
+
   patchGroveCellValue: (pageId, rowId, propertyId, value) =>
     set((state) => {
       const grovePage = state.grovePages[pageId];
@@ -170,6 +207,9 @@ export const useGroveCatalogStore = create<GroveCatalogState>((set) => ({
       }
 
       const nextPropertyValue = normalizePropertyValue(rowId, propertyId, value);
+      if (!nextPropertyValue) {
+        return state;
+      }
 
       return {
         grovePages: {
