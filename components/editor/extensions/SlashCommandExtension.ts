@@ -300,22 +300,21 @@ export const slashCommands: SlashCommandItem[] = [
   // ── 캔버스 / 그래프 (obnofi 전용) ────────────────────────────
   {
     id: "canvas",
-    title: "캔버스",
-    description: "자유 드로잉 캔버스 (Tldraw)",
+    title: "Clearing",
+    description: "FigJam 스타일 무한 캔버스를 인라인 블록으로 삽입",
     icon: "PenTool",
     category: "canvas",
     isObnofi: true,
-    keywords: ["canvas", "draw", "tldraw", "캔버스", "그리기"],
+    keywords: ["canvas", "clearing", "figjam", "draw", "캔버스", "클리어링", "그리기"],
   },
   {
-    id: "erDiagram",
+    id: "dbDiagram",
     title: "DB 다이어그램",
-    description: "React Flow ERD 다이어그램",
+    description: "SQL ↔ ERD 양방향 동기화 다이어그램",
     icon: "Database",
     category: "canvas",
-    isDisabled: true,
     isObnofi: true,
-    keywords: ["er", "diagram", "erd", "다이어그램"],
+    keywords: ["er", "diagram", "erd", "db", "diagram", "sql", "다이어그램", "데이터베이스"],
   },
   {
     id: "graphView",

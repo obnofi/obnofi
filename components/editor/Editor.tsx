@@ -11,6 +11,7 @@ import { CodeBlock } from "@/components/editor/extensions/CodeBlock";
 import { LinkedDatabaseBlock } from "@/components/editor/extensions/LinkedDatabaseBlock";
 import { SlashCommandExtension } from "@/components/editor/extensions/SlashCommandExtension";
 import { LinkDatabaseModal } from "@/components/editor/extensions/LinkDatabaseModal";
+import { DbDiagramExtension } from "@/src/components/editor/extensions/DbDiagramExtension";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 
 interface EditorProps {
@@ -78,6 +79,7 @@ export function Editor({
         workspaceId,
         pageId,
       }),
+      DbDiagramExtension,
       SlashCommandExtension.configure({
         workspaceId,
         pageId,
@@ -113,13 +115,13 @@ export function Editor({
     <>
       <div
         data-testid="workspace-editor"
-        className={`editor prose max-w-none text-[#111110] dark:prose-invert dark:text-zinc-100 ${
+        className={`editor prose max-w-none text-[#111110] dark:prose-invert dark:text-zinc-100 [&:focus-within]:outline-none [&_*]:focus-visible:outline-none ${
           editable ? "cursor-text" : ""
         }`}
       >
         <EditorContent
           editor={editor}
-          className="[&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:text-[#111110] [&_.ProseMirror]:outline-none dark:[&_.ProseMirror]:text-zinc-100 [&_.ProseMirror-focused]:outline-none [&_.ProseMirror-placeholder]:text-zinc-400 [&_.ProseMirror-placeholder]:before:content-[attr(data-placeholder)] [&_.ProseMirror-placeholder]:before:pointer-events-none"
+          className="[&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:text-[#111110] [&_.ProseMirror]:outline-none dark:[&_.ProseMirror]:text-zinc-100 [&_.ProseMirror-focused]:outline-none [&_.ProseMirror-focused]:ring-0 [&_.ProseMirror-focused]:border-transparent [&_.ProseMirror-placeholder]:text-zinc-400 [&_.ProseMirror-placeholder]:before:content-[attr(data-placeholder)] [&_.ProseMirror-placeholder]:before:pointer-events-none"
         />
       </div>
 

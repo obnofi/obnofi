@@ -246,6 +246,11 @@ export function SlashCommandList({
         case "canvas":
           chain.insertCanvasEmbed().run();
           break;
+        case "dbDiagram":
+          (chain as typeof chain & { insertDbDiagram: () => typeof chain })
+            .insertDbDiagram()
+            .run();
+          break;
         case "button":
           chain.insertButtonBlock().run();
           break;

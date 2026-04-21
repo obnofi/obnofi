@@ -8,6 +8,7 @@ import {
 } from "@tiptap/react";
 import { useRouter } from "next/navigation";
 import { DatabasePageCard } from "@/components/database/DatabasePageCard";
+import { useUIStore } from "@/store/useUIStore";
 
 interface LinkedDatabaseBlockExtensionOptions {
   workspaceId?: string;
@@ -22,6 +23,7 @@ interface LinkedDatabaseBlockAttrs {
 
 function LinkedDatabaseBlockView(props: ReactNodeViewProps) {
   const router = useRouter();
+  const openGrovePageSideTab = useUIStore((state) => state.openGrovePageSideTab);
   const attrs = props.node.attrs as LinkedDatabaseBlockAttrs;
   const { pageId, workspaceId } = attrs;
 
@@ -33,7 +35,7 @@ function LinkedDatabaseBlockView(props: ReactNodeViewProps) {
         loadingTestId="linked-database-loading"
         readyTestId="linked-database-ready"
         emptyTestId="linked-database-empty"
-        onOpenRow={(rowId) => router.push(`/workspace/${workspaceId}?page=${rowId}`)}
+        onOpenRow={(rowId) => openGrovePageSideTab(rowId, workspaceId)}
         headerLabel="연결된 데이터베이스"
         onOpenDatabase={
           workspaceId && pageId

@@ -9,7 +9,7 @@ import {
 } from "@tiptap/react";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Canvas } from "@/components/canvas/Canvas";
+import { ClearingBoard } from "@/components/canvas/ClearingBoard";
 import type { Page } from "@/types";
 
 interface CanvasBlockExtensionOptions {
@@ -65,7 +65,7 @@ function CanvasBlockView(props: ReactNodeViewProps) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: "Inline Canvas",
+        title: "Inline Clearing",
         type: "canvas",
         parentId: parentPageId,
         workspaceId,
@@ -92,19 +92,6 @@ function CanvasBlockView(props: ReactNodeViewProps) {
 
     void createCanvasPage();
   }, [autoCreate, createCanvasPage, pageId, props.editor.isEditable]);
-
-  const handleUpdateContent = async (content: object) => {
-    if (!canvasPage) {
-      return;
-    }
-
-    setCanvasPage({ ...canvasPage, content });
-    await fetch(`/api/pages/${canvasPage.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
-    });
-  };
 
   return (
     <NodeViewWrapper className="my-4">
@@ -134,20 +121,20 @@ function CanvasBlockView(props: ReactNodeViewProps) {
             <Loader2 className="h-6 w-6 animate-spin text-[#2E7D45]" />
           </div>
         ) : canvasPage ? (
-          <div data-testid="inline-canvas-ready" className="h-[420px]">
-            <Canvas
-              content={canvasPage.content}
-              onUpdate={handleUpdateContent}
-              compact={true}
+          <div data-testid="inline-canvas-ready" className="h-[520px] min-h-[520px]">
+            <ClearingBoard
+              embedded={true}
+              roomSlug={canvasPage.id}
+              title={canvasPage.title || "Inline Clearing"}
             />
           </div>
         ) : (
           <div data-testid="inline-canvas-empty" className="px-4 py-8 text-sm text-zinc-500 dark:text-zinc-400">
             {isCreating
-              ? "Creating canvas..."
+              ? "Creating Clearing..."
               : props.editor.isEditable
-              ? "Canvas is being prepared."
-              : "Canvas preview unavailable."}
+              ? "Clearing is being prepared."
+              : "Clearing preview unavailable."}
           </div>
         )}
       </div>

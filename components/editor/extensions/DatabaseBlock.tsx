@@ -9,6 +9,7 @@ import {
 } from "@tiptap/react";
 import { useRouter } from "next/navigation";
 import { DatabasePageCard } from "@/components/database/DatabasePageCard";
+import { useUIStore } from "@/store/useUIStore";
 import { Page, PropertyType, ViewType } from "@/types";
 
 interface DatabaseBlockExtensionOptions {
@@ -33,6 +34,7 @@ interface DatabaseNodeAttrs {
 
 function DatabaseBlockView(props: ReactNodeViewProps) {
   const router = useRouter();
+  const openGrovePageSideTab = useUIStore((state) => state.openGrovePageSideTab);
   const attrs = props.node.attrs as DatabaseNodeAttrs;
   const {
     databaseId,
@@ -125,7 +127,7 @@ function DatabaseBlockView(props: ReactNodeViewProps) {
         loadingTestId="inline-database-loading"
         readyTestId="inline-database-ready"
         emptyTestId="inline-database-empty"
-        onOpenRow={(rowId) => router.push(`/workspace/${workspaceId}?page=${rowId}`)}
+        onOpenRow={(rowId) => openGrovePageSideTab(rowId, workspaceId)}
         selection={
           props.editor.isEditable
             ? {

@@ -32,7 +32,7 @@ const typeIcons: Record<PageType, React.ReactNode> = {
 
 const typeLabels: Record<PageType, string> = {
   document: "Document",
-  canvas: "Canvas",
+  canvas: "Clearing",
   database: "Database",
 };
 
@@ -140,7 +140,7 @@ export function Sidebar({ workspaceId, currentPageId }: SidebarProps) {
   const handleCreatePage = async (type: PageType) => {
     const titles: Record<PageType, string> = {
       document: "New Page",
-      canvas: "New Canvas",
+      canvas: "New Clearing",
       database: "New Database",
     };
 
@@ -214,7 +214,7 @@ export function Sidebar({ workspaceId, currentPageId }: SidebarProps) {
 
           {showNewPageMenu && (
             <div className="absolute top-full left-0 right-0 z-[99999] mt-1 rounded border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-lg">
-              {(["document", "database"] as PageType[]).map((type) => (
+              {(["document", "canvas", "database"] as PageType[]).map((type) => (
                 <button
                   key={type}
                   onClick={() => handleCreatePage(type)}
