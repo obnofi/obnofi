@@ -20,10 +20,16 @@
   /* Text */
   --color-text-primary:     #37352F;
   --color-text-secondary:   #787774;
-  --color-text-placeholder: #C7C6C4;
+  --color-text-placeholder: #DDDCDA;
 
   /* UI */
   --color-tooltip-bg:       #1F1F1E;
+  --color-board-surface:    #FCFBF7;
+  --color-board-grid:       rgba(55, 53, 47, 0.07);
+  --color-board-card:       #FFFDF8;
+  --color-sticky-sun:       #FFF1A8;
+  --color-sticky-rose:      #FFD9E6;
+  --color-sticky-sky:       #DDF1FF;
 
   /* Typography */
   --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
@@ -53,8 +59,14 @@ html.dark {
   --color-border:           #373737;
   --color-text-primary:     #FFFCED;
   --color-text-secondary:   #7F7F7F;
-  --color-text-placeholder: #4A4A4A;
+  --color-text-placeholder: #3C3C3C;
   --color-tooltip-bg:       #111111;
+  --color-board-surface:    #1F201E;
+  --color-board-grid:       rgba(255, 252, 237, 0.07);
+  --color-board-card:       #262824;
+  --color-sticky-sun:       #7B6416;
+  --color-sticky-rose:      #6B3347;
+  --color-sticky-sky:       #274A63;
   color-scheme: dark;
 }
 
@@ -183,4 +195,131 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* Editor 내에서는 focus ring 제거 */
+.editor :focus-visible,
+.ProseMirror :focus-visible {
+  outline: none;
+}
+
+/* =========================================================
+   DATABASE CALENDAR — FullCalendar token bridge
+   ========================================================= */
+.grove-calendar {
+  --fc-page-bg-color: var(--color-background);
+  --fc-neutral-bg-color: var(--color-surface);
+  --fc-neutral-text-color: var(--color-text-secondary);
+  --fc-border-color: var(--color-border);
+  --fc-button-bg-color: transparent;
+  --fc-button-border-color: transparent;
+  --fc-button-text-color: var(--color-text-secondary);
+  --fc-button-hover-bg-color: var(--color-hover);
+  --fc-button-hover-border-color: transparent;
+  --fc-button-active-bg-color: var(--color-hover);
+  --fc-button-active-border-color: transparent;
+  --fc-today-bg-color: var(--color-accent-subtle);
+  --fc-event-bg-color: var(--color-accent-subtle);
+  --fc-event-border-color: transparent;
+  --fc-event-text-color: var(--color-accent);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+.grove-calendar .fc {
+  font-family: var(--font-sans);
+}
+
+.grove-calendar .fc-toolbar.fc-header-toolbar {
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.grove-calendar .fc-toolbar-title {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.grove-calendar .fc-button {
+  border-radius: 4px;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 6px 10px;
+  text-transform: none;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.grove-calendar .fc-button:focus,
+.grove-calendar .fc-button:active {
+  box-shadow: none !important;
+}
+
+.grove-calendar .fc-scrollgrid {
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.grove-calendar .fc-theme-standard td,
+.grove-calendar .fc-theme-standard th {
+  border-color: var(--color-border);
+}
+
+.grove-calendar .fc-col-header-cell {
+  background: var(--color-surface);
+  padding: 8px 0;
+}
+
+.grove-calendar .fc-col-header-cell-cushion {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.grove-calendar .fc-daygrid-day {
+  background: var(--color-background);
+  min-height: 96px;
+}
+
+.grove-calendar .fc-daygrid-day-frame {
+  padding: 6px;
+}
+
+.grove-calendar .fc-daygrid-day-number {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 0;
+  text-decoration: none;
+}
+
+.grove-calendar .fc-day-today .fc-daygrid-day-number {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.grove-calendar .fc-daygrid-event {
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.grove-calendar .fc-daygrid-event:hover {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
+.grove-calendar .fc-daygrid-day.fc-day-other {
+  background: var(--color-surface);
 }
