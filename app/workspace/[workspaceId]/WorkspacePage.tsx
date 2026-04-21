@@ -45,10 +45,11 @@ import {
   AtSign,
 } from "lucide-react";
 import { Editor } from "@/components/editor/Editor";
-import { Canvas } from "@/components/canvas/Canvas";
+import { ClearingBoard } from "@/components/canvas/ClearingBoard";
 import { DatabaseWorkspace } from "@/components/database/DatabaseWorkspace";
 import { SharePopover } from "@/components/share/SharePopover";
 import { DatabaseViewModal } from "@/components/database/DatabaseViewModal";
+import { GroveSideTab } from "@/components/workspace/GroveSideTab";
 import { usePageStore, PageTreeNode } from "@/store/pageStore";
 import { PageType } from "@/types";
 import { useUIStore } from "@/store/useUIStore";
@@ -183,7 +184,7 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
   const handleCreateChildPage = async (type: PageType) => {
     const titles: Record<PageType, string> = {
       document: "New Page",
-      canvas: "New Canvas",
+      canvas: "New Clearing",
       database: "New Database",
     };
 
@@ -206,7 +207,7 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
   const handleCreatePage = async (type: PageType) => {
     const titles: Record<PageType, string> = {
       document: "New Page",
-      canvas: "New Canvas",
+      canvas: "New Clearing",
       database: "New Database",
     };
 
@@ -892,6 +893,7 @@ greet('Notion');`}</code>
 
                 {/* Editor */}
                 <Editor
+                  key={pageId}
                   content={currentPage.content}
                   editable={true}
                   onUpdate={handleContentUpdate}
@@ -904,7 +906,13 @@ greet('Notion');`}</code>
           )}
 
           {currentPage.type === "canvas" && (
-            <Canvas content={currentPage.content} onUpdate={handleContentUpdate} />
+            <div className="h-full">
+              <ClearingBoard
+                embedded={true}
+                roomSlug={currentPage.id}
+                title={currentPage.title || "Jungle Clearing"}
+              />
+            </div>
           )}
 
           {currentPage.type === "database" && (
@@ -915,6 +923,7 @@ greet('Notion');`}</code>
 
       {/* Database View Modal - available on all pages */}
       <DatabaseViewModal />
+      <GroveSideTab workspaceId={workspaceId} />
     </div>
   );
 }
