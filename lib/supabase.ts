@@ -1,36 +1,101 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+let browserClient: SupabaseClient | null = null;
 
-// 클라이언트 컴포넌트용 (anon key)
-export const supabase = createClient(url, anon);
-
-// 서버 API 라우트용 (service role — 클라이언트에 절대 노출 금지)
-export const supabaseAdmin = createClient(url, serviceRole);
-
-// 파일 업로드 헬퍼
-export async function uploadFile(
-  bucket: string,
-  path: string,
-  file: File | Buffer,
-  contentType?: string
+function getEnvValue(
+  name:
+    | "NEXT_PUBLIC_SUPABASE_URL"
+    | "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    | "SUPABASE_SERVICE_ROLE_KEY"
 ) {
-  const { data, error } = await supabaseAdmin.storage
-    .from(bucket)
-    .upload(path, file, { contentType, upsert: true });
-
-  if (error) throw error;
-
-  const { data: urlData } = supabaseAdmin.storage
-    .from(bucket)
-    .getPublicUrl(data.path);
-
-  return urlData.publicUrl;
+  switch (name) {
+    case "NEXT_PUBLIC_SUPABASE_URL":
+      return process.env.NEXT_PUBLIC_SUPABASE_URL;
+    case "NEXT_PUBLIC_SUPABASE_ANON_KEY":
+      return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    case "SUPABASE_SERVICE_ROLE_KEY":
+      return process.env.SUPABASE_SERVICE_ROLE_KEY;
+    default:
+      return undefined;
+  }
 }
 
-export async function deleteFile(bucket: string, path: string) {
-  const { error } = await supabaseAdmin.storage.from(bucket).remove([path]);
-  if (error) throw error;
+function getRequiredEnv(
+  name:
+    | "NEXT_PUBLIC_SUPABASE_URL"
+    | "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    | "SUPABASE_SERVICE_ROLE_KEY"
+) {
+  const value = getEnvValue(name);
+  if (!value) {
+    throw new Error(`Missing required Supabase environment variable: ${name}`);
+  }
+  return value;
+}
+
+export function isSupabaseConfigured() {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+}
+
+export function createBrowserSupabaseClient() {
+  if (browserClient) {
+    return browserClient;
+  }
+
+  browserClient = createClient(
+    getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
+    getRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
+      },
+    }
+  );
+
+  return browserClient;
+}
+
+export function createServiceSupabaseClient() {
+  return createClient(
+    getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
+    getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY"),
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  );
+}
+
+export async function uploadClearingAsset(file: File, roomId: string) {
+  const supabase = createBrowserSupabaseClient();
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "png";
+  const path = `${roomId}/${crypto.randomUUID()}.${extension}`;
+  const { data, error } = await supabase.storage
+    .from("clearing-assets")
+    .upload(path, file, {
+      cacheControl: "3600",
+      contentType: file.type,
+      upsert: true,
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from("clearing-assets")
+    .getPublicUrl(data.path);
+
+  return publicUrlData.publicUrl;
 }
