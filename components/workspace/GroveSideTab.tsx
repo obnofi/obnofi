@@ -7,6 +7,7 @@ import { PropertyCell } from "@/components/database/PropertyCell";
 import { Editor } from "@/components/editor/Editor";
 import { patchGroveCell } from "@/lib/groveCatalogApi";
 import { useGroveCatalogStore } from "@/store/useGroveCatalogStore";
+import { usePageStore } from "@/store/pageStore";
 import { useUIStore } from "@/store/useUIStore";
 import type { Database, Page, Property, PropertyValue, PropertyValueData } from "@/types";
 
@@ -37,6 +38,7 @@ export function GroveSideTab({ workspaceId }: { workspaceId: string }) {
   const { groveSideTab, closeGroveSideTab, toggleGroveSideTabFullscreen } =
     useUIStore();
   const openGrovePageSideTab = useUIStore((state) => state.openGrovePageSideTab);
+  const updatePage = usePageStore((state) => state.updatePage);
   const patchGroveCellValue = useGroveCatalogStore(
     (state) => state.patchGroveCellValue
   );
@@ -111,15 +113,9 @@ export function GroveSideTab({ workspaceId }: { workspaceId: string }) {
     }
 
     setPage({ ...page, title });
-    const response = await fetch(`/api/pages/${page.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title }),
-    });
-
-    if (response.ok) {
-      setPage((await response.json()) as Page);
-    }
+    await updatePage(page.id, { title });
+    const latestPage = usePageStore.getState().pages.find((item) => item.id === page.id);
+    setPage(latestPage ?? { ...page, title });
   };
 
   const handlePageContentUpdate = async (nextContent: object) => {
@@ -219,13 +215,15 @@ export function GroveSideTab({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div
-      className="fixed inset-0 z-[100000] bg-black/10"
+      className={`fixed inset-0 z-[100000] ${isFullscreen ? "bg-black/40" : "bg-black/10"}`}
       onMouseDown={handleBackdropMouseDown}
     >
       <aside
         data-grove-side-tab-panel="true"
-        className={`absolute right-0 top-0 flex h-full flex-col border-l border-[var(--color-border)] bg-[var(--color-background)] shadow-2xl transition-all ${
-          isFullscreen ? "w-full" : "w-full max-w-[680px]"
+        className={`absolute right-0 top-0 flex h-full flex-col border-l border-[var(--color-border)] shadow-2xl transition-all ${
+          isFullscreen
+            ? "w-full !max-w-none bg-[var(--color-surface)]"
+            : "w-full max-w-[680px] bg-[var(--color-background)]"
         }`}
         onMouseDown={(event) => event.stopPropagation()}
       >

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
   addEdge,
   Background,
@@ -21,7 +22,6 @@ import { ArrowLeft, Loader2, Orbit, Plus, Trash2 } from "lucide-react";
 import { CustomNoteNode } from "@/components/graph/CustomNoteNode";
 import { CustomDatabaseNode } from "@/components/graph/CustomDatabaseNode";
 import { DatabaseViewModal } from "@/components/database/DatabaseViewModal";
-import { Sidebar } from "@/components/sidebar/Sidebar";
 import { buildGraphData, type GraphEdge, type GraphNode } from "@/lib/graph-utils";
 import { Page } from "@/types";
 
@@ -104,9 +104,9 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
           {
             ...connection,
             id: `${connection.source}-${connection.target}-${Date.now()}`,
-            type: "smoothstep",
-            animated: true,
-            style: { stroke: "#2E7D45", strokeWidth: 1.5 },
+            type: "default",
+            animated: false,
+            style: { stroke: "#2E7D45", strokeWidth: 1.15, opacity: 0.65 },
           },
           currentEdges
         );
@@ -127,119 +127,116 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
   }, [setEdges]);
 
   return (
-    <div data-testid="workspace-graph-page" className="flex h-screen bg-white dark:bg-[#111110]">
-      <Sidebar workspaceId={workspaceId} />
-
-      <div className="flex-1 overflow-hidden">
-        <header className="flex items-center justify-between border-b border-zinc-200 px-5 py-3 dark:border-zinc-800">
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/workspace/${workspaceId}`}
-              data-testid="graph-back-link"
-              className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to workspace
-            </Link>
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-[#2E7D45]/10 p-2 text-[#2E7D45]">
-                <Orbit className="h-4 w-4" />
-              </div>
-              <div>
-                <h1 className="text-sm font-semibold text-[#111110] dark:text-zinc-100">
-                  Graph View
-                </h1>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {pages.length} pages, {edges.length} links
-                </p>
-              </div>
+    <>
+      <header className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-3 bg-[var(--color-background)]">
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/workspace/${workspaceId}`}
+            data-testid="graph-back-link"
+            className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-[var(--color-accent-subtle)] p-2 text-[var(--color-accent)]">
+              <Orbit className="h-4 w-4" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                Graph View
+              </h1>
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                {nodes.length} pages, {edges.length} links
+              </p>
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <main className="h-[calc(100vh-61px)]">
-          {isLoading ? (
-            <div className="flex h-full items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-[#2E7D45]" />
-            </div>
-          ) : error ? (
-            <div className="flex h-full items-center justify-center px-6 text-sm text-red-500">
-              {error}
-            </div>
-          ) : pages.length === 0 ? (
-            <div className="flex h-full items-center justify-center px-6 text-center">
-              <div>
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-900">
-                  <Orbit className="h-6 w-6 text-zinc-400" />
-                </div>
-                <h2 className="text-lg font-semibold text-[#111110] dark:text-zinc-100">
-                  No pages yet
-                </h2>
-                <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                  Create a few notes with <code>[[Wiki Links]]</code> to see the graph.
-                </p>
+      <main className="flex-1 overflow-hidden">
+        {isLoading ? (
+          <div className="flex h-full items-center justify-center bg-[var(--color-background)]">
+            <Loader2 className="h-6 w-6 animate-spin text-[var(--color-accent)]" />
+          </div>
+        ) : error ? (
+          <div className="flex h-full items-center justify-center px-6 text-sm text-red-500 bg-[var(--color-background)]">
+            {error}
+          </div>
+        ) : nodes.length === 0 ? (
+          <div className="flex h-full items-center justify-center px-6 text-center bg-[var(--color-background)]">
+            <div>
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-surface)]">
+                <Orbit className="h-6 w-6 text-[var(--color-text-placeholder)]" />
               </div>
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                No pages yet
+              </h2>
+              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                Create a few notes with <code>[[Wiki Links]]</code> to see the graph.
+              </p>
             </div>
-          ) : (
-            <>
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                nodeTypes={nodeTypes}
-                fitView
-                fitViewOptions={{ padding: 0.2 }}
-                minZoom={0.2}
-                maxZoom={1.5}
-                nodesDraggable
-                nodesConnectable
-                elementsSelectable
-                deleteKeyCode={["Backspace", "Delete"]}
-                connectionLineType={ConnectionLineType.SmoothStep}
-                defaultEdgeOptions={{
-                  animated: false,
-                  style: { stroke: "#94a3b8", strokeWidth: 1.25 },
-                }}
-                className="bg-[radial-gradient(circle_at_top,_rgba(46,125,69,0.08),_transparent_35%),linear-gradient(180deg,rgba(248,250,252,1)_0%,rgba(255,255,255,1)_100%)] dark:bg-[radial-gradient(circle_at_top,_rgba(46,125,69,0.12),_transparent_35%),linear-gradient(180deg,rgba(20,20,20,1)_0%,rgba(17,17,16,1)_100%)]"
+          </div>
+        ) : (
+          <>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              nodeTypes={nodeTypes}
+              fitView
+              fitViewOptions={{ padding: 0.2 }}
+              minZoom={0.2}
+              maxZoom={1.5}
+              nodesDraggable
+              nodesConnectable
+              elementsSelectable
+              deleteKeyCode={["Backspace", "Delete"]}
+              connectionLineType={ConnectionLineType.SmoothStep}
+              defaultEdgeOptions={{
+                animated: false,
+                style: { stroke: "#9ca3af", strokeWidth: 1, opacity: 0.55 },
+              }}
+              className="bg-[var(--color-background)]"
+            >
+              <Panel
+                position="top-right"
+                className="m-3 flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]/90 p-2 shadow-sm backdrop-blur"
               >
-                <Panel
-                  position="top-right"
-                  className="m-3 flex items-center gap-2 rounded-xl border border-zinc-200 bg-white/90 p-2 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90"
+                <button
+                  type="button"
+                  onClick={handleAutoLayout}
+                  className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
                 >
-                  <button
-                    type="button"
-                    onClick={handleAutoLayout}
-                    className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Reset layout
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleClearManualEdges}
-                    className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Clear manual links
-                  </button>
-                </Panel>
-                <MiniMap
-                  pannable
-                  zoomable
-                  className="!bg-white dark:!bg-zinc-900"
-                  nodeColor={() => "#2E7D45"}
-                />
-                <Controls />
-                <Background gap={24} size={1} color="#d4d4d8" />
-              </ReactFlow>
-              <DatabaseViewModal />
-            </>
-          )}
-        </main>
-      </div>
-    </div>
+                  <Plus className="h-3.5 w-3.5" />
+                  Reset layout
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearManualEdges}
+                  className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Clear manual links
+                </button>
+              </Panel>
+              <MiniMap
+                pannable
+                zoomable
+                className="!bg-[var(--color-surface)]"
+                nodeColor={(node) =>
+                  node.type === "customDatabase" ? "#2E7D45" : "#64748b"
+                }
+              />
+              <Controls />
+              <Background gap={28} size={0.7} color="var(--color-border)" />
+            </ReactFlow>
+            <DatabaseViewModal />
+          </>
+        )}
+      </main>
+    </>
   );
 }
 
