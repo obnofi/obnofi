@@ -4,6 +4,7 @@ import fastifyCors from "@fastify/cors";
 import fastifyWebsocket from "@fastify/websocket";
 import { registerWsRoutes } from "./ws/index.js";
 import { startCrawlerScheduler } from "./jobs/scheduler.js";
+import { registerRoutes } from "./routes/index.js";
 
 async function main() {
   const server = Fastify({ logger: true });
@@ -14,6 +15,9 @@ async function main() {
   });
 
   await server.register(fastifyWebsocket);
+
+  // Register HTTP API routes
+  await registerRoutes(server);
 
   registerWsRoutes(server);
   startCrawlerScheduler();

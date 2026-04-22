@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
+import { SessionProvider } from "@/components/auth/SessionProvider";
 
 export const metadata: Metadata = {
   title: "Obnofi",
   description: "A Notion-like workspace with publishing",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -39,7 +43,9 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   );
 }
