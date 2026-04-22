@@ -53,6 +53,7 @@ import {
   BarChart2,
   Columns2,
   Columns3,
+  ClipboardList,
 } from "lucide-react";
 import type { SlashCommandItem } from "@/components/editor/extensions/SlashCommandExtension";
 import { CATEGORIES } from "@/components/editor/extensions/SlashCommandExtension";
@@ -108,6 +109,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   BarChart2,
   Columns2,
   Columns3,
+  ClipboardList,
 };
 
 function showToast(message: string) {
@@ -257,6 +259,24 @@ export function SlashCommandList({
         case "linkDatabase":
           chain.deleteRange(range).run();
           onLinkDatabase?.();
+          break;
+        case "template-meeting":
+          chain.run();
+          editor.commands.insertContent(
+            `<h1>회의록</h1><p><strong>일시:</strong> </p><p><strong>참석자:</strong> </p><h2>안건</h2><ul><li><p></p></li></ul><h2>메모</h2><p></p><h2>액션 아이템</h2><ul><li><p></p></li></ul>`
+          );
+          break;
+        case "template-project":
+          chain.run();
+          editor.commands.insertContent(
+            `<h1>프로젝트 브리프</h1><h2>개요</h2><p></p><h2>목표</h2><ul><li><p></p></li></ul><h2>범위</h2><p></p><h2>결과물</h2><ul><li><p></p></li></ul><h2>일정</h2><p></p>`
+          );
+          break;
+        case "template-weekly":
+          chain.run();
+          editor.commands.insertContent(
+            `<h1>주간 플래너</h1><h2>이번 주 목표</h2><ul><li><p></p></li></ul><h2>월</h2><p></p><h2>화</h2><p></p><h2>수</h2><p></p><h2>목</h2><p></p><h2>금</h2><p></p><h2>회고</h2><p></p>`
+          );
           break;
         default:
           chain.run();

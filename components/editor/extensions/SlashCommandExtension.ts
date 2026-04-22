@@ -437,8 +437,31 @@ export const slashCommands: SlashCommandItem[] = [
     description: "재사용 가능한 콘텐츠 블록",
     icon: "LayoutTemplate",
     category: "advanced",
-    isDisabled: true,
     keywords: ["template", "템플릿"],
+  },
+  {
+    id: "template-meeting",
+    title: "회의록",
+    description: "안건, 메모, 액션 아이템 양식",
+    icon: "ClipboardList",
+    category: "advanced",
+    keywords: ["template", "meeting", "회의", "회의록", "템플릿"],
+  },
+  {
+    id: "template-project",
+    title: "프로젝트 브리프",
+    description: "범위, 목표, 결과물 정의 양식",
+    icon: "FileText",
+    category: "advanced",
+    keywords: ["template", "project", "프로젝트", "브리프", "템플릿"],
+  },
+  {
+    id: "template-weekly",
+    title: "주간 플래너",
+    description: "이번 주 할일과 일정 양식",
+    icon: "CalendarDays",
+    category: "advanced",
+    keywords: ["template", "weekly", "주간", "플래너", "템플릿"],
   },
 
   // ── 임베드 ──────────────────────────────────────────────────
