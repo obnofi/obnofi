@@ -86,6 +86,36 @@ test("/button 입력시 버튼 블록이 삽입된다", async ({ page }) => {
   await expect(page.getByTestId("button-block-url").last()).toHaveValue("");
 });
 
+test(": 입력시 기본 이모지 탭에서 이모지를 삽입할 수 있다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  const editor = await focusEditorTail(page);
+  await page.keyboard.type(":seed");
+  await page.keyboard.press("Enter");
+
+  await expect(editor).toContainText("🌱");
+});
+
+test("이미지를 잘라 개인 이모지로 추가할 수 있다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  const editor = await focusEditorTail(page);
+  await page.keyboard.type(":");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "grove.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8Dwn4GBgYGJAQoAHxcCA8uBbrQAAAAASUVORK5CYII=",
+      "base64"
+    ),
+  });
+
+  await page.getByPlaceholder("my-emoji").fill("grove");
+  await page.getByRole("button", { name: "잘라서 추가" }).click();
+
+  await expect(editor.locator('img[data-obnofi-custom-emoji][title=":grove:"]').last()).toBeVisible();
+});
+
 test("그래프 뷰에서도 사이드바가 유지된다", async ({ page }) => {
   await gotoWorkspaceDocument(page);
 

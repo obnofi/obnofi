@@ -1,37 +1,28 @@
 import { ReactRenderer } from "@tiptap/react";
 import tippy from "tippy.js";
 import type { Instance as TippyInstance } from "tippy.js";
-import {
-  type SuggestionProps,
-  type SuggestionKeyDownProps,
+import type {
+  SuggestionKeyDownProps,
+  SuggestionProps,
 } from "@tiptap/suggestion";
-import { SlashCommandList } from "../SlashCommandList";
-import type { SlashCommandItem } from "./SlashCommandExtension";
+import { PersonalEmojiList } from "../PersonalEmojiList";
+import type { PersonalEmojiListHandle } from "../PersonalEmojiList";
 
-export function createSlashSuggestion(
-  workspaceId?: string,
-  pageId?: string,
-  onLinkDatabase?: () => void,
-  onInsertButton?: () => void,
-  onInsertPageLink?: () => void
-) {
+type EmojiQuery = string;
+
+export function createPersonalEmojiSuggestion() {
   return () => {
-    let component: ReactRenderer | null = null;
+    let component: ReactRenderer<PersonalEmojiListHandle> | null = null;
     let popup: TippyInstance | null = null;
 
     return {
-      onStart: (props: SuggestionProps<SlashCommandItem>) => {
-        component = new ReactRenderer(SlashCommandList, {
+      onStart: (props: SuggestionProps<EmojiQuery>) => {
+        component = new ReactRenderer(PersonalEmojiList, {
           props: {
-            items: props.items,
+            query: props.items[0] ?? "",
             command: props.command,
             editor: props.editor,
             range: props.range,
-            workspaceId,
-            pageId,
-            onLinkDatabase,
-            onInsertButton,
-            onInsertPageLink,
           },
           editor: props.editor,
         });
@@ -61,28 +52,17 @@ export function createSlashSuggestion(
         popup = Array.isArray(instances) ? instances[0] : instances;
       },
 
-      onUpdate: (props: SuggestionProps<SlashCommandItem>) => {
+      onUpdate: (props: SuggestionProps<EmojiQuery>) => {
         component?.updateProps({
-          items: props.items,
+          query: props.items[0] ?? "",
           command: props.command,
           editor: props.editor,
           range: props.range,
-          workspaceId,
-          pageId,
-          onLinkDatabase,
-          onInsertButton,
-          onInsertPageLink,
         });
 
         const clientRect = props.clientRect?.();
         if (clientRect && popup) {
           popup.setProps({ getReferenceClientRect: () => clientRect });
-        }
-
-        if (props.items.length === 0) {
-          popup?.hide();
-        } else {
-          popup?.show();
         }
       },
 
@@ -91,7 +71,7 @@ export function createSlashSuggestion(
           popup?.hide();
           return true;
         }
-        return false;
+        return component?.ref?.onKeyDown(props.event) ?? false;
       },
 
       onExit: () => {

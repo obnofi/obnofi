@@ -121,7 +121,12 @@ function CanvasBlockView(props: ReactNodeViewProps) {
             <Loader2 className="h-6 w-6 animate-spin text-[#2E7D45]" />
           </div>
         ) : canvasPage ? (
-          <div data-testid="inline-canvas-ready" className="h-[520px] min-h-[520px]">
+          <div
+            data-testid="inline-canvas-ready"
+            className="h-[520px] min-h-[520px]"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
             <ClearingBoard
               embedded={true}
               roomSlug={canvasPage.id}

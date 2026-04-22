@@ -57,6 +57,8 @@ import {
 } from "lucide-react";
 import type { SlashCommandItem } from "@/components/editor/extensions/SlashCommandExtension";
 import { CATEGORIES } from "@/components/editor/extensions/SlashCommandExtension";
+import { usePageStore } from "@/store/pageStore";
+import { useUIStore } from "@/store/useUIStore";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Type,
@@ -158,6 +160,7 @@ interface SlashCommandListProps {
   pageId?: string;
   onLinkDatabase?: () => void;
   onInsertButton?: () => void;
+  onInsertPageLink?: () => void;
 }
 
 type ItemWithIndex = SlashCommandItem & { globalIndex: number };
@@ -171,11 +174,16 @@ export function SlashCommandList({
   items,
   editor,
   range,
+  workspaceId,
+  pageId,
   onLinkDatabase,
   onInsertButton,
+  onInsertPageLink,
 }: SlashCommandListProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const { createPage } = usePageStore();
+  const openGrovePageSideTab = useUIStore((state) => state.openGrovePageSideTab);
 
   // Build groups with stable global indices in category display order
   const { groups, flatItems } = useMemo<{
@@ -255,15 +263,29 @@ export function SlashCommandList({
             .insertDbDiagram()
             .run();
           break;
+        case "columns2":
+          chain.insertColumnLayout({ columns: 2 }).run();
+          break;
+        case "columns3":
+          chain.insertColumnLayout({ columns: 3 }).run();
+          break;
+        case "math":
+          chain.insertMathBlock().run();
+          break;
         case "button":
-          chain.deleteRange(range).run();
+          chain.run();
           onInsertButton?.();
           return;
 
         case "linkDatabase":
-          chain.deleteRange(range).run();
+          chain.run();
           onLinkDatabase?.();
           break;
+        case "pageLink":
+        case "pageMention":
+          chain.run();
+          onInsertPageLink?.();
+          return;
         case "template-meeting":
           chain.run();
           editor.commands.insertContent(
@@ -282,11 +304,26 @@ export function SlashCommandList({
             `<h1>주간 플래너</h1><h2>이번 주 목표</h2><ul><li><p></p></li></ul><h2>월</h2><p></p><h2>화</h2><p></p><h2>수</h2><p></p><h2>목</h2><p></p><h2>금</h2><p></p><h2>회고</h2><p></p>`
           );
           break;
+        case "subPage":
+          chain.run();
+          (async () => {
+            if (!workspaceId || !pageId) return;
+            const newPage = await createPage({
+              title: "새 페이지",
+              type: "document",
+              parentId: pageId,
+              workspaceId,
+            });
+            if (newPage) {
+              openGrovePageSideTab(newPage.id, workspaceId);
+            }
+          })();
+          return;
         default:
           chain.run();
       }
     },
-    [editor, range]
+    [editor, range, workspaceId, pageId, createPage, openGrovePageSideTab]
   );
 
   // Reset selected index when item list changes

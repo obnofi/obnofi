@@ -8,7 +8,12 @@ import { DatabaseBlock } from "@/components/editor/extensions/DatabaseBlock";
 import { CanvasBlock } from "@/components/editor/extensions/CanvasBlock";
 import { ButtonBlock } from "@/components/editor/extensions/ButtonBlock";
 import { CodeBlock } from "@/components/editor/extensions/CodeBlock";
+import {
+  ColumnLayoutBlock,
+  GroveColumn,
+} from "@/components/editor/extensions/ColumnLayoutBlock";
 import { LinkedDatabaseBlock } from "@/components/editor/extensions/LinkedDatabaseBlock";
+import { MathBlock } from "@/components/editor/extensions/MathBlock";
 import { SlashCommandExtension } from "@/components/editor/extensions/SlashCommandExtension";
 import {
   CustomEmojiNode,
@@ -16,6 +21,8 @@ import {
 } from "@/components/editor/extensions/PersonalEmojiExtension";
 import { LinkDatabaseModal } from "@/components/editor/extensions/LinkDatabaseModal";
 import { ButtonInsertModal } from "@/components/editor/extensions/ButtonInsertModal";
+import { PageLinkModal } from "@/components/editor/extensions/PageLinkModal";
+import { PageLinkExtension } from "@/components/editor/extensions/PageLinkExtension";
 import { DbDiagramExtension } from "@/src/components/editor/extensions/DbDiagramExtension";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 
@@ -38,6 +45,7 @@ export function Editor({
 }: EditorProps) {
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [isButtonModalOpen, setIsButtonModalOpen] = useState(false);
+  const [isPageLinkModalOpen, setIsPageLinkModalOpen] = useState(false);
   const editorRef = useRef<TiptapEditor | null>(null);
 
   const handleDatabaseSelect = useCallback(
@@ -69,9 +77,24 @@ export function Editor({
     setIsButtonModalOpen(true);
   }, []);
 
+  const handleOpenPageLinkModal = useCallback(() => {
+    setIsPageLinkModalOpen(true);
+  }, []);
+
   const handleButtonInsert = useCallback((label: string, url: string) => {
     editorRef.current?.commands.insertButtonBlock({ label, url });
   }, []);
+
+  const handlePageLinkInsert = useCallback(
+    (selectedPageId: string, selectedPageTitle: string) => {
+      editorRef.current?.commands.insertPageLink({
+        pageId: selectedPageId,
+        pageTitle: selectedPageTitle,
+        workspaceId: workspaceId ?? "",
+      });
+    },
+    [workspaceId]
+  );
 
   const editor = useEditor({
     extensions: [
@@ -89,18 +112,26 @@ export function Editor({
       }),
       ButtonBlock,
       CodeBlock,
+      GroveColumn,
+      ColumnLayoutBlock,
+      MathBlock,
       LinkedDatabaseBlock.configure({
         workspaceId,
         pageId,
       }),
       CustomEmojiNode,
       PersonalEmojiExtension,
-      DbDiagramExtension,
+      DbDiagramExtension.configure({
+        workspaceId,
+        pageId,
+      }),
+      PageLinkExtension,
       SlashCommandExtension.configure({
         workspaceId,
         pageId,
         onLinkDatabase: handleOpenLinkModal,
         onInsertButton: handleOpenButtonModal,
+        onInsertPageLink: handleOpenPageLinkModal,
       }),
     ],
     content: content || {
@@ -152,6 +183,12 @@ export function Editor({
         isOpen={isButtonModalOpen}
         onClose={() => setIsButtonModalOpen(false)}
         onConfirm={handleButtonInsert}
+      />
+      <PageLinkModal
+        isOpen={isPageLinkModalOpen}
+        onClose={() => setIsPageLinkModalOpen(false)}
+        onSelect={handlePageLinkInsert}
+        workspaceId={workspaceId ?? ""}
       />
     </>
   );

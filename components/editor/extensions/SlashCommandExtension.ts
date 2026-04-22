@@ -27,6 +27,7 @@ export const CATEGORIES: SlashCommandCategory[] = [
   { id: "canvas", label: "캔버스 / 그래프" },
   { id: "developer", label: "개발자 특화" },
   { id: "advanced", label: "고급 블록" },
+  { id: "page", label: "페이지" },
   { id: "embed", label: "임베드" },
   { id: "inline", label: "인라인" },
 ];
@@ -393,7 +394,6 @@ export const slashCommands: SlashCommandItem[] = [
     description: "2열 나란히 레이아웃",
     icon: "Columns2",
     category: "advanced",
-    isDisabled: true,
     keywords: ["column", "layout", "2열"],
   },
   {
@@ -402,7 +402,6 @@ export const slashCommands: SlashCommandItem[] = [
     description: "3열 나란히 레이아웃",
     icon: "Columns3",
     category: "advanced",
-    isDisabled: true,
     keywords: ["column", "layout", "3열"],
   },
   {
@@ -411,7 +410,6 @@ export const slashCommands: SlashCommandItem[] = [
     description: "LaTeX 수식 블록 렌더링",
     icon: "Sigma",
     category: "advanced",
-    isDisabled: true,
     keywords: ["math", "latex", "formula", "수식"],
   },
   {
@@ -428,7 +426,6 @@ export const slashCommands: SlashCommandItem[] = [
     description: "다른 페이지로 링크",
     icon: "Link",
     category: "advanced",
-    isDisabled: true,
     keywords: ["page", "link", "페이지", "링크"],
   },
   {
@@ -462,6 +459,16 @@ export const slashCommands: SlashCommandItem[] = [
     icon: "CalendarDays",
     category: "advanced",
     keywords: ["template", "weekly", "주간", "플래너", "템플릿"],
+  },
+
+  // ── 페이지 ──────────────────────────────────────────────────
+  {
+    id: "subPage",
+    title: "하위 페이지",
+    description: "현재 페이지 안에 새 페이지 만들기",
+    icon: "FileText",
+    category: "page",
+    keywords: ["page", "subpage", "하위", "페이지", "서브"],
   },
 
   // ── 임베드 ──────────────────────────────────────────────────
@@ -509,7 +516,6 @@ export const slashCommands: SlashCommandItem[] = [
     description: "[[페이지명]]으로 페이지 링크",
     icon: "FileText",
     category: "inline",
-    isDisabled: true,
     keywords: ["page", "mention", "link", "페이지"],
   },
   {
@@ -560,11 +566,12 @@ export const SlashCommandExtension = Extension.create({
       pageId: undefined as string | undefined,
       onLinkDatabase: undefined as (() => void) | undefined,
       onInsertButton: undefined as (() => void) | undefined,
+      onInsertPageLink: undefined as (() => void) | undefined,
     };
   },
 
   addProseMirrorPlugins() {
-    const { workspaceId, pageId, onLinkDatabase, onInsertButton } = this.options;
+    const { workspaceId, pageId, onLinkDatabase, onInsertButton, onInsertPageLink } = this.options;
     return [
       Suggestion({
         editor: this.editor,
@@ -572,7 +579,7 @@ export const SlashCommandExtension = Extension.create({
         allowSpaces: false,
         startOfLine: false,
         items: ({ query }) => getSlashCommandItems(query),
-        render: createSlashSuggestion(workspaceId, pageId, onLinkDatabase, onInsertButton),
+        render: createSlashSuggestion(workspaceId, pageId, onLinkDatabase, onInsertButton, onInsertPageLink),
       }),
     ];
   },
