@@ -70,7 +70,7 @@ function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
     "Done": "bg-emerald-100 text-emerald-700",
     "In Progress": "bg-blue-100 text-blue-700",
-    "To Do": "bg-gray-100 text-gray-700",
+    "To Do": "bg-[var(--color-surface)] text-[var(--color-text-secondary)]",
   };
   return (
     <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[status] || colors["To Do"]}`}>
@@ -91,7 +91,7 @@ function TagBadge({ tag }: { tag: string }) {
     "Product": "bg-pink-100 text-pink-700",
   };
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[tag] || "bg-gray-100 text-gray-700"}`}>
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[tag] || "bg-[var(--color-surface)] text-[var(--color-text-secondary)]"}`}>
       {tag}
     </span>
   );
@@ -280,17 +280,17 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-white">
-        <aside className="w-60 border-r border-gray-200 bg-[#fbfbfa] flex flex-col h-full">
+      <div className="flex h-screen bg-[var(--color-background)]">
+        <aside className="w-60 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full">
           <div className="flex items-center gap-2 px-3 py-3">
             <div className="w-[22px] h-[22px] bg-[#2e7d45] rounded flex items-center justify-center shrink-0">
               <span className="text-white text-[12px] font-semibold">W</span>
             </div>
-            <span className="flex-1 text-[14px] font-medium text-[#1a1a1a] truncate">Workspace</span>
+            <span className="flex-1 text-[14px] font-medium text-[var(--color-text-primary)] truncate">Workspace</span>
           </div>
         </aside>
         <div className="flex-1 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-gray-300 border-t-[#2E7D45] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[var(--color-border)] border-t-[var(--color-accent)] rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -298,55 +298,55 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
 
   if (!currentPage) {
     return (
-      <div className="flex h-screen bg-white">
-        <aside className="w-60 border-r border-gray-200 bg-[#fbfbfa] flex flex-col h-full">
+      <div className="flex h-screen bg-[var(--color-background)]">
+        <aside className="w-60 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full">
           <div className="flex items-center gap-2 px-3 py-3">
             <div className="w-[22px] h-[22px] bg-[#2e7d45] rounded flex items-center justify-center shrink-0">
               <span className="text-white text-[12px] font-semibold">W</span>
             </div>
-            <span className="flex-1 text-[14px] font-medium text-[#1a1a1a] truncate">Workspace</span>
+            <span className="flex-1 text-[14px] font-medium text-[var(--color-text-primary)] truncate">Workspace</span>
           </div>
         </aside>
-        <div className="flex-1 flex items-center justify-center text-gray-500">Page not found</div>
+        <div className="flex-1 flex items-center justify-center text-[var(--color-text-secondary)]">Page not found</div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-[var(--color-background)]">
       {/* Sidebar - Demo Style */}
-      <aside className="w-60 border-r border-gray-200 bg-[#fbfbfa] flex flex-col h-full overflow-hidden">
+      <aside className="w-60 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full overflow-hidden">
         {/* Workspace Switcher */}
         <div className="flex items-center gap-2 px-3 py-3">
           <div className="w-[22px] h-[22px] bg-[#2e7d45] rounded flex items-center justify-center shrink-0">
             <span className="text-white text-[12px] font-semibold">W</span>
           </div>
-          <span className="flex-1 text-[14px] font-medium text-[#1a1a1a] truncate">Workspace</span>
-          <ChevronDown className="w-4 h-4 text-gray-500" />
+          <span className="flex-1 text-[14px] font-medium text-[var(--color-text-primary)] truncate">Workspace</span>
+          <ChevronDown className="w-4 h-4 text-[var(--color-text-secondary)]" />
         </div>
 
         {/* Quick Actions */}
         <div className="px-2 flex flex-col gap-0.5">
-          <button className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-200/70 text-gray-600 text-[13px]">
+          <button className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px]">
             <Search className="w-4 h-4" />Search
           </button>
-          <button className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-200/70 text-gray-600 text-[13px]">
+          <button className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px]">
             <Settings className="w-4 h-4" />Settings
           </button>
           <div className="relative">
-            <button 
+            <button
               onClick={() => setShowNewPageMenu(!showNewPageMenu)}
-              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-200/70 text-gray-600 text-[13px] w-full text-left"
+              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px] w-full text-left"
             >
               <Plus className="w-4 h-4" />New page
             </button>
             {showNewPageMenu && (
-              <div className="absolute top-full left-0 right-0 z-[99999] mt-1 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+              <div className="absolute top-full left-0 right-0 z-[99999] mt-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] py-1 shadow-lg">
                 {(["document", "database"] as PageType[]).map((type) => (
                   <button
                     key={type}
                     onClick={() => handleCreatePage(type)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-100 transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)] transition-colors"
                   >
                     {typeIcons[type]}
                     <span className="capitalize">{type}</span>
@@ -355,7 +355,7 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
               </div>
             )}
           </div>
-          <Link href={`/workspace/${workspaceId}/graph`} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-200/70 text-gray-600 text-[13px]">
+          <Link href={`/workspace/${workspaceId}/graph`} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px]">
             <Orbit className="w-4 h-4" />Graph View
           </Link>
         </div>
@@ -363,14 +363,14 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
         {/* Favorites */}
         {favoritePages.length > 0 && (
           <div className="px-2 mt-4">
-            <div className="px-2 py-1 text-[11px] font-medium text-gray-400 uppercase tracking-wide">Favorites</div>
+            <div className="px-2 py-1 text-[11px] font-medium text-[var(--color-text-placeholder)] uppercase tracking-wide">Favorites</div>
             <div className="flex flex-col gap-0.5">
               {favoritePages.map((page) => (
                 <button
                   key={page.id}
                   onClick={() => handleSelectPage(page.id)}
                   className={`flex items-center gap-2 px-2 py-1.5 rounded text-[13px] ${
-                    page.id === pageId ? "bg-gray-200/70 text-gray-900" : "hover:bg-gray-200/70 text-gray-600"
+                    page.id === pageId ? "bg-[var(--color-selected)] text-[var(--color-text-primary)]" : "hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)]"
                   }`}
                 >
                   {typeIcons[page.type]}
@@ -384,9 +384,9 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
         {/* Private - Page Tree */}
         <div className="px-2 mt-4 flex-1 overflow-y-auto">
           <div className="flex items-center justify-between px-2 py-1">
-            <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Private</span>
-            <button onClick={() => setShowNewPageMenu(!showNewPageMenu)} className="p-0.5 rounded hover:bg-gray-200/70">
-              <Plus className="w-3.5 h-3.5 text-gray-400" />
+            <span className="text-[11px] font-medium text-[var(--color-text-placeholder)] uppercase tracking-wide">Private</span>
+            <button onClick={() => setShowNewPageMenu(!showNewPageMenu)} className="p-0.5 rounded hover:bg-[var(--color-hover)]">
+              <Plus className="w-3.5 h-3.5 text-[var(--color-text-placeholder)]" />
             </button>
           </div>
           <div className="flex flex-col gap-0.5">
@@ -407,15 +407,15 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
 
         {/* Recent */}
         {recentPages.length > 0 && (
-          <div className="border-t border-gray-200 px-2 py-2 shrink-0">
-            <div className="px-2 py-1 text-[11px] font-medium text-gray-400 uppercase tracking-wide">Recent</div>
+          <div className="border-t border-[var(--color-border)] px-2 py-2 shrink-0">
+            <div className="px-2 py-1 text-[11px] font-medium text-[var(--color-text-placeholder)] uppercase tracking-wide">Recent</div>
             <div className="flex flex-col gap-0.5">
               {recentPages.map((page) => (
                 <button
                   key={page.id}
                   onClick={() => handleSelectPage(page.id)}
                   className={`flex items-center gap-2 px-2 py-1.5 rounded text-[13px] ${
-                    page.id === pageId ? "bg-gray-200/70 text-gray-900" : "hover:bg-gray-200/70 text-gray-600"
+                    page.id === pageId ? "bg-[var(--color-selected)] text-[var(--color-text-primary)]" : "hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)]"
                   }`}
                 >
                   <Clock className="w-3.5 h-3.5" />
@@ -430,15 +430,15 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Top Bar - Demo Style */}
-        <header className="h-12 border-b border-gray-200 flex items-center justify-between px-4 shrink-0">
+        <header className="h-12 border-b border-[var(--color-border)] flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-gray-500">{typeIcons[currentPage.type]}</span>
-            <span className="text-[14px] text-gray-700 truncate max-w-xs">{currentPage.title || "Untitled"}</span>
+            <span className="text-[var(--color-text-secondary)]">{typeIcons[currentPage.type]}</span>
+            <span className="text-[14px] text-[var(--color-text-primary)] truncate max-w-xs">{currentPage.title || "Untitled"}</span>
           </div>
           <div className="flex items-center gap-2">
             <SharePopover pageId={pageId} isPublic={currentPage.isPublic} shareId={currentPage.shareId} onShareUpdateAction="share-update" />
-            <button className="p-2 hover:bg-gray-100 rounded"><Settings className="w-4 h-4 text-gray-600" /></button>
-            <button className="p-2 hover:bg-gray-100 rounded"><Sparkles className="w-4 h-4 text-gray-600" /></button>
+            <button className="p-2 hover:bg-[var(--color-hover)] rounded"><Settings className="w-4 h-4 text-[var(--color-text-secondary)]" /></button>
+            <button className="p-2 hover:bg-[var(--color-hover)] rounded"><Sparkles className="w-4 h-4 text-[var(--color-text-secondary)]" /></button>
           </div>
         </header>
 
@@ -454,12 +454,12 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
                   value={title}
                   onChange={(e) => handleTitleChange(e.target.value)}
                   placeholder="Untitled"
-                  className="mb-6 w-full border-none bg-transparent text-[40px] font-bold text-[#111110] outline-none placeholder:text-gray-300 dark:text-zinc-100 dark:placeholder:text-zinc-600"
+                  className="mb-6 w-full border-none bg-transparent text-[40px] font-bold text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-placeholder)]"
                 />
 
                 {/* Mobile Add Buttons */}
-                <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 p-3 sm:hidden">
-                  <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-gray-500">
+                <div className="mb-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 sm:hidden">
+                  <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
                     <Plus className="h-3.5 w-3.5" />Add to doc
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -473,15 +473,15 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
                           type="button"
                           onClick={() => void handleCreateChildPage(action.type)}
                           disabled={pendingChildType !== null}
-                          className="flex min-h-24 flex-col items-start justify-between rounded-xl border border-gray-200 bg-white p-3 text-left transition hover:border-[#2E7D45] hover:bg-[#F4FBF6] disabled:cursor-wait disabled:opacity-60"
+                          className="flex min-h-24 flex-col items-start justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-left transition hover:border-[#2E7D45] hover:bg-[var(--color-accent-subtle)] disabled:cursor-wait disabled:opacity-60"
                         >
                           <div className="flex w-full items-center justify-between text-[#2E7D45]">
                             <span className="rounded-lg bg-[#E8F3EC] p-2">{action.icon}</span>
                             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                           </div>
                           <div>
-                            <div className="text-sm font-semibold text-gray-900">{action.label}</div>
-                            <div className="mt-1 text-xs text-gray-500">{action.description}</div>
+                            <div className="text-sm font-semibold text-[var(--color-text-primary)]">{action.label}</div>
+                            <div className="mt-1 text-xs text-[var(--color-text-secondary)]">{action.description}</div>
                           </div>
                         </button>
                       );
@@ -491,8 +491,8 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
 
                 {/* Section 1: Welcome */}
                 <section className="mb-12">
-                  <h1 className="text-[40px] font-bold text-gray-900 mb-4">Welcome to Notion</h1>
-                  <p className="text-[16px] text-gray-600 mb-6 leading-relaxed">
+                  <h1 className="text-[40px] font-bold text-[var(--color-text-primary)] mb-4">Welcome to Notion</h1>
+                  <p className="text-[16px] text-[var(--color-text-secondary)] mb-6 leading-relaxed">
                     This is a demo page showcasing various Notion features. Explore the sections below to see databases, collaboration tools, and page customization options in action.
                   </p>
                   <div className="space-y-2 mb-6">
@@ -500,19 +500,19 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
                       <div className="w-[18px] h-[18px] rounded border border-emerald-500 bg-emerald-500 flex items-center justify-center mt-0.5">
                         <Check className="w-3 h-3 text-white" />
                       </div>
-                      <span className="text-[15px] text-gray-700">Create your first page</span>
+                      <span className="text-[15px] text-[var(--color-text-primary)]">Create your first page</span>
                     </div>
                     <div className="flex items-start gap-3">
                       <div className="w-[18px] h-[18px] rounded border border-emerald-500 bg-emerald-500 flex items-center justify-center mt-0.5">
                         <Check className="w-3 h-3 text-white" />
                       </div>
-                      <span className="text-[15px] text-gray-700">Invite your team members</span>
+                      <span className="text-[15px] text-[var(--color-text-primary)]">Invite your team members</span>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4 dark:bg-amber-950/30 dark:border-amber-800/50">
                     <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                    <p className="text-[15px] text-gray-700">
-                      Tip: Use the <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm">/</code> command to quickly add different block types like headings, lists, toggles, and more.
+                    <p className="text-[15px] text-[var(--color-text-primary)]">
+                      Tip: Use the <code className="bg-[var(--color-surface)] px-1.5 py-0.5 rounded text-sm">/</code> command to quickly add different block types like headings, lists, toggles, and more.
                     </p>
                   </div>
                 </section>
@@ -520,10 +520,10 @@ export function WorkspacePage({ workspaceId, pageId }: WorkspacePageProps) {
                 {/* Section 2: Toggle */}
                 <section className="mb-8">
                   <button onClick={() => setIsCodeExpanded(!isCodeExpanded)} className="flex items-center gap-2 group">
-                    <ChevronRight className={`w-[18px] h-[18px] text-gray-500 transition-transform ${isCodeExpanded ? "rotate-90" : ""}`} />
-                    <span className="text-[18px] font-semibold text-gray-900">Click to expand</span>
+                    <ChevronRight className={`w-[18px] h-[18px] text-[var(--color-text-secondary)] transition-transform ${isCodeExpanded ? "rotate-90" : ""}`} />
+                    <span className="text-[18px] font-semibold text-[var(--color-text-primary)]">Click to expand</span>
                   </button>
-                  <p className="text-[14px] text-gray-500 ml-6 mt-1">Hidden content revealed</p>
+                  <p className="text-[14px] text-[var(--color-text-secondary)] ml-6 mt-1">Hidden content revealed</p>
                   {isCodeExpanded && (
                     <div className="ml-6 mt-4">
                       <div className="bg-gray-900 rounded-lg overflow-hidden">
@@ -545,12 +545,12 @@ greet('Notion');`}</code>
 
                 {/* Section 3: Database */}
                 <section className="mb-12">
-                  <h2 className="text-[24px] font-semibold text-gray-900 mb-4">Database Example</h2>
-                  <p className="text-[16px] text-gray-600 mb-6">
+                  <h2 className="text-[24px] font-semibold text-[var(--color-text-primary)] mb-4">Database Example</h2>
+                  <p className="text-[16px] text-[var(--color-text-secondary)] mb-6">
                     Notion databases are powerful tools for organizing information. Below is the same data shown in different views.
                   </p>
                   {/* Tabs */}
-                  <div className="flex items-center gap-1 border-b border-gray-200 mb-4">
+                  <div className="flex items-center gap-1 border-b border-[var(--color-border)] mb-4">
                     {[
                       { id: "table", icon: Table, label: "Table" },
                       { id: "board", icon: LayoutGrid, label: "Board" },
@@ -563,34 +563,34 @@ greet('Notion');`}</code>
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium rounded-t transition-colors ${
-                          activeTab === tab.id ? "text-gray-900 border-b-2 border-gray-900" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          activeTab === tab.id ? "text-[var(--color-text-primary)] border-b-2 border-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]"
                         }`}
                       >
                         <tab.icon className="w-4 h-4" />
                         {tab.label}
                       </button>
                     ))}
-                    <span className="ml-4 text-[13px] text-gray-400">Same data, different views</span>
+                    <span className="ml-4 text-[13px] text-[var(--color-text-placeholder)]">Same data, different views</span>
                   </div>
 
                   {/* Table View */}
                   {activeTab === "table" && (
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
                       <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-200">
+                        <thead className="bg-[var(--color-surface)] border-b border-[var(--color-border)]">
                           <tr>
-                            <th className="text-left px-3 py-2 text-[13px] font-medium text-gray-600">Name</th>
-                            <th className="text-left px-3 py-2 text-[13px] font-medium text-gray-600 w-32">Status</th>
-                            <th className="text-left px-3 py-2 text-[13px] font-medium text-gray-600 w-36">Date</th>
-                            <th className="text-left px-3 py-2 text-[13px] font-medium text-gray-600">Tags</th>
+                            <th className="text-left px-3 py-2 text-[13px] font-medium text-[var(--color-text-secondary)]">Name</th>
+                            <th className="text-left px-3 py-2 text-[13px] font-medium text-[var(--color-text-secondary)] w-32">Status</th>
+                            <th className="text-left px-3 py-2 text-[13px] font-medium text-[var(--color-text-secondary)] w-36">Date</th>
+                            <th className="text-left px-3 py-2 text-[13px] font-medium text-[var(--color-text-secondary)]">Tags</th>
                           </tr>
                         </thead>
                         <tbody>
                           {tasks.map((task) => (
-                            <tr key={task.id} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="px-3 py-2 text-[14px] text-gray-900">{task.name}</td>
+                            <tr key={task.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-hover)]">
+                              <td className="px-3 py-2 text-[14px] text-[var(--color-text-primary)]">{task.name}</td>
                               <td className="px-3 py-2"><StatusBadge status={task.status} /></td>
-                              <td className="px-3 py-2 text-[14px] text-gray-600">{task.date}</td>
+                              <td className="px-3 py-2 text-[14px] text-[var(--color-text-secondary)]">{task.date}</td>
                               <td className="px-3 py-2">
                                 <div className="flex gap-1">
                                   {task.tags.map((tag) => <TagBadge key={tag} tag={tag} />)}
@@ -609,14 +609,14 @@ greet('Notion');`}</code>
                       {Object.entries(boardColumns).map(([key, column]) => (
                         <div key={key} className="w-[280px] shrink-0">
                           <div className="flex items-center gap-2 mb-3">
-                            <div className={`w-2 h-2 rounded-full ${key === "todo" ? "bg-gray-400" : key === "doing" ? "bg-blue-400" : "bg-emerald-400"}`} />
-                            <span className="text-[13px] font-medium text-gray-700">{column.name}</span>
-                            <span className="text-[12px] text-gray-400">{column.count}</span>
+                            <div className={`w-2 h-2 rounded-full ${key === "todo" ? "bg-[var(--color-text-placeholder)]" : key === "doing" ? "bg-blue-400" : "bg-emerald-400"}`} />
+                            <span className="text-[13px] font-medium text-[var(--color-text-primary)]">{column.name}</span>
+                            <span className="text-[12px] text-[var(--color-text-placeholder)]">{column.count}</span>
                           </div>
                           <div className="space-y-2">
                             {column.cards.map((card) => (
-                              <div key={card.id} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-                                <p className="text-[14px] text-gray-900 mb-2">{card.name}</p>
+                              <div key={card.id} className="bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
+                                <p className="text-[14px] text-[var(--color-text-primary)] mb-2">{card.name}</p>
                                 {card.tag ? <TagBadge tag={card.tag} /> : null}
                               </div>
                             ))}
@@ -628,10 +628,10 @@ greet('Notion');`}</code>
 
                   {/* Calendar View */}
                   {activeTab === "calendar" && (
-                    <div className="border border-gray-200 rounded-lg p-4">
+                    <div className="border border-[var(--color-border)] rounded-lg p-4">
                       <div className="grid grid-cols-7 gap-2 mb-2">
                         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                          <div key={day} className="text-center text-[12px] font-medium text-gray-500 py-2">{day}</div>
+                          <div key={day} className="text-center text-[12px] font-medium text-[var(--color-text-secondary)] py-2">{day}</div>
                         ))}
                       </div>
                       <div className="grid grid-cols-7 gap-2">
@@ -639,12 +639,12 @@ greet('Notion');`}</code>
                           const day = i - 2;
                           const hasEvent = day === 15 || day === 19;
                           return (
-                            <div key={i} className="aspect-square border border-gray-100 rounded p-1">
+                            <div key={i} className="aspect-square border border-[var(--color-border)] rounded p-1">
                               {day > 0 && day <= 30 && (
                                 <>
-                                  <span className="text-[12px] text-gray-600">{day}</span>
+                                  <span className="text-[12px] text-[var(--color-text-secondary)]">{day}</span>
                                   {hasEvent && (
-                                    <div className="mt-1 px-1.5 py-0.5 bg-blue-100 rounded text-[10px] text-blue-700 truncate">
+                                    <div className="mt-1 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 rounded text-[10px] text-blue-700 dark:text-blue-300 truncate">
                                       {day === 15 ? "Team Sync" : "Review"}
                                     </div>
                                   )}
@@ -661,14 +661,14 @@ greet('Notion');`}</code>
                   {activeTab === "gallery" && (
                     <div className="grid grid-cols-3 gap-4">
                       {[
-                        { name: "Homepage Redesign", tag: "Design", color: "bg-purple-100" },
-                        { name: "API Documentation", tag: "Engineering", color: "bg-blue-100" },
-                        { name: "User Research", tag: "Research", color: "bg-green-100" },
+                        { name: "Homepage Redesign", tag: "Design", color: "bg-purple-100 dark:bg-purple-900/40" },
+                        { name: "API Documentation", tag: "Engineering", color: "bg-blue-100 dark:bg-blue-900/40" },
+                        { name: "User Research", tag: "Research", color: "bg-green-100 dark:bg-green-900/40" },
                       ].map((item, i) => (
-                        <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div key={i} className="border border-[var(--color-border)] rounded-lg overflow-hidden">
                           <div className={`h-24 ${item.color}`} />
                           <div className="p-3">
-                            <p className="text-[14px] font-medium text-gray-900 mb-2">{item.name}</p>
+                            <p className="text-[14px] font-medium text-[var(--color-text-primary)] mb-2">{item.name}</p>
                             <TagBadge tag={item.tag} />
                           </div>
                         </div>
@@ -678,11 +678,11 @@ greet('Notion');`}</code>
 
                   {/* List View */}
                   {activeTab === "list" && (
-                    <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
+                    <div className="border border-[var(--color-border)] rounded-lg divide-y divide-[var(--color-border)]">
                       {tasks.map((task) => (
-                        <div key={task.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-                          <FileText className="w-4 h-4 text-gray-400" />
-                          <span className="flex-1 text-[14px] text-gray-900">{task.name}</span>
+                        <div key={task.id} className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-hover)]">
+                          <FileText className="w-4 h-4 text-[var(--color-text-placeholder)]" />
+                          <span className="flex-1 text-[14px] text-[var(--color-text-primary)]">{task.name}</span>
                           <StatusBadge status={task.status} />
                         </div>
                       ))}
@@ -691,10 +691,10 @@ greet('Notion');`}</code>
 
                   {/* Timeline View */}
                   {activeTab === "timeline" && (
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex border-b border-gray-200 mb-4">
+                    <div className="border border-[var(--color-border)] rounded-lg p-4">
+                      <div className="flex border-b border-[var(--color-border)] mb-4">
                         {["Week 1", "Week 2", "Week 3", "Week 4"].map((w) => (
-                          <div key={w} className="flex-1 text-center text-[12px] font-medium text-gray-500 py-2">{w}</div>
+                          <div key={w} className="flex-1 text-center text-[12px] font-medium text-[var(--color-text-secondary)] py-2">{w}</div>
                         ))}
                       </div>
                       {[
@@ -705,8 +705,8 @@ greet('Notion');`}</code>
                         { name: "Onboarding", width: "15%", offset: "0%" },
                       ].map((item) => (
                         <div key={item.name} className="flex items-center gap-2 mb-3">
-                          <span className="w-24 text-[13px] text-gray-600 truncate">{item.name}</span>
-                          <div className="flex-1 h-6 bg-gray-100 rounded relative">
+                          <span className="w-24 text-[13px] text-[var(--color-text-secondary)] truncate">{item.name}</span>
+                          <div className="flex-1 h-6 bg-[var(--color-surface)] rounded relative">
                             <div className="absolute h-full bg-blue-400 rounded opacity-70" style={{ width: item.width, left: item.offset }} />
                           </div>
                         </div>
@@ -717,15 +717,15 @@ greet('Notion');`}</code>
 
                 {/* Section 4: Properties */}
                 <section className="mb-12">
-                  <h2 className="text-[22px] font-semibold text-gray-900 mb-2">Properties Panel</h2>
-                  <p className="text-[15px] text-gray-600 mb-6">
+                  <h2 className="text-[22px] font-semibold text-[var(--color-text-primary)] mb-2">Properties Panel</h2>
+                  <p className="text-[15px] text-[var(--color-text-secondary)] mb-6">
                     Every database entry can have custom properties. Click to add a property to see available types.
                   </p>
-                  <div className="w-80 border border-gray-200 rounded-lg divide-y divide-gray-100">
+                  <div className="w-80 border border-[var(--color-border)] rounded-lg divide-y divide-[var(--color-border)]">
                     {properties.map((prop) => (
-                      <div key={prop.name} className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50">
-                        <prop.icon className="w-4 h-4 text-gray-500" />
-                        <span className="text-[14px] text-gray-700">{prop.name}</span>
+                      <div key={prop.name} className="flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--color-hover)]">
+                        <prop.icon className="w-4 h-4 text-[var(--color-text-secondary)]" />
+                        <span className="text-[14px] text-[var(--color-text-primary)]">{prop.name}</span>
                       </div>
                     ))}
                   </div>
@@ -733,18 +733,18 @@ greet('Notion');`}</code>
 
                 {/* Section 5: Relations */}
                 <section className="mb-12">
-                  <h2 className="text-[22px] font-semibold text-gray-900 mb-2">Section 6: Relations & Rollups</h2>
-                  <p className="text-[15px] text-gray-600 mb-6">
+                  <h2 className="text-[22px] font-semibold text-[var(--color-text-primary)] mb-2">Section 6: Relations & Rollups</h2>
+                  <p className="text-[15px] text-[var(--color-text-secondary)] mb-6">
                     Tables and Databases in Notion support Relations property, which helps aggregate data across items.
                   </p>
                   <div className="flex gap-6 mb-6">
                     {/* Tasks Database */}
-                    <div className="flex-1 border border-gray-200 rounded-lg overflow-hidden">
-                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200">
-                        <CheckSquare className="w-4 h-4 text-gray-600" />
-                        <span className="text-[14px] font-medium text-gray-900">Tasks</span>
+                    <div className="flex-1 border border-[var(--color-border)] rounded-lg overflow-hidden">
+                      <div className="flex items-center gap-2 px-3 py-2 bg-[var(--color-surface)] border-b border-[var(--color-border)]">
+                        <CheckSquare className="w-4 h-4 text-[var(--color-text-secondary)]" />
+                        <span className="text-[14px] font-medium text-[var(--color-text-primary)]">Tasks</span>
                       </div>
-                      <div className="divide-y divide-gray-100">
+                      <div className="divide-y divide-[var(--color-border)]">
                         {[
                           { name: "Implement auth flow", rel: "Website Redesign" },
                           { name: "Write API documentation", rel: "Mobile App" },
@@ -752,41 +752,41 @@ greet('Notion');`}</code>
                           { name: "Setup CI/CD pipeline", rel: "Mobile App" },
                         ].map((task, i) => (
                           <div key={i} className="flex items-center justify-between px-3 py-2">
-                            <span className="text-[13px] text-gray-700">{task.name}</span>
-                            <span className="px-2 py-0.5 bg-gray-100 rounded text-[11px] text-gray-600">{task.rel}</span>
+                            <span className="text-[13px] text-[var(--color-text-primary)]">{task.name}</span>
+                            <span className="px-2 py-0.5 bg-[var(--color-surface)] rounded text-[11px] text-[var(--color-text-secondary)]">{task.rel}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                     {/* Projects Database */}
-                    <div className="flex-1 border border-gray-200 rounded-lg overflow-hidden">
-                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200">
-                        <Home className="w-4 h-4 text-gray-600" />
-                        <span className="text-[14px] font-medium text-gray-900">Projects</span>
+                    <div className="flex-1 border border-[var(--color-border)] rounded-lg overflow-hidden">
+                      <div className="flex items-center gap-2 px-3 py-2 bg-[var(--color-surface)] border-b border-[var(--color-border)]">
+                        <Home className="w-4 h-4 text-[var(--color-text-secondary)]" />
+                        <span className="text-[14px] font-medium text-[var(--color-text-primary)]">Projects</span>
                       </div>
-                      <div className="grid grid-cols-3 text-[11px] font-medium text-gray-500 px-3 py-2 border-b border-gray-100">
+                      <div className="grid grid-cols-3 text-[11px] font-medium text-[var(--color-text-secondary)] px-3 py-2 border-b border-[var(--color-border)]">
                         <span>Project Name</span>
                         <span>Tasks</span>
                         <span>Status</span>
                       </div>
                       {projects.map((proj) => (
-                        <div key={proj.id} className="grid grid-cols-3 px-3 py-2 border-b border-gray-100 last:border-0">
-                          <span className="text-[13px] text-gray-700">{proj.name}</span>
-                          <span className="px-2 py-0.5 bg-gray-100 rounded text-[11px] text-gray-600 w-fit">{proj.tasks} tasks</span>
-                          <span className="text-[13px] text-gray-600">{proj.status}</span>
+                        <div key={proj.id} className="grid grid-cols-3 px-3 py-2 border-b border-[var(--color-border)] last:border-0">
+                          <span className="text-[13px] text-[var(--color-text-primary)]">{proj.name}</span>
+                          <span className="px-2 py-0.5 bg-[var(--color-surface)] rounded text-[11px] text-[var(--color-text-secondary)] w-fit">{proj.tasks} tasks</span>
+                          <span className="text-[13px] text-[var(--color-text-secondary)]">{proj.status}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                   {/* Relation Indicator */}
-                  <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 rounded-lg mb-4">
-                    <AlertCircle className="w-4 h-4 text-blue-600" />
-                    <span className="text-[14px] text-gray-700">
+                  <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg mb-4">
+                    <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-[14px] text-[var(--color-text-primary)]">
                       Relation: Task entries in Project column are linked to entries in the Project database
                     </span>
                   </div>
                   {/* Arrow Visual */}
-                  <div className="flex items-center justify-center gap-2 text-[14px] text-gray-600">
+                  <div className="flex items-center justify-center gap-2 text-[14px] text-[var(--color-text-secondary)]">
                     <span>Tasks</span>
                     <ArrowRight className="w-4 h-4" />
                     <span className="font-medium">Projects</span>
@@ -795,97 +795,97 @@ greet('Notion');`}</code>
 
                 {/* Section 6: Collaboration */}
                 <section className="mb-12">
-                  <h2 className="text-[22px] font-semibold text-gray-900 mb-2">Section 7: Collaboration</h2>
-                  <p className="text-[15px] text-gray-600 mb-6">
+                  <h2 className="text-[22px] font-semibold text-[var(--color-text-primary)] mb-2">Section 7: Collaboration</h2>
+                  <p className="text-[15px] text-[var(--color-text-secondary)] mb-6">
                     Notion excels at team collaboration. Here&apos;s how comments, mentions, and real-time editing work.
                   </p>
                   <div className="grid grid-cols-3 gap-4">
                     {/* Comment Bubble */}
-                    <div className="border border-gray-200 rounded-lg p-4">
+                    <div className="border border-[var(--color-border)] rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center">
                           <MessageSquare className="w-4 h-4 text-white" />
                         </div>
-                        <span className="text-[13px] font-medium text-gray-700">Comments</span>
+                        <span className="text-[13px] font-medium text-[var(--color-text-primary)]">Comments</span>
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="bg-[var(--color-surface)] rounded-lg p-3">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="w-6 h-6 rounded-full bg-purple-500" />
-                          <span className="text-[12px] font-medium text-gray-700">Mike Johnson</span>
-                          <span className="text-[11px] text-gray-400">2h ago</span>
+                          <span className="text-[12px] font-medium text-[var(--color-text-primary)]">Mike Johnson</span>
+                          <span className="text-[11px] text-[var(--color-text-placeholder)]">2h ago</span>
                         </div>
-                        <p className="text-[12px] text-gray-600">
+                        <p className="text-[12px] text-[var(--color-text-secondary)]">
                           This looks great! Can we add more details to the project timeline?
                         </p>
                       </div>
                     </div>
                     {/* User Presence */}
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <div className="text-[13px] font-medium text-gray-700 mb-3">Live Collaboration</div>
+                    <div className="border border-[var(--color-border)] rounded-lg p-4">
+                      <div className="text-[13px] font-medium text-[var(--color-text-primary)] mb-3">Live Collaboration</div>
                       <div className="flex items-center gap-2 mb-3">
                         <div className="flex -space-x-2">
                           {["bg-red-500", "bg-blue-500", "bg-green-500", "bg-yellow-500"].map((color, i) => (
-                            <div key={i} className={`w-8 h-8 rounded-full ${color} border-2 border-white`} />
+                            <div key={i} className={`w-8 h-8 rounded-full ${color} border-2 border-[var(--color-background)]`} />
                           ))}
                         </div>
-                        <span className="text-[12px] text-gray-500">+3 more</span>
+                        <span className="text-[12px] text-[var(--color-text-secondary)]">+3 more</span>
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-green-500" />
-                          <span className="text-[12px] text-gray-600">Sarah editing...</span>
+                          <span className="text-[12px] text-[var(--color-text-secondary)]">Sarah editing...</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-blue-500" />
-                          <span className="text-[12px] text-gray-600">Tom viewing</span>
+                          <span className="text-[12px] text-[var(--color-text-secondary)]">Tom viewing</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-purple-500" />
-                          <span className="text-[12px] text-gray-600">Alex viewing</span>
+                          <span className="text-[12px] text-[var(--color-text-secondary)]">Alex viewing</span>
                         </div>
                       </div>
                     </div>
                     {/* Mentions */}
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <div className="text-[13px] font-medium text-gray-700 mb-2">Mentions</div>
-                      <p className="text-[12px] text-gray-500 mb-3">Use @ to mention people or pages</p>
-                      <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                        <div className="flex items-center gap-1 text-[12px]">
+                    <div className="border border-[var(--color-border)] rounded-lg p-4">
+                      <div className="text-[13px] font-medium text-[var(--color-text-primary)] mb-2">Mentions</div>
+                      <p className="text-[12px] text-[var(--color-text-secondary)] mb-3">Use @ to mention people or pages</p>
+                      <div className="bg-[var(--color-surface)] rounded-lg p-3 space-y-2">
+                        <div className="flex items-center gap-1 text-[12px] text-[var(--color-text-primary)]">
                           <span>Hey</span>
-                          <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">@Sarah</span>
+                          <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded">@Sarah</span>
                           <span>can you review this?</span>
                         </div>
-                        <div className="flex items-center gap-1 text-[12px]">
+                        <div className="flex items-center gap-1 text-[12px] text-[var(--color-text-primary)]">
                           <span>Check out the</span>
-                          <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">@Roadmap</span>
+                          <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded">@Roadmap</span>
                           <span>for details</span>
                         </div>
                       </div>
-                      <p className="text-[11px] text-gray-400 mt-2">Press @ to mention</p>
+                      <p className="text-[11px] text-[var(--color-text-placeholder)] mt-2">Press @ to mention</p>
                     </div>
                   </div>
                 </section>
 
                 {/* Section 7: Buttons & Templates */}
                 <section className="mb-12">
-                  <h2 className="text-[22px] font-semibold text-gray-900 mb-2">Section 8: Buttons & Templates</h2>
-                  <p className="text-[15px] text-gray-600 mb-6">
+                  <h2 className="text-[22px] font-semibold text-[var(--color-text-primary)] mb-2">Section 8: Buttons & Templates</h2>
+                  <p className="text-[15px] text-[var(--color-text-secondary)] mb-6">
                     Quickly create pages from templates with one click.
                   </p>
                   <div className="flex items-center gap-3 mb-6">
                     <button className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[14px] font-medium transition-colors">
                       <Plus className="w-4 h-4" />Add Task
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-[14px] font-medium transition-colors">
+                    <button className="flex items-center gap-2 px-4 py-2 border border-[var(--color-border)] hover:bg-[var(--color-hover)] text-[var(--color-text-primary)] rounded-lg text-[14px] font-medium transition-colors">
                       <FileText className="w-4 h-4" />New Template
                     </button>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     {templates.map((template, i) => (
-                      <div key={i} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors cursor-pointer">
-                        <template.icon className="w-6 h-6 text-gray-600 mb-3" />
-                        <h3 className="text-[15px] font-medium text-gray-900 mb-1">{template.title}</h3>
-                        <p className="text-[13px] text-gray-500">{template.desc}</p>
+                      <div key={i} className="border border-[var(--color-border)] rounded-lg p-4 hover:bg-[var(--color-hover)] transition-colors cursor-pointer">
+                        <template.icon className="w-6 h-6 text-[var(--color-text-secondary)] mb-3" />
+                        <h3 className="text-[15px] font-medium text-[var(--color-text-primary)] mb-1">{template.title}</h3>
+                        <p className="text-[13px] text-[var(--color-text-secondary)]">{template.desc}</p>
                       </div>
                     ))}
                   </div>
@@ -965,7 +965,7 @@ function PageTreeItem({ node, level, currentPageId, onSelect, onToggle, expanded
     <div>
       <div
         className={`group flex items-center gap-1.5 py-1 rounded-md cursor-pointer transition-colors ${
-          isActive ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:bg-gray-100"
+          isActive ? "bg-[var(--color-selected)] text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
         }`}
         style={{ paddingLeft: `${level * 14 + 8}px`, paddingRight: "8px" }}
         onClick={() => onSelect(node.id)}
@@ -974,17 +974,17 @@ function PageTreeItem({ node, level, currentPageId, onSelect, onToggle, expanded
           onClick={(e) => { e.stopPropagation(); if (hasChildren) onToggle(node.id); }}
           className={`p-0.5 rounded transition-transform shrink-0 ${hasChildren ? "opacity-100" : "opacity-0"} ${isExpanded ? "rotate-90" : ""}`}
         >
-          <ChevronRight className="w-3 h-3 text-gray-500" />
+          <ChevronRight className="w-3 h-3 text-[var(--color-text-secondary)]" />
         </button>
-        <span className="text-gray-500 shrink-0">{node.icon ? <span>{node.icon}</span> : getIcon(node.type)}</span>
+        <span className="text-[var(--color-text-secondary)] shrink-0">{node.icon ? <span>{node.icon}</span> : getIcon(node.type)}</span>
         <span className="flex-1 text-[13px] truncate">{node.title || "Untitled"}</span>
         {isDatabase && onOpenDatabaseModal && (
           <button
             onClick={handleDatabaseAction}
-            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 transition-opacity"
+            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[var(--color-hover)] transition-opacity"
             title="Open database view"
           >
-            <MoreHorizontal className="w-3.5 h-3.5 text-gray-500" />
+            <MoreHorizontal className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
           </button>
         )}
       </div>

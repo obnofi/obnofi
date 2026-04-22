@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tippy.js/dist/tippy.css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* =========================================================
    DESIGN TOKENS  (DESIGN.md §2, §3, §4, §9)
    ========================================================= */
@@ -129,6 +131,16 @@ body {
 
 .tippy-box[data-theme~="slash-command"] > .tippy-arrow {
   display: none;
+}
+
+.obnofi-custom-emoji {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  margin: 0 0.06em;
+  vertical-align: -0.18em;
+  border-radius: 0.18em;
+  object-fit: cover;
 }
 
 /* =========================================================
