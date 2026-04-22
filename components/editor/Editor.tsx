@@ -10,7 +10,12 @@ import { ButtonBlock } from "@/components/editor/extensions/ButtonBlock";
 import { CodeBlock } from "@/components/editor/extensions/CodeBlock";
 import { LinkedDatabaseBlock } from "@/components/editor/extensions/LinkedDatabaseBlock";
 import { SlashCommandExtension } from "@/components/editor/extensions/SlashCommandExtension";
+import {
+  CustomEmojiNode,
+  PersonalEmojiExtension,
+} from "@/components/editor/extensions/PersonalEmojiExtension";
 import { LinkDatabaseModal } from "@/components/editor/extensions/LinkDatabaseModal";
+import { ButtonInsertModal } from "@/components/editor/extensions/ButtonInsertModal";
 import { DbDiagramExtension } from "@/src/components/editor/extensions/DbDiagramExtension";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 
@@ -32,6 +37,7 @@ export function Editor({
   pageId,
 }: EditorProps) {
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [isButtonModalOpen, setIsButtonModalOpen] = useState(false);
   const editorRef = useRef<TiptapEditor | null>(null);
 
   const handleDatabaseSelect = useCallback(
@@ -59,6 +65,14 @@ export function Editor({
     setIsLinkModalOpen(true);
   }, []);
 
+  const handleOpenButtonModal = useCallback(() => {
+    setIsButtonModalOpen(true);
+  }, []);
+
+  const handleButtonInsert = useCallback((label: string, url: string) => {
+    editorRef.current?.commands.insertButtonBlock({ label, url });
+  }, []);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -79,11 +93,14 @@ export function Editor({
         workspaceId,
         pageId,
       }),
+      CustomEmojiNode,
+      PersonalEmojiExtension,
       DbDiagramExtension,
       SlashCommandExtension.configure({
         workspaceId,
         pageId,
         onLinkDatabase: handleOpenLinkModal,
+        onInsertButton: handleOpenButtonModal,
       }),
     ],
     content: content || {
@@ -130,6 +147,11 @@ export function Editor({
         onClose={() => setIsLinkModalOpen(false)}
         onSelect={handleDatabaseSelect}
         workspaceId={workspaceId ?? ""}
+      />
+      <ButtonInsertModal
+        isOpen={isButtonModalOpen}
+        onClose={() => setIsButtonModalOpen(false)}
+        onConfirm={handleButtonInsert}
       />
     </>
   );

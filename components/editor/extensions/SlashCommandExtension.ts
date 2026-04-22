@@ -559,11 +559,12 @@ export const SlashCommandExtension = Extension.create({
       workspaceId: undefined as string | undefined,
       pageId: undefined as string | undefined,
       onLinkDatabase: undefined as (() => void) | undefined,
+      onInsertButton: undefined as (() => void) | undefined,
     };
   },
 
   addProseMirrorPlugins() {
-    const { workspaceId, pageId, onLinkDatabase } = this.options;
+    const { workspaceId, pageId, onLinkDatabase, onInsertButton } = this.options;
     return [
       Suggestion({
         editor: this.editor,
@@ -571,7 +572,7 @@ export const SlashCommandExtension = Extension.create({
         allowSpaces: false,
         startOfLine: false,
         items: ({ query }) => getSlashCommandItems(query),
-        render: createSlashSuggestion(workspaceId, pageId, onLinkDatabase),
+        render: createSlashSuggestion(workspaceId, pageId, onLinkDatabase, onInsertButton),
       }),
     ];
   },
