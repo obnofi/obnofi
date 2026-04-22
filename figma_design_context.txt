@@ -22,7 +22,7 @@
           <text id="182:880" name="newPageText" x="32" y="4" width="63" height="16" />
         </frame>
       </frame>
-      <frame id="182:881" name="Favorites Section" x="0" y="114" width="224" height="105">
+      <frame id="182:881" name="Favorites Section" x="0" y="114" width="224" height="105">x
         <frame id="182:882" name="favLabelWrap" x="0" y="8" width="224" height="17">
           <text id="182:883" name="favLabel" x="8" y="0" width="49" height="13" />
         </frame>
