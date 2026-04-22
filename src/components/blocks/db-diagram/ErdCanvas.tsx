@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -8,7 +8,6 @@ import {
   type Node,
   type Edge,
   type Connection,
-  Panel
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -25,6 +24,11 @@ interface ErdCanvasProps {
   onSchemaChange: (schema: DbSchema) => void
 }
 
+export interface ErdCanvasHandle {
+  addTable: () => void
+  fitView: () => void
+}
+
 const nodeTypes = {
   tableNode: TableNode as any
 }
@@ -33,14 +37,14 @@ const edgeTypes = {
   relationEdge: RelationEdge as any
 }
 
-export default function ErdCanvas({
+const ErdCanvas = forwardRef<ErdCanvasHandle, ErdCanvasProps>(function ErdCanvas({
   nodes,
   edges,
   onNodesChange,
   onEdgesChange,
   onConnect,
   onSchemaChange
-}: ErdCanvasProps) {
+}, ref) {
   const { fitView } = useReactFlow()
   const [selectedColumn, setSelectedColumn] = useState<{ table: TableDef; column: any } | null>(null)
   const [showHandles, setShowHandles] = useState(false)
@@ -84,6 +88,11 @@ export default function ErdCanvas({
   const handleFitView = useCallback(() => {
     fitView({ padding: 0.2, duration: 300 })
   }, [fitView])
+
+  useImperativeHandle(ref, () => ({
+    addTable: handleAddTable,
+    fitView: handleFitView,
+  }), [handleAddTable, handleFitView])
 
   const enhancedNodes = nodes.map(node => {
     const nodeData = node.data as TableNodeData
@@ -134,7 +143,7 @@ export default function ErdCanvas({
         }}
         connectionLineStyle={{ stroke: '#2E7D45', strokeWidth: 2, strokeDasharray: '5,5' }}
       >
-        <Background color="#e5e7eb" gap={20} size={1} className="dark:bg-[#111110]" />
+        <Background color="#e5e7eb" gap={20} size={1} className="!bg-transparent dark:!bg-transparent" />
         <Controls className="!bg-white dark:!bg-[#1a1a1a] !border-gray-200 dark:!border-gray-700" showInteractive={false} />
         <MiniMap
           className="!bg-white dark:!bg-[#1a1a1a] !border-gray-200 dark:!border-gray-700"
@@ -142,30 +151,13 @@ export default function ErdCanvas({
           maskColor="rgba(0, 0, 0, 0.1)"
         />
 
-        <Panel position="top-right" className="m-4">
-          <div className="flex gap-2">
-            <button
-              onClick={handleAddTable}
-              className="px-3 py-2 bg-[#2E7D45] text-white text-sm font-medium rounded-lg shadow hover:bg-[#236338] transition-colors flex items-center gap-2"
-            >
-              <span>+</span>
-              테이블 추가
-            </button>
-            <button
-              onClick={handleFitView}
-              className="px-3 py-2 bg-white dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg shadow border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            >
-              화면 맞춤
-            </button>
-          </div>
-        </Panel>
       </ReactFlow>
 
       {/* Column Edit Panel */}
       {selectedColumn && (
         <div className="absolute right-4 top-4 w-52 bg-white dark:bg-[#202020] rounded-md shadow-lg border border-[#E3E2E0] dark:border-[#373737] p-3 z-10">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-[#37352F] dark:text-[#FFFCED]">컬럼 편집</h3>
+            <h5 className="text-xs font-semibold text-[#37352F] dark:text-[#FFFCED]">컬럼 편집</h5>
             <button onClick={() => setSelectedColumn(null)} className="text-[#787774] hover:text-[#37352F] dark:hover:text-[#FFFCED] text-sm">×</button>
           </div>
 
@@ -244,4 +236,6 @@ export default function ErdCanvas({
       )}
     </div>
   )
-}
+})
+
+export default ErdCanvas

@@ -64,6 +64,8 @@ export function DatabasePageCard({
     updateDatabaseTitle,
     createRow,
     createProperty,
+    updateProperty,
+    deleteProperty,
     updatePropertyValue,
   } = useDatabasePage(pageId);
 
@@ -79,6 +81,12 @@ export function DatabasePageCard({
       onOpenRow={onOpenRow}
       onCreateRow={createRow}
       onCreateProperty={(name, type) => createProperty({ name, type })}
+      onUpdateProperty={updateProperty}
+      onDeleteProperty={deleteProperty}
+      onMoveProperty={(propertyId, direction) => {
+        // TODO: Implement property reordering
+        console.log("Move property", propertyId, direction);
+      }}
       onUpdatePropertyValue={updatePropertyValue}
       onTitleChange={editableTitle ? updateDatabaseTitle : undefined}
       viewType={viewType}

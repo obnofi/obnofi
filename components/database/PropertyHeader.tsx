@@ -70,9 +70,9 @@ export function PropertyHeader({
       React.ComponentType<{ className?: string }>) || LucideIcons.HelpCircle;
 
   return (
-    <div className="group relative">
-      <div className="flex items-center justify-between px-3 py-2">
-        <div className="flex flex-col gap-0.5">
+    <div className="group relative h-full">
+      <div className="flex h-full items-center justify-between px-3 py-2">
+        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
           {isEditingName ? (
             <input
               type="text"
@@ -87,33 +87,34 @@ export function PropertyHeader({
                 }
               }}
               autoFocus
-              className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-sm font-medium text-[#111110] outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              className="rounded border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-0.5 text-sm font-medium text-[var(--color-text-primary)] outline-none"
             />
           ) : (
             <button
               onClick={() => setIsEditingName(true)}
-              className="text-left text-sm font-medium text-[#111110] hover:text-[#111110] dark:text-zinc-100 dark:hover:text-zinc-100"
+              className="text-left text-sm font-medium text-[var(--color-text-primary)] hover:text-[var(--color-text-primary)] truncate"
+              title={property.name}
             >
               {property.name}
             </button>
           )}
-          <span className="text-[10px] text-zinc-400">
+          <span className="text-[10px] text-[var(--color-text-secondary)]">
             {getPropertyTypeLabel(property.type)}
           </span>
         </div>
 
-        <div className="relative" ref={menuRef}>
+        <div className="relative shrink-0" ref={menuRef}>
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="rounded p-1 opacity-0 transition hover:bg-zinc-100 group-hover:opacity-100 dark:hover:bg-zinc-800"
+            className="rounded p-1 opacity-0 transition hover:bg-[var(--color-hover)] group-hover:opacity-100"
           >
-            <MoreHorizontal className="h-4 w-4 text-zinc-400" />
+            <MoreHorizontal className="h-4 w-4 text-[var(--color-text-secondary)]" />
           </button>
 
           {isMenuOpen && (
-            <div className="absolute right-0 top-full z-[99999] mt-1 w-56 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-              <div className="border-b border-zinc-100 px-3 py-2 dark:border-zinc-800">
-                <span className="text-xs font-medium text-zinc-500">
+            <div className="absolute right-0 top-full z-[99999] mt-1 w-56 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-lg">
+              <div className="border-b border-[var(--color-border)] px-3 py-2">
+                <span className="text-xs font-medium text-[var(--color-text-secondary)]">
                   Property type
                 </span>
                 <div className="mt-2">
@@ -132,9 +133,9 @@ export function PropertyHeader({
                   setIsEditingName(true);
                   setIsMenuOpen(false);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]"
               >
-                <Edit2 className="h-4 w-4 text-zinc-400" />
+                <Edit2 className="h-4 w-4 text-[var(--color-text-secondary)]" />
                 Rename
               </button>
 
@@ -144,9 +145,9 @@ export function PropertyHeader({
                     setIsEditingOptions(true);
                     setIsMenuOpen(false);
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]"
                 >
-                  <Settings className="h-4 w-4 text-zinc-400" />
+                  <Settings className="h-4 w-4 text-[var(--color-text-secondary)]" />
                   Edit options
                 </button>
               )}
@@ -159,9 +160,9 @@ export function PropertyHeader({
                       setIsMenuOpen(false);
                     }}
                     disabled={!canMoveLeft}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-100 disabled:opacity-50 dark:hover:bg-zinc-800"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-hover)] disabled:opacity-50"
                   >
-                    <ArrowUp className="h-4 w-4 text-zinc-400" />
+                    <ArrowUp className="h-4 w-4 text-[var(--color-text-secondary)]" />
                     Move left
                   </button>
                   <button
@@ -170,15 +171,15 @@ export function PropertyHeader({
                       setIsMenuOpen(false);
                     }}
                     disabled={!canMoveRight}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-100 disabled:opacity-50 dark:hover:bg-zinc-800"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-hover)] disabled:opacity-50"
                   >
-                    <ArrowDown className="h-4 w-4 text-zinc-400" />
+                    <ArrowDown className="h-4 w-4 text-[var(--color-text-secondary)]" />
                     Move right
                   </button>
                 </>
               )}
 
-              <div className="border-t border-zinc-100 dark:border-zinc-800" />
+              <div className="border-t border-[var(--color-border)]" />
 
               <button
                 onClick={() => {
@@ -198,14 +199,14 @@ export function PropertyHeader({
       {/* Options Editor Modal */}
       {isEditingOptions && requiresOptions(property.type) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="w-full max-w-md rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-[#111110] dark:text-zinc-100">
+              <h3 className="text-lg font-medium text-[var(--color-text-primary)]">
                 Edit options for "{property.name}"
               </h3>
               <button
                 onClick={() => setIsEditingOptions(false)}
-                className="rounded p-1 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                className="rounded p-1 text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
               >
                 ✕
               </button>
@@ -219,7 +220,7 @@ export function PropertyHeader({
             <div className="mt-4 flex justify-end">
               <button
                 onClick={() => setIsEditingOptions(false)}
-                className="rounded-md bg-[#2E7D45] px-4 py-2 text-sm font-medium text-white hover:bg-[#256a3a]"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)]"
               >
                 Done
               </button>

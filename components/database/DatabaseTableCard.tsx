@@ -8,6 +8,7 @@ import type {
   Page,
   PropertyValueData,
   ViewType,
+  SelectOption,
 } from "@/types";
 import { DatabaseSurface } from "@/components/database/DatabaseSurface";
 
@@ -25,6 +26,9 @@ interface DatabaseTableCardProps {
   onOpenRow: (rowId: string) => void;
   onCreateRow?: () => void | Promise<string | undefined>;
   onCreateProperty?: (name: string, type: PropertyType) => void;
+  onUpdateProperty?: (propertyId: string, updates: { name?: string; type?: PropertyType; options?: SelectOption[] }) => void;
+  onDeleteProperty?: (propertyId: string) => void;
+  onMoveProperty?: (propertyId: string, direction: "left" | "right") => void;
   onUpdatePropertyValue?: (
     rowId: string,
     propertyId: string,
@@ -61,6 +65,9 @@ export function DatabaseTableCard({
   onOpenRow,
   onCreateRow,
   onCreateProperty,
+  onUpdateProperty,
+  onDeleteProperty,
+  onMoveProperty,
   onUpdatePropertyValue,
   onTitleChange,
   viewType,
@@ -220,6 +227,9 @@ export function DatabaseTableCard({
               onOpenRow={onOpenRow}
               onCreateRow={onCreateRow}
               onCreateProperty={onCreateProperty}
+              onUpdateProperty={onUpdateProperty}
+              onDeleteProperty={onDeleteProperty}
+              onMoveProperty={onMoveProperty}
               onUpdatePropertyValue={onUpdatePropertyValue}
               compact={compact}
             />

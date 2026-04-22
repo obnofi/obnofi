@@ -95,11 +95,11 @@ export function getTimelineBounds(tasks: Task[]): { start: string; end: string }
 export function getStatusClasses(status: TaskStatus): string {
   switch (status) {
     case "Done":
-      return "bg-emerald-100 text-emerald-700";
+      return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400";
     case "In Progress":
-      return "bg-amber-100 text-amber-700";
+      return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
     case "To Do":
     default:
-      return "bg-zinc-100 text-zinc-700";
+      return "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400";
   }
 }

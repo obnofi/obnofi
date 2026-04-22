@@ -4,14 +4,18 @@ import React, { useRef, useState } from "react";
 import { flexRender, type Table } from "@tanstack/react-table";
 import { Plus, X } from "lucide-react";
 import * as LucideIcons from "lucide-react";
-import { Property, Page, PropertyType } from "@/types";
+import { Property, Page, PropertyType, SelectOption } from "@/types";
 import { getPropertyTypeLabel, getPropertyTypeIcon } from "@/lib/database-utils";
+import { PropertyHeader } from "./PropertyHeader";
 
 interface TableViewProps {
   table: Table<Page>;
   properties: Property[];
   onCreateRow?: () => void;
   onCreateProperty?: (name: string, type: PropertyType) => void;
+  onUpdateProperty?: (propertyId: string, updates: { name?: string; type?: PropertyType; options?: SelectOption[] }) => void;
+  onDeleteProperty?: (propertyId: string) => void;
+  onMoveProperty?: (propertyId: string, direction: "left" | "right") => void;
   compact?: boolean;
 }
 
@@ -24,6 +28,9 @@ export function TableView({
   properties: _properties,
   onCreateRow,
   onCreateProperty,
+  onUpdateProperty,
+  onDeleteProperty,
+  onMoveProperty,
   compact = false,
 }: TableViewProps) {
   const [showAddProp, setShowAddProp] = useState(false);
@@ -63,31 +70,56 @@ export function TableView({
                     return null;
                   }
 
+                  // Find property for this column (if not title column)
+                  const property = !isTitleColumn
+                    ? _properties.find((p) => p.id === header.column.id)
+                    : null;
+
                   return (
                     <th
                       key={header.id}
-                      className={`relative bg-[var(--color-surface)] px-4 py-2.5 text-left text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-secondary)] border-r border-[var(--color-border)] ${
+                      className={`relative bg-[var(--color-surface)] px-0 py-0 text-left border-r border-[var(--color-border)] ${
                         isTitleColumn
-                          ? `sticky left-0 z-10 ${compact ? "w-48" : "w-64"}`
+                          ? `sticky left-0 z-10 ${compact ? "w-48" : "w-64"} px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-secondary)]`
                           : compact
                           ? "w-32 min-w-[7rem]"
                           : "w-40 min-w-[9rem]"
                       }`}
                     >
-                      <button
-                        type="button"
-                        onClick={header.column.getToggleSortingHandler()}
-                        className="inline-flex items-center gap-1 hover:text-[var(--color-text-primary)]"
-                      >
-                        <span>
+                      {isTitleColumn ? (
+                        <button
+                          type="button"
+                          onClick={header.column.getToggleSortingHandler()}
+                          className="inline-flex items-center gap-1 hover:text-[var(--color-text-primary)]"
+                        >
+                          <span>
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                          </span>
+                          {header.column.getIsSorted() === "asc" ? "↑" : ""}
+                          {header.column.getIsSorted() === "desc" ? "↓" : ""}
+                        </button>
+                      ) : property ? (
+                        <PropertyHeader
+                          property={property}
+                          onRename={(name) => onUpdateProperty?.(property.id, { name })}
+                          onChangeType={(type) => onUpdateProperty?.(property.id, { type })}
+                          onUpdateOptions={(options) => onUpdateProperty?.(property.id, { options })}
+                          onDelete={() => onDeleteProperty?.(property.id)}
+                          onMove={(direction) => onMoveProperty?.(property.id, direction)}
+                          canMoveLeft={property.order > 0}
+                          canMoveRight={property.order < _properties.length - 1}
+                        />
+                      ) : (
+                        <span className="px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">
                           {flexRender(
                             header.column.columnDef.header,
                             header.getContext()
                           )}
                         </span>
-                        {header.column.getIsSorted() === "asc" ? "↑" : ""}
-                        {header.column.getIsSorted() === "desc" ? "↓" : ""}
-                      </button>
+                      )}
                       {isGrouped ? (
                         <span className="ml-2 rounded-full bg-[var(--color-accent-subtle)] px-2 py-0.5 text-[10px] text-[var(--color-accent)]">
                           Grouped

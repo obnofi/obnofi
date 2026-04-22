@@ -67,7 +67,7 @@ export function InlineDatabaseView({
   if (isLoading) {
     return (
       <div
-        className={`flex h-64 items-center justify-center rounded-lg border border-zinc-200 bg-white ${className}`}
+        className={`flex h-64 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] ${className}`}
       >
         <Loader2 className="h-6 w-6 animate-spin text-[#2E7D45]" />
       </div>
@@ -77,7 +77,7 @@ export function InlineDatabaseView({
   if (!databasePage) {
     return (
       <div
-        className={`flex h-64 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 ${className}`}
+        className={`flex h-64 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text-secondary)] ${className}`}
       >
         Failed to load database
       </div>
@@ -86,18 +86,18 @@ export function InlineDatabaseView({
 
   return (
     <div
-      className={`flex flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white ${className}`}
+      className={`flex flex-col overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] ${className}`}
     >
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-zinc-200 px-4 py-3">
+      <div className="flex items-center gap-3 border-b border-[var(--color-border)] px-4 py-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2E7D45]/10">
           <Database className="h-4 w-4 text-[#2E7D45]" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-[#111110]">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
             {databasePage.title || pageTitle || "Untitled Database"}
           </h3>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-[var(--color-text-secondary)]">
             {databasePage.database.rows.length || 0} rows
             {databasePage.database.properties.length
               ? ` · ${databasePage.database.properties.length} properties`

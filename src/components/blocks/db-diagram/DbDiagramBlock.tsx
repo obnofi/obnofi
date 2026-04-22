@@ -2,19 +2,25 @@ import { useState, useEffect } from 'react'
 import { NodeViewWrapper } from '@tiptap/react'
 import { ReactFlowProvider } from '@xyflow/react'
 import DbDiagramLayout from './DbDiagramLayout'
+import { usePageStore } from '@/store/pageStore'
 
 interface DbDiagramBlockProps {
   node: {
     attrs: {
       sql?: string
       layout?: Record<string, { x: number; y: number }>
+      pageId?: string | null
+      workspaceId?: string | null
     }
   }
   updateAttributes: (attrs: Record<string, any>) => void
 }
 
 export default function DbDiagramBlock({ node, updateAttributes }: DbDiagramBlockProps) {
-  const { sql = '', layout = {} } = node.attrs
+  const { sql = '', layout = {}, pageId = null } = node.attrs
+  const { pages } = usePageStore()
+  const parentPage = pageId ? pages.find(p => p.id === pageId) : null
+  const pageName = parentPage?.title || null
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   useEffect(() => {
@@ -44,12 +50,13 @@ export default function DbDiagramBlock({ node, updateAttributes }: DbDiagramBloc
             onLayoutChange={handleLayoutChange}
             isFullscreen={isFullscreen}
             onToggleFullscreen={() => setIsFullscreen(f => !f)}
+            pageName={pageName}
           />
         </ReactFlowProvider>
       </div>
       {isFullscreen && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 backdrop-blur-[2px]"
+          className="fixed left-60 right-0 top-0 bottom-0 bg-black/40 z-[35] backdrop-blur-[2px]"
           onClick={() => setIsFullscreen(false)}
         />
       )}

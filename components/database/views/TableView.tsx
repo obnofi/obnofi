@@ -9,47 +9,47 @@ interface TaskTableViewProps {
 
 export function TaskTableView({ tasks }: TaskTableViewProps) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+    <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)]">
       <div className="overflow-x-auto">
         <table className="min-w-full border-separate border-spacing-0 text-sm">
-          <thead className="bg-zinc-50">
-            <tr className="text-left text-xs uppercase tracking-[0.12em] text-zinc-500">
-              <th className="border-b border-zinc-200 px-4 py-3 font-medium">Task</th>
-              <th className="border-b border-zinc-200 px-4 py-3 font-medium">Status</th>
-              <th className="border-b border-zinc-200 px-4 py-3 font-medium">Tags</th>
-              <th className="border-b border-zinc-200 px-4 py-3 font-medium">Date</th>
-              <th className="border-b border-zinc-200 px-4 py-3 font-medium">Timeline</th>
+          <thead className="bg-[var(--color-surface)]">
+            <tr className="text-left text-xs uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+              <th className="border-b border-[var(--color-border)] px-4 py-3 font-medium">Task</th>
+              <th className="border-b border-[var(--color-border)] px-4 py-3 font-medium">Status</th>
+              <th className="border-b border-[var(--color-border)] px-4 py-3 font-medium">Tags</th>
+              <th className="border-b border-[var(--color-border)] px-4 py-3 font-medium">Date</th>
+              <th className="border-b border-[var(--color-border)] px-4 py-3 font-medium">Timeline</th>
             </tr>
           </thead>
           <tbody>
             {tasks.map((task) => (
-              <tr key={task.id} className="text-zinc-700">
-                <td className="border-b border-zinc-100 px-4 py-3 font-medium text-[#111110]">
+              <tr key={task.id} className="text-[var(--color-text-primary)]">
+                <td className="border-b border-[var(--color-border)] px-4 py-3 font-medium text-[var(--color-text-primary)]">
                   {task.name}
                 </td>
-                <td className="border-b border-zinc-100 px-4 py-3">
+                <td className="border-b border-[var(--color-border)] px-4 py-3">
                   <span
                     className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${getStatusClasses(task.status)}`}
                   >
                     {task.status}
                   </span>
                 </td>
-                <td className="border-b border-zinc-100 px-4 py-3">
+                <td className="border-b border-[var(--color-border)] px-4 py-3">
                   <div className="flex flex-wrap gap-2">
                     {task.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs text-zinc-600"
+                        className="rounded-full bg-[var(--color-hover)] px-2.5 py-1 text-xs text-[var(--color-text-secondary)]"
                       >
                         {tag}
                       </span>
                     ))}
                   </div>
                 </td>
-                <td className="border-b border-zinc-100 px-4 py-3 text-zinc-500">
+                <td className="border-b border-[var(--color-border)] px-4 py-3 text-[var(--color-text-secondary)]">
                   {formatTaskDay(task.date)}
                 </td>
-                <td className="border-b border-zinc-100 px-4 py-3 text-zinc-500">
+                <td className="border-b border-[var(--color-border)] px-4 py-3 text-[var(--color-text-secondary)]">
                   {formatTaskDay(task.startDate)} - {formatTaskDay(task.endDate)}
                 </td>
               </tr>

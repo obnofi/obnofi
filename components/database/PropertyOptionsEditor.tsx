@@ -86,9 +86,9 @@ export function PropertyOptionsEditor({
         {options.map((option, index) => (
           <div
             key={option.id}
-            className="flex items-center gap-2 rounded-md bg-zinc-50 px-2 py-1.5 dark:bg-zinc-800"
+            className="flex items-center gap-2 rounded-md bg-[var(--color-hover)] px-2 py-1.5"
           >
-            <GripVertical className="h-4 w-4 cursor-grab text-zinc-400" />
+            <GripVertical className="h-4 w-4 cursor-grab text-[var(--color-text-secondary)]" />
 
             <div className="flex flex-1 items-center gap-2">
               {editingOptionId === option.id ? (
@@ -105,12 +105,12 @@ export function PropertyOptionsEditor({
                     }
                   }}
                   autoFocus
-                  className="flex-1 rounded border border-zinc-300 bg-white px-2 py-1 text-sm text-[#111110] outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100"
+                  className="flex-1 rounded border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-sm text-[var(--color-text-primary)] outline-none"
                 />
               ) : (
                 <button
                   onClick={() => setEditingOptionId(option.id)}
-                  className="flex-1 text-left text-sm text-[#111110] dark:text-zinc-100"
+                  className="flex-1 text-left text-sm text-[var(--color-text-primary)]"
                 >
                   {option.label}
                 </button>
@@ -123,7 +123,7 @@ export function PropertyOptionsEditor({
                     onClick={() => handleUpdateOption(option.id, { color })}
                     className={`h-5 w-5 rounded-full transition ${
                       option.color === color
-                        ? "ring-2 ring-offset-1 ring-zinc-400"
+                        ? "ring-2 ring-offset-1 ring-[var(--color-text-secondary)]"
                         : ""
                     }`}
                     style={{ backgroundColor: getOptionBgColor(color) }}
@@ -136,20 +136,20 @@ export function PropertyOptionsEditor({
               <button
                 onClick={() => handleMoveOption(option.id, "up")}
                 disabled={index === 0}
-                className="rounded p-1 text-zinc-400 hover:bg-zinc-200 disabled:opacity-30 dark:hover:bg-zinc-700"
+                className="rounded p-1 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] disabled:opacity-30"
               >
                 ↑
               </button>
               <button
                 onClick={() => handleMoveOption(option.id, "down")}
                 disabled={index === options.length - 1}
-                className="rounded p-1 text-zinc-400 hover:bg-zinc-200 disabled:opacity-30 dark:hover:bg-zinc-700"
+                className="rounded p-1 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] disabled:opacity-30"
               >
                 ↓
               </button>
               <button
                 onClick={() => handleRemoveOption(option.id)}
-                className="rounded p-1 text-zinc-400 hover:bg-zinc-200 hover:text-red-500 dark:hover:bg-zinc-700"
+                className="rounded p-1 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] hover:text-red-500"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -169,12 +169,12 @@ export function PropertyOptionsEditor({
             }
           }}
           placeholder="Add an option..."
-          className="flex-1 rounded-md border border-zinc-200 bg-transparent px-3 py-1.5 text-sm text-[#111110] outline-none placeholder:text-zinc-400 dark:border-zinc-700 dark:text-zinc-100"
+          className="flex-1 rounded-md border border-[var(--color-border)] bg-transparent px-3 py-1.5 text-sm text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-placeholder)]"
         />
         <button
           onClick={handleAddOption}
           disabled={!newOptionLabel.trim()}
-          className="flex items-center gap-1 rounded-md bg-[#2E7D45] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#256a3a] disabled:opacity-50"
+          className="flex items-center gap-1 rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
         >
           <Plus className="h-4 w-4" />
           Add

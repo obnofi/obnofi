@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, KanbanSquare, LayoutGrid, ListFilter, SlidersHorizontal, Table2 } from "lucide-react";
-import type { PropertyType, ViewType, DatabasePage, PropertyValueData } from "@/types";
+import type { PropertyType, ViewType, DatabasePage, PropertyValueData, SelectOption } from "@/types";
 import { useGroveTable } from "@/hooks/useGroveTable";
 import { TableView } from "@/components/database/TableView";
 import { GalleryView } from "@/components/database/views/GalleryView";
@@ -26,6 +26,9 @@ interface DatabaseSurfaceProps {
   onSurfaceStateChange?: (snapshot: GroveSurfaceSnapshot) => void;
   onCreateRow?: () => void;
   onCreateProperty?: (name: string, type: PropertyType) => void;
+  onUpdateProperty?: (propertyId: string, updates: { name?: string; type?: PropertyType; options?: SelectOption[] }) => void;
+  onDeleteProperty?: (propertyId: string) => void;
+  onMoveProperty?: (propertyId: string, direction: "left" | "right") => void;
   onOpenRow?: (rowId: string) => void;
   onUpdatePropertyValue?: (
     rowId: string,
@@ -53,6 +56,9 @@ export function DatabaseSurface({
   onSurfaceStateChange,
   onCreateRow,
   onCreateProperty,
+  onUpdateProperty,
+  onDeleteProperty,
+  onMoveProperty,
   onOpenRow,
   onUpdatePropertyValue,
 }: DatabaseSurfaceProps) {
@@ -256,6 +262,9 @@ export function DatabaseSurface({
             properties={properties}
             onCreateRow={onCreateRow}
             onCreateProperty={onCreateProperty}
+            onUpdateProperty={onUpdateProperty}
+            onDeleteProperty={onDeleteProperty}
+            onMoveProperty={onMoveProperty}
             compact={compact}
           />
         ) : null}

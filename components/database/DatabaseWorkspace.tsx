@@ -12,7 +12,7 @@ export function DatabaseWorkspace({ pageId, workspaceId }: DatabaseWorkspaceProp
   const openGrovePageSideTab = useUIStore((state) => state.openGrovePageSideTab);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-white px-12 pb-6 pt-8">
+    <div className="flex h-full flex-col overflow-hidden bg-[var(--color-background)] px-12 pb-6 pt-8">
       <div className="flex-1 overflow-hidden">
         <DatabasePageCard
           pageId={pageId}

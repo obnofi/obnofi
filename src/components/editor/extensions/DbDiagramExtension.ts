@@ -4,6 +4,8 @@ import DbDiagramBlock from '@/src/components/blocks/db-diagram/DbDiagramBlock'
 
 export interface DbDiagramOptions {
   HTMLAttributes: Record<string, any>
+  workspaceId?: string
+  pageId?: string
 }
 
 declare module '@tiptap/core' {
@@ -25,18 +27,18 @@ export const DbDiagramExtension = Node.create<DbDiagramOptions>({
 
   addOptions() {
     return {
-      HTMLAttributes: {}
+      HTMLAttributes: {},
+      workspaceId: undefined,
+      pageId: undefined,
     }
   },
 
   addAttributes() {
     return {
-      sql: {
-        default: ''
-      },
-      layout: {
-        default: {}
-      }
+      sql: { default: '' },
+      layout: { default: {} },
+      workspaceId: { default: null },
+      pageId: { default: null },
     }
   },
 
@@ -67,7 +69,9 @@ export const DbDiagramExtension = Node.create<DbDiagramOptions>({
           type: this.name,
           attrs: {
             sql: options?.sql || '',
-            layout: {}
+            layout: {},
+            workspaceId: this.options.workspaceId ?? null,
+            pageId: this.options.pageId ?? null,
           }
         })
       }
