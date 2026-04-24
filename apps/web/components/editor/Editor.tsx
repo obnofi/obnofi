@@ -27,6 +27,8 @@ import { PageLinkExtension } from "@/components/editor/extensions/PageLinkExtens
 import { PageLinkMark } from "@/components/editor/extensions/PageMentionExtension";
 import { DbDiagramExtension } from "@/src/components/editor/extensions/DbDiagramExtension";
 import { SubPageBlock } from "@/components/editor/extensions/SubPageBlock";
+import { BlockActionsExtension } from "@/components/editor/extensions/BlockActionsExtension";
+import { BlockActionBar } from "@/components/editor/BlockActionBar";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 
 interface EditorProps {
@@ -50,6 +52,7 @@ export function Editor({
   const [isButtonModalOpen, setIsButtonModalOpen] = useState(false);
   const [isPageLinkModalOpen, setIsPageLinkModalOpen] = useState(false);
   const editorRef = useRef<TiptapEditor | null>(null);
+  const editorShellRef = useRef<HTMLDivElement | null>(null);
 
   const handleDatabaseSelect = useCallback(
     (databaseId: string, selectedPageId: string) => {
@@ -131,6 +134,7 @@ export function Editor({
       PageLinkExtension,
       PageLinkMark.configure({ workspaceId }),
       SubPageBlock,
+      ...(editable ? [BlockActionsExtension] : []),
       SlashCommandExtension.configure({
         workspaceId,
         pageId,
@@ -168,6 +172,7 @@ export function Editor({
     <>
       <div
         data-testid="workspace-editor"
+        ref={editorShellRef}
         className={`editor prose max-w-none text-[#111110] dark:prose-invert dark:text-zinc-100 [&:focus-within]:outline-none [&_*]:focus-visible:outline-none ${
           editable ? "cursor-text" : ""
         }`}
@@ -176,6 +181,9 @@ export function Editor({
           editor={editor}
           className="[&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:text-[#111110] [&_.ProseMirror]:outline-none dark:[&_.ProseMirror]:text-zinc-100 [&_.ProseMirror-focused]:outline-none [&_.ProseMirror-focused]:ring-0 [&_.ProseMirror-focused]:border-transparent [&_.ProseMirror-placeholder]:text-zinc-400 [&_.ProseMirror-placeholder]:before:content-[attr(data-placeholder)] [&_.ProseMirror-placeholder]:before:pointer-events-none"
         />
+        {editable ? (
+          <BlockActionBar editor={editor} container={editorShellRef.current} />
+        ) : null}
       </div>
 
       <LinkDatabaseModal
