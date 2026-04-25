@@ -25,14 +25,15 @@ export const CustomNoteNode = memo(function CustomNoteNode({
       <Handle
         type="target"
         position={Position.Left}
-        className="!h-2 !w-2 !border-0 !bg-transparent opacity-0"
+        style={{ top: 20 }}
+        className="!h-3 !w-3 !border-0 !bg-transparent opacity-0"
       />
 
       <div
         className={[
-          "h-3.5 w-3.5 rounded-full border transition-all",
+          "h-8 w-8 rounded-full border transition-all",
           selected
-            ? "border-[#2E7D45] bg-[#2E7D45] shadow-[0_0_0_5px_rgba(46,125,69,0.16)]"
+            ? "border-[#2E7D45] bg-[#2E7D45] shadow-[0_0_0_6px_rgba(46,125,69,0.16)]"
             : "border-slate-400/60 bg-slate-500/75 group-hover:border-[#2E7D45] group-hover:bg-[#2E7D45]",
         ].join(" ")}
       />
@@ -50,7 +51,8 @@ export const CustomNoteNode = memo(function CustomNoteNode({
       <Handle
         type="source"
         position={Position.Right}
-        className="!h-2 !w-2 !border-0 !bg-transparent opacity-0"
+        style={{ top: 20 }}
+        className="!h-3 !w-3 !border-0 !bg-transparent opacity-0"
       />
     </div>
   );

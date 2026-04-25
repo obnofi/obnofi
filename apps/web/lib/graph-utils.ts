@@ -168,7 +168,7 @@ export function buildGraphData(pages: Page[]): {
       id: edgeId,
       source,
       target,
-      type: "default",
+      type: "straight",
     });
     edgeSet.add(edgeId);
   };

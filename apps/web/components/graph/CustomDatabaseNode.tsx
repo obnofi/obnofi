@@ -35,18 +35,19 @@ export const CustomDatabaseNode = memo(function CustomDatabaseNode({
       <Handle
         type="target"
         position={Position.Left}
-        className="!h-2 !w-2 !border-0 !bg-transparent opacity-0"
+        style={{ top: 20 }}
+        className="!h-3 !w-3 !border-0 !bg-transparent opacity-0"
       />
 
       <div
         className={[
-          "flex h-3.5 w-3.5 items-center justify-center rounded-full border transition-all",
+          "flex h-8 w-8 items-center justify-center rounded-full border transition-all",
           selected
-            ? "border-[#2E7D45] bg-[#2E7D45] shadow-[0_0_0_5px_rgba(46,125,69,0.16)]"
+            ? "border-[#2E7D45] bg-[#2E7D45] shadow-[0_0_0_6px_rgba(46,125,69,0.16)]"
             : "border-[#2E7D45]/60 bg-[#2E7D45]/75 group-hover:border-[#2E7D45] group-hover:bg-[#2E7D45]",
         ].join(" ")}
       >
-        <Database className="h-2 w-2 text-white" />
+        <Database className="h-4 w-4 text-white" />
       </div>
       <div
         className={[
@@ -62,7 +63,8 @@ export const CustomDatabaseNode = memo(function CustomDatabaseNode({
       <Handle
         type="source"
         position={Position.Right}
-        className="!h-2 !w-2 !border-0 !bg-transparent opacity-0"
+        style={{ top: 20 }}
+        className="!h-3 !w-3 !border-0 !bg-transparent opacity-0"
       />
     </div>
   );

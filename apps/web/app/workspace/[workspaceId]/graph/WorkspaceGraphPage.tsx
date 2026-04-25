@@ -104,7 +104,7 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
           {
             ...connection,
             id: `${connection.source}-${connection.target}-${Date.now()}`,
-            type: "default",
+            type: "straight",
             animated: false,
             style: { stroke: "#2E7D45", strokeWidth: 1.15, opacity: 0.65 },
           },
@@ -193,8 +193,9 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
               nodesConnectable
               elementsSelectable
               deleteKeyCode={["Backspace", "Delete"]}
-              connectionLineType={ConnectionLineType.SmoothStep}
+              connectionLineType={ConnectionLineType.Straight}
               defaultEdgeOptions={{
+                type: "straight",
                 animated: false,
                 style: { stroke: "#9ca3af", strokeWidth: 1, opacity: 0.55 },
               }}
