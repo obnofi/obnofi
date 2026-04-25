@@ -126,3 +126,46 @@ test("그래프 뷰에서도 사이드바가 유지된다", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "Graph View" })).toBeVisible();
   await expect(page.getByTestId("graph-back-link")).toBeVisible();
 });
+
+test("블록 핸들을 드래그해 블록 순서를 바꿀 수 있다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  const sourceBlock = page
+    .locator("[data-grove-block='true']")
+    .filter({ hasText: "Welcome to Obnofi" })
+    .first();
+  const targetBlock = page
+    .locator("[data-grove-block='true']")
+    .filter({ hasText: "Features" })
+    .first();
+
+  await expect(sourceBlock).toBeVisible();
+  await expect(targetBlock).toBeVisible();
+
+  await sourceBlock.hover();
+
+  const moveHandle = page.getByRole("button", { name: "블록 이동" });
+  await expect(moveHandle).toBeVisible();
+
+  const handleBox = await moveHandle.boundingBox();
+  const targetBox = await targetBlock.boundingBox();
+
+  expect(handleBox).not.toBeNull();
+  expect(targetBox).not.toBeNull();
+
+  await page.mouse.move(
+    handleBox!.x + handleBox!.width / 2,
+    handleBox!.y + handleBox!.height / 2
+  );
+  await page.mouse.down();
+  await page.mouse.move(targetBox!.x + 4, targetBox!.y + 6, { steps: 12 });
+  await page.mouse.up();
+
+  const blockTexts = await page.locator("[data-grove-block='true']").evaluateAll((nodes) =>
+    nodes.map((node) => node.textContent?.replace(/\s+/g, " ").trim() ?? "")
+  );
+
+  expect(blockTexts.indexOf("Welcome to Obnofi")).toBeGreaterThan(
+    blockTexts.indexOf("Features")
+  );
+});
