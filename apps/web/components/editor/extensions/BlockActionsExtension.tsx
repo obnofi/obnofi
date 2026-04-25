@@ -20,6 +20,10 @@ type ActionableBlockInfo = {
 };
 
 type BlockActionsMeta = Partial<BlockActionsState>;
+type BlockPointerCoords = {
+  clientX: number;
+  clientY: number;
+};
 
 const actionableParentNames = new Set([
   "doc",
@@ -177,6 +181,55 @@ function findBlockById(
   return match;
 }
 
+function findBlockByElement(
+  view: EditorView,
+  element: HTMLElement | null
+): ActionableBlockInfo | null {
+  const blockElement = element?.closest<HTMLElement>("[data-grove-block='true']") ?? null;
+  const blockId = blockElement?.dataset.blockId ?? "";
+
+  if (!blockId) {
+    return null;
+  }
+
+  return findBlockById(view.state.doc, blockId);
+}
+
+function findBlockNearGutter(
+  view: EditorView,
+  point: BlockPointerCoords
+): ActionableBlockInfo | null {
+  const blockElements = Array.from(
+    view.dom.querySelectorAll<HTMLElement>("[data-grove-block='true'][data-block-id]")
+  );
+  let bestMatch: { distance: number; block: ActionableBlockInfo } | null = null;
+
+  for (const blockElement of blockElements) {
+    const rect = blockElement.getBoundingClientRect();
+    const withinVerticalRange =
+      point.clientY >= rect.top - 10 && point.clientY <= rect.bottom + 10;
+    const withinHorizontalRange =
+      point.clientX >= rect.left - 96 && point.clientX <= rect.right + 24;
+
+    if (!withinVerticalRange || !withinHorizontalRange) {
+      continue;
+    }
+
+    const block = findBlockByElement(view, blockElement);
+    if (!block) {
+      continue;
+    }
+
+    const distance = Math.abs(point.clientY - (rect.top + rect.height / 2));
+
+    if (!bestMatch || distance < bestMatch.distance) {
+      bestMatch = { distance, block };
+    }
+  }
+
+  return bestMatch?.block ?? null;
+}
+
 function cloneJsonWithFreshBlockIds(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map((item) => cloneJsonWithFreshBlockIds(item));
@@ -218,26 +271,39 @@ function cloneJsonWithFreshBlockIds(value: unknown): unknown {
 
 function getDropBlockAtCoords(
   view: EditorView,
-  event: DragEvent
+  point: BlockPointerCoords
 ): ActionableBlockInfo | null {
   const coords = view.posAtCoords({
-    left: event.clientX,
-    top: event.clientY,
+    left: point.clientX,
+    top: point.clientY,
   });
 
   if (!coords) {
-    return null;
+    const domTarget =
+      typeof document !== "undefined"
+        ? document.elementFromPoint(point.clientX, point.clientY)
+        : null;
+
+    return (
+      findBlockByElement(
+        view,
+        domTarget instanceof HTMLElement ? domTarget : domTarget?.parentElement ?? null
+      ) ?? findBlockNearGutter(view, point)
+    );
   }
 
-  return getActionableBlockAtResolvedPos(view.state.doc, coords.pos);
+  return (
+    getActionableBlockAtResolvedPos(view.state.doc, coords.pos) ??
+    findBlockNearGutter(view, point)
+  );
 }
 
 function resolveDropPos(
   view: EditorView,
   source: ActionableBlockInfo,
-  event: DragEvent
+  point: BlockPointerCoords
 ) {
-  const target = getDropBlockAtCoords(view, event);
+  const target = getDropBlockAtCoords(view, point);
 
   if (!target) {
     return null;
@@ -252,7 +318,7 @@ function resolveDropPos(
     targetDom instanceof HTMLElement ? targetDom : targetDom?.parentElement;
   const rect = targetElement?.getBoundingClientRect();
   const isAfter = rect
-    ? event.clientY > rect.top + rect.height / 2
+    ? point.clientY > rect.top + rect.height / 2
     : false;
 
   return isAfter ? target.pos + target.node.nodeSize : target.pos;
@@ -268,7 +334,7 @@ function dispatchBlockActionsMeta(
 export function startBlockDrag(
   view: EditorView,
   blockId: string,
-  event: DragEvent
+  event?: DragEvent
 ) {
   const block = findBlockById(view.state.doc, blockId);
 
@@ -285,8 +351,8 @@ export function startBlockDrag(
       })
   );
 
-  event.dataTransfer?.setData("text/plain", blockId);
-  if (event.dataTransfer) {
+  event?.dataTransfer?.setData("text/plain", blockId);
+  if (event?.dataTransfer) {
     event.dataTransfer.effectAllowed = "move";
     const dragGhost = document.createElement("div");
     dragGhost.style.width = "1px";
@@ -298,6 +364,80 @@ export function startBlockDrag(
       dragGhost.remove();
     }, 0);
   }
+}
+
+export function updateBlockDrag(view: EditorView, point: BlockPointerCoords) {
+  const pluginState = blockActionsPluginKey.getState(view.state);
+  const draggedBlockId = pluginState?.draggedBlockId;
+
+  if (!draggedBlockId) {
+    return false;
+  }
+
+  const source = findBlockById(view.state.doc, draggedBlockId);
+  if (!source) {
+    return false;
+  }
+
+  const dropPos = resolveDropPos(view, source, point);
+
+  if (dropPos === null) {
+    if (pluginState?.dropPos !== null) {
+      dispatchBlockActionsMeta(view, { dropPos: null });
+    }
+    return false;
+  }
+
+  if (pluginState?.dropPos !== dropPos) {
+    dispatchBlockActionsMeta(view, { dropPos });
+  }
+
+  return true;
+}
+
+export function applyBlockDrag(view: EditorView, point: BlockPointerCoords) {
+  const pluginState = blockActionsPluginKey.getState(view.state);
+  const draggedBlockId = pluginState?.draggedBlockId;
+
+  if (!draggedBlockId) {
+    return false;
+  }
+
+  const source = findBlockById(view.state.doc, draggedBlockId);
+  if (!source) {
+    return false;
+  }
+
+  const dropPos = resolveDropPos(view, source, point);
+  if (dropPos === null) {
+    endBlockDrag(view);
+    return false;
+  }
+
+  const sourceStart = source.pos;
+  const sourceEnd = source.pos + source.node.nodeSize;
+
+  if (dropPos >= sourceStart && dropPos <= sourceEnd) {
+    endBlockDrag(view);
+    return true;
+  }
+
+  const insertPos = sourceStart < dropPos ? dropPos - source.node.nodeSize : dropPos;
+
+  view.dispatch(
+    view.state.tr
+      .delete(sourceStart, sourceEnd)
+      .insert(insertPos, source.node)
+      .setMeta(blockActionsPluginKey, {
+        draggedBlockId: null,
+        dropPos: null,
+        hoveredBlockId: source.id,
+      })
+      .scrollIntoView()
+  );
+  view.focus();
+
+  return true;
 }
 
 export function endBlockDrag(view: EditorView) {
@@ -444,23 +584,7 @@ function createBlockActionsPlugin() {
           return false;
         },
         dragover(view, event) {
-          const pluginState = blockActionsPluginKey.getState(view.state);
-          const draggedBlockId = pluginState?.draggedBlockId;
-
-          if (!draggedBlockId) {
-            return false;
-          }
-
-          const source = findBlockById(view.state.doc, draggedBlockId);
-          if (!source) {
-            return false;
-          }
-
-          const dropPos = resolveDropPos(view, source, event);
-          if (dropPos === null) {
-            if (pluginState?.dropPos !== null) {
-              dispatchBlockActionsMeta(view, { dropPos: null });
-            }
+          if (!blockActionsPluginKey.getState(view.state)?.draggedBlockId) {
             return false;
           }
 
@@ -468,57 +592,15 @@ function createBlockActionsPlugin() {
           if (event.dataTransfer) {
             event.dataTransfer.dropEffect = "move";
           }
-
-          if (pluginState?.dropPos !== dropPos) {
-            dispatchBlockActionsMeta(view, { dropPos });
-          }
-
-          return true;
+          return updateBlockDrag(view, event);
         },
         drop(view, event) {
-          const pluginState = blockActionsPluginKey.getState(view.state);
-          const draggedBlockId = pluginState?.draggedBlockId;
-
-          if (!draggedBlockId) {
-            return false;
-          }
-
-          const source = findBlockById(view.state.doc, draggedBlockId);
-          if (!source) {
-            return false;
-          }
-
-          const dropPos = resolveDropPos(view, source, event);
-          if (dropPos === null) {
-            endBlockDrag(view);
+          if (!blockActionsPluginKey.getState(view.state)?.draggedBlockId) {
             return false;
           }
 
           event.preventDefault();
-
-          const sourceStart = source.pos;
-          const sourceEnd = source.pos + source.node.nodeSize;
-
-          if (dropPos >= sourceStart && dropPos <= sourceEnd) {
-            endBlockDrag(view);
-            return true;
-          }
-
-          const insertPos = sourceStart < dropPos ? dropPos - source.node.nodeSize : dropPos;
-
-          view.dispatch(
-            view.state.tr
-              .delete(sourceStart, sourceEnd)
-              .insert(insertPos, source.node)
-              .setMeta(blockActionsPluginKey, {
-                draggedBlockId: null,
-                dropPos: null,
-                hoveredBlockId: source.id,
-              })
-              .scrollIntoView()
-          );
-
-          return true;
+          return applyBlockDrag(view, event);
         },
         dragend(view) {
           endBlockDrag(view);

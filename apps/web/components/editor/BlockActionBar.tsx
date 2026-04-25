@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { GripVertical } from "lucide-react";
 import {
+  applyBlockDrag,
   blockActionsPluginKey,
   endBlockDrag,
   startBlockDrag,
+  updateBlockDrag,
 } from "@/components/editor/extensions/BlockActionsExtension";
 
 interface BlockActionBarProps {
@@ -118,16 +120,44 @@ export function BlockActionBar({ editor, container }: BlockActionBarProps) {
     >
       <button
         type="button"
-        draggable
         className="grove-block-action-button"
         aria-label="블록 이동"
         title="블록 이동"
         onMouseDown={(event) => event.stopPropagation()}
-        onDragStart={(event) => {
-          startBlockDrag(editor.view, hoveredBlockId, event.nativeEvent);
-        }}
-        onDragEnd={() => {
-          endBlockDrag(editor.view);
+        onPointerDown={(event) => {
+          if (event.button !== 0) {
+            return;
+          }
+
+          event.preventDefault();
+          event.stopPropagation();
+
+          const blockId = hoveredBlockId;
+          startBlockDrag(editor.view, blockId);
+
+          const cleanup = () => {
+            document.removeEventListener("pointermove", handlePointerMove);
+            document.removeEventListener("pointerup", handlePointerUp);
+            document.removeEventListener("pointercancel", handlePointerCancel);
+          };
+
+          const handlePointerMove = (moveEvent: PointerEvent) => {
+            updateBlockDrag(editor.view, moveEvent);
+          };
+
+          const handlePointerUp = (upEvent: PointerEvent) => {
+            cleanup();
+            applyBlockDrag(editor.view, upEvent);
+          };
+
+          const handlePointerCancel = () => {
+            cleanup();
+            endBlockDrag(editor.view);
+          };
+
+          document.addEventListener("pointermove", handlePointerMove);
+          document.addEventListener("pointerup", handlePointerUp, { once: true });
+          document.addEventListener("pointercancel", handlePointerCancel, { once: true });
         }}
       >
         <GripVertical className="h-4 w-4" />
