@@ -13,6 +13,7 @@ export interface Page {
   content: object | null;
   type: PageType;
   icon?: string | null;
+  coverImage?: string | null;
   parentId: string | null;
   workspaceId: string;
   createdAt: string;
@@ -51,6 +52,7 @@ export interface UpdatePageInput {
   title?: string;
   content?: object | null;
   icon?: string | null;
+  coverImage?: string | null;
   parentId?: string | null;
   isPublic?: boolean;
 }

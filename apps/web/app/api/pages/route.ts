@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
       parentDatabaseId: databaseId || null,
       content: type === "document" ? { type: "doc", content: [{ type: "paragraph" }] } : null,
       icon: null,
+      coverImage: null,
       isPublic: false,
       shareId: null,
       sharePassword: null,
