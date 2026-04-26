@@ -168,7 +168,8 @@ export function buildGraphData(pages: Page[]): {
       id: edgeId,
       source,
       target,
-      type: "straight",
+      type: "floating",
+      zIndex: -1,
     });
     edgeSet.add(edgeId);
   };
@@ -185,6 +186,7 @@ export function buildGraphData(pages: Page[]): {
       nodes.push({
         id: page.id,
         type: "customDatabase",
+        zIndex: 1,
         position: {
           x: Math.cos(angle) * radius + 420,
           y: Math.sin(angle) * radius + 320,
@@ -200,6 +202,7 @@ export function buildGraphData(pages: Page[]): {
       nodes.push({
         id: page.id,
         type: "customNote",
+        zIndex: 1,
         position: {
           x: Math.cos(angle) * radius + 420,
           y: Math.sin(angle) * radius + 320,

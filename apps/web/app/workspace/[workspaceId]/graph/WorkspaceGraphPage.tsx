@@ -8,10 +8,12 @@ import {
   Background,
   ConnectionLineType,
   Controls,
+  MarkerType,
   MiniMap,
   Panel,
   ReactFlow,
   ReactFlowProvider,
+  type EdgeTypes,
   type NodeTypes,
   useEdgesState,
   useNodesState,
@@ -21,6 +23,7 @@ import "@xyflow/react/dist/style.css";
 import { ArrowLeft, Loader2, Orbit, Plus, Trash2 } from "lucide-react";
 import { CustomNoteNode } from "@/components/graph/CustomNoteNode";
 import { CustomDatabaseNode } from "@/components/graph/CustomDatabaseNode";
+import { FloatingGraphEdge } from "@/components/graph/FloatingGraphEdge";
 import { DatabaseViewModal } from "@/components/database/DatabaseViewModal";
 import { buildGraphData, type GraphEdge, type GraphNode } from "@/lib/graph-utils";
 import { Page } from "@obnofi/types";
@@ -32,6 +35,10 @@ interface WorkspaceGraphPageProps {
 const nodeTypes: NodeTypes = {
   customNote: CustomNoteNode,
   customDatabase: CustomDatabaseNode,
+};
+
+const edgeTypes: EdgeTypes = {
+  floating: FloatingGraphEdge,
 };
 
 function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
@@ -104,8 +111,10 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
           {
             ...connection,
             id: `${connection.source}-${connection.target}-${Date.now()}`,
-            type: "straight",
+            type: "floating",
             animated: false,
+            zIndex: -1,
+            markerEnd: { type: MarkerType.ArrowClosed, color: "#2E7D45" },
             style: { stroke: "#2E7D45", strokeWidth: 1.15, opacity: 0.65 },
           },
           currentEdges
@@ -185,6 +194,7 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
               fitView
               fitViewOptions={{ padding: 0.2 }}
               minZoom={0.2}
@@ -195,11 +205,13 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
               deleteKeyCode={["Backspace", "Delete"]}
               connectionLineType={ConnectionLineType.Straight}
               defaultEdgeOptions={{
-                type: "straight",
+                type: "floating",
                 animated: false,
+                zIndex: -1,
+                markerEnd: { type: MarkerType.ArrowClosed, color: "#9ca3af" },
                 style: { stroke: "#9ca3af", strokeWidth: 1, opacity: 0.55 },
               }}
-              className="bg-[var(--color-background)]"
+              className="graph-view-flow bg-[var(--color-background)]"
             >
               <Panel
                 position="top-right"
@@ -227,7 +239,7 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
                 zoomable
                 className="!bg-[var(--color-surface)]"
                 nodeColor={(node) =>
-                  node.type === "customDatabase" ? "#2E7D45" : "#64748b"
+                  node.type === "customDatabase" ? "#337EA9" : "#64748b"
                 }
               />
               <Controls />
