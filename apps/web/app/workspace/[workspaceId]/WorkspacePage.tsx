@@ -9,15 +9,14 @@ import {
   Plus,
   FileText,
   Palette,
-  Clock,
-  MoreHorizontal,
   Sparkles,
   Loader2,
   Database,
 } from "lucide-react";
-import { usePageStore, PageTreeNode } from "@/store/pageStore";
+import { usePageStore } from "@/store/pageStore";
 import { Page, PageType } from "@obnofi/types";
 import { useUIStore } from "@/store/useUIStore";
+import { GrovePageCanopy } from "@/components/workspace/GrovePageCanopy";
 import { PageTitleBlock } from "@/components/workspace/PageTitleBlock";
 
 // Dynamically import heavy components
@@ -79,7 +78,6 @@ export function WorkspacePage({
     getPageTree,
   } = usePageStore();
 
-  const openDatabaseModal = useUIStore((state) => state.openDatabaseModal);
   const openGrovePageSideTab = useUIStore((state) => state.openGrovePageSideTab);
   const isDatabaseModalOpen = useUIStore((state) => state.databaseModal.isOpen);
   const isGroveSideTabOpen = useUIStore((state) => state.groveSideTab.isOpen);
@@ -130,6 +128,10 @@ export function WorkspacePage({
     await updatePage(pageId, { content });
   };
 
+  const handlePageChromeUpdate = async (input: Partial<Pick<Page, "icon" | "coverImage">>) => {
+    await updatePage(pageId, input);
+  };
+
   const handleToggleExpand = (pageId: string) => {
     setExpandedPages(prev => {
       const next = new Set(prev);
@@ -144,12 +146,6 @@ export function WorkspacePage({
 
   const handleSelectPage = (selectedPageId: string) => {
     router.push(`/workspace/${workspaceId}?page=${selectedPageId}`);
-  };
-
-  const handleOpenDatabaseModal = (databaseId: string | null | undefined, title: string) => {
-    if (databaseId) {
-      openDatabaseModal(databaseId, title);
-    }
   };
 
   useEffect(() => {
@@ -295,8 +291,30 @@ export function WorkspacePage({
       <div className="flex-1 overflow-hidden bg-[var(--color-background)]">
         {currentPage.type === "document" && (
           <div className="h-full overflow-y-auto">
+            {currentPage.coverImage ? (
+              <div className="w-full px-0 pt-0">
+                <GrovePageCanopy
+                  page={currentPage}
+                  onUpdate={handlePageChromeUpdate}
+                  hideControls={true}
+                />
+              </div>
+            ) : null}
+
             <div className="max-w-4xl mx-auto px-12 py-8">
-              {/* Title */}
+              {!currentPage.coverImage ? (
+                <GrovePageCanopy
+                  page={currentPage}
+                  onUpdate={handlePageChromeUpdate}
+                />
+              ) : (
+                <GrovePageCanopy
+                  page={currentPage}
+                  onUpdate={handlePageChromeUpdate}
+                  hideCover={true}
+                />
+              )}
+
               <PageTitleBlock
                 value={title}
                 onChange={(nextTitle) => void handleTitleChange(nextTitle)}

@@ -4,6 +4,12 @@
 
 > 🎨 **브랜드 포인트 컬러**: `#2E7D45` (로고 그린) — 강조, CTA, 포커스 링에 일관되게 사용한다.
 
+## Jungle System Extension
+
+| Jungle term | Meaning |
+|---|---|
+| `Canopy` | Page cover image / page hero image |
+
 ---
 
 ## 1. 디자인 철학 (Design Philosophy)

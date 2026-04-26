@@ -77,10 +77,23 @@ export function createServiceSupabaseClient() {
   );
 }
 
-export async function uploadClearingAsset(file: File, roomId: string) {
+async function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadPublicAsset(file: File, pathPrefix: string) {
+  if (!isSupabaseConfigured()) {
+    return fileToDataUrl(file);
+  }
+
   const supabase = createBrowserSupabaseClient();
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "png";
-  const path = `${roomId}/${crypto.randomUUID()}.${extension}`;
+  const path = `${pathPrefix}/${crypto.randomUUID()}.${extension}`;
   const { data, error } = await supabase.storage
     .from("clearing-assets")
     .upload(path, file, {
@@ -98,4 +111,12 @@ export async function uploadClearingAsset(file: File, roomId: string) {
     .getPublicUrl(data.path);
 
   return publicUrlData.publicUrl;
+}
+
+export async function uploadClearingAsset(file: File, roomId: string) {
+  return uploadPublicAsset(file, roomId);
+}
+
+export async function uploadPageCanopyAsset(file: File, pageId: string) {
+  return uploadPublicAsset(file, `page-canopies/${pageId}`);
 }
