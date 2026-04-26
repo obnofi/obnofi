@@ -74,7 +74,7 @@ export function BlockActionBar({ editor, container }: BlockActionBarProps) {
 
       setPosition({
         blockId: hoveredBlockId,
-        left: blockRect.left - containerRect.left - 30,
+        left: blockRect.left - containerRect.left - 42,
         top: blockRect.top - containerRect.top + blockRect.height / 2,
       });
     };

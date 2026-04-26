@@ -17,6 +17,7 @@ type ActionableBlockInfo = {
   pos: number;
   node: ProseMirrorNode;
   parentNode: ProseMirrorNode;
+  parentPos: number;
 };
 
 type BlockActionsMeta = Partial<BlockActionsState>;
@@ -50,18 +51,6 @@ const actionableNodeNames = [
 
 export const blockActionsPluginKey = new PluginKey<BlockActionsState>("blockActions");
 
-function getEventElementTarget(target: EventTarget | null) {
-  if (target instanceof HTMLElement) {
-    return target;
-  }
-
-  if (target instanceof Node) {
-    return target.parentElement;
-  }
-
-  return null;
-}
-
 function isWithinBlockHoverBuffer(
   view: EditorView,
   blockId: string,
@@ -78,10 +67,10 @@ function isWithinBlockHoverBuffer(
   const rect = block.getBoundingClientRect();
 
   return (
-    event.clientX >= rect.left - 72 &&
-    event.clientX <= rect.right &&
-    event.clientY >= rect.top - 6 &&
-    event.clientY <= rect.bottom + 6
+    event.clientX >= rect.left - 128 &&
+    event.clientX <= rect.right + 16 &&
+    event.clientY >= rect.top - 12 &&
+    event.clientY <= rect.bottom + 12
   );
 }
 
@@ -147,6 +136,7 @@ function getActionableBlockAtResolvedPos(
       pos: blockPos,
       node,
       parentNode: parent,
+      parentPos: depth > 1 ? $pos.before(depth - 1) : 0,
     };
   }
 
@@ -168,11 +158,14 @@ function findBlockById(
       return;
     }
 
+    const $pos = doc.resolve(pos);
+
     match = {
       id: blockId,
       pos,
       node,
       parentNode: parent ?? doc,
+      parentPos: $pos.depth > 1 ? $pos.before($pos.depth - 1) : 0,
     };
 
     return false;
@@ -207,9 +200,9 @@ function findBlockNearGutter(
   for (const blockElement of blockElements) {
     const rect = blockElement.getBoundingClientRect();
     const withinVerticalRange =
-      point.clientY >= rect.top - 10 && point.clientY <= rect.bottom + 10;
+      point.clientY >= rect.top - 14 && point.clientY <= rect.bottom + 14;
     const withinHorizontalRange =
-      point.clientX >= rect.left - 96 && point.clientX <= rect.right + 24;
+      point.clientX >= rect.left - 132 && point.clientX <= rect.right + 24;
 
     if (!withinVerticalRange || !withinHorizontalRange) {
       continue;
@@ -228,6 +221,23 @@ function findBlockNearGutter(
   }
 
   return bestMatch?.block ?? null;
+}
+
+function findHoverableBlock(
+  view: EditorView,
+  point: BlockPointerCoords
+) {
+  const domTarget =
+    typeof document !== "undefined"
+      ? document.elementFromPoint(point.clientX, point.clientY)
+      : null;
+
+  return (
+    findBlockByElement(
+      view,
+      domTarget instanceof HTMLElement ? domTarget : domTarget?.parentElement ?? null
+    ) ?? findBlockNearGutter(view, point)
+  );
 }
 
 function cloneJsonWithFreshBlockIds(value: unknown): unknown {
@@ -269,33 +279,34 @@ function cloneJsonWithFreshBlockIds(value: unknown): unknown {
   return value;
 }
 
-function getDropBlockAtCoords(
+type BlockSiblingEntry = {
+  block: ActionableBlockInfo;
+  rect: DOMRect;
+};
+
+function getSiblingEntries(
   view: EditorView,
-  point: BlockPointerCoords
-): ActionableBlockInfo | null {
-  const coords = view.posAtCoords({
-    left: point.clientX,
-    top: point.clientY,
-  });
+  source: ActionableBlockInfo
+): BlockSiblingEntry[] {
+  const blockElements = Array.from(
+    view.dom.querySelectorAll<HTMLElement>("[data-grove-block='true'][data-block-id]")
+  );
+  const siblings: BlockSiblingEntry[] = [];
 
-  if (!coords) {
-    const domTarget =
-      typeof document !== "undefined"
-        ? document.elementFromPoint(point.clientX, point.clientY)
-        : null;
+  for (const blockElement of blockElements) {
+    const block = findBlockByElement(view, blockElement);
+    if (!block || block.parentPos !== source.parentPos) {
+      continue;
+    }
 
-    return (
-      findBlockByElement(
-        view,
-        domTarget instanceof HTMLElement ? domTarget : domTarget?.parentElement ?? null
-      ) ?? findBlockNearGutter(view, point)
-    );
+    siblings.push({
+      block,
+      rect: blockElement.getBoundingClientRect(),
+    });
   }
 
-  return (
-    getActionableBlockAtResolvedPos(view.state.doc, coords.pos) ??
-    findBlockNearGutter(view, point)
-  );
+  siblings.sort((left, right) => left.block.pos - right.block.pos);
+  return siblings;
 }
 
 function resolveDropPos(
@@ -303,25 +314,27 @@ function resolveDropPos(
   source: ActionableBlockInfo,
   point: BlockPointerCoords
 ) {
-  const target = getDropBlockAtCoords(view, point);
+  const siblings = getSiblingEntries(view, source);
 
-  if (!target) {
+  if (siblings.length === 0) {
     return null;
   }
 
-  if (target.parentNode.type.name !== source.parentNode.type.name) {
+  const minLeft = Math.min(...siblings.map(({ rect }) => rect.left)) - 96;
+  const maxRight = Math.max(...siblings.map(({ rect }) => rect.right)) + 24;
+
+  if (point.clientX < minLeft || point.clientX > maxRight) {
     return null;
   }
 
-  const targetDom = view.nodeDOM(target.pos);
-  const targetElement =
-    targetDom instanceof HTMLElement ? targetDom : targetDom?.parentElement;
-  const rect = targetElement?.getBoundingClientRect();
-  const isAfter = rect
-    ? point.clientY > rect.top + rect.height / 2
-    : false;
+  for (const { block, rect } of siblings) {
+    if (point.clientY <= rect.top + rect.height / 2) {
+      return block.pos;
+    }
+  }
 
-  return isAfter ? target.pos + target.node.nodeSize : target.pos;
+  const lastSibling = siblings.at(-1);
+  return lastSibling ? lastSibling.block.pos + lastSibling.block.node.nodeSize : null;
 }
 
 function dispatchBlockActionsMeta(
@@ -542,11 +555,9 @@ function createBlockActionsPlugin() {
             return false;
           }
 
-          const eventElement = getEventElementTarget(event.target);
-          const target =
-            eventElement?.closest<HTMLElement>("[data-grove-block='true']") ?? null;
+          const hoverBlock = findHoverableBlock(view, event);
 
-          if (!target) {
+          if (!hoverBlock) {
             if (
               pluginState?.hoveredBlockId &&
               isWithinBlockHoverBuffer(view, pluginState.hoveredBlockId, event)
@@ -560,9 +571,8 @@ function createBlockActionsPlugin() {
             return false;
           }
 
-          const blockId = target.dataset.blockId ?? null;
-          if (blockId && pluginState?.hoveredBlockId !== blockId) {
-            dispatchBlockActionsMeta(view, { hoveredBlockId: blockId });
+          if (pluginState?.hoveredBlockId !== hoverBlock.id) {
+            dispatchBlockActionsMeta(view, { hoveredBlockId: hoverBlock.id });
           }
 
           return false;
