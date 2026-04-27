@@ -56,10 +56,12 @@ export function GrovePageCanopy({
   const [isCanopyPickerOpen, setIsCanopyPickerOpen] = useState(false);
   const [customEmoji, setCustomEmoji] = useState("");
   const [isUploadingCanopy, setIsUploadingCanopy] = useState(false);
+  const [isUploadingIcon, setIsUploadingIcon] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement | null>(null);
   const canopyPickerRef = useRef<HTMLDivElement | null>(null);
   const canopyInputRef = useRef<HTMLInputElement | null>(null);
+  const iconInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!isEmojiPickerOpen && !isCanopyPickerOpen) {
@@ -133,6 +135,27 @@ export function GrovePageCanopy({
     await onUpdate({ coverImage });
   };
 
+  const handleIconFilePick = async (file: File | undefined) => {
+    if (!file || !file.type.startsWith("image/")) {
+      return;
+    }
+
+    setIsUploadingIcon(true);
+    setUploadError(null);
+
+    try {
+      const iconUrl = await uploadPageCanopyAsset(file, `icon-${page.id}`);
+      await onUpdate({ icon: iconUrl });
+    } catch {
+      setUploadError("아이콘 이미지를 올리지 못했습니다.");
+    } finally {
+      setIsUploadingIcon(false);
+      if (iconInputRef.current) {
+        iconInputRef.current.value = "";
+      }
+    }
+  };
+
   return (
     <div className="mb-6">
       <input
@@ -142,131 +165,54 @@ export function GrovePageCanopy({
         className="hidden"
         onChange={(event) => void handleCanopyFilePick(event.target.files?.[0])}
       />
+      <input
+        ref={iconInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => void handleIconFilePick(event.target.files?.[0])}
+      />
 
-      {page.coverImage && !hideCover ? (
-        <div className="group relative mb-5 overflow-hidden rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)]">
-          <div className="relative h-[220px] w-full">
-            <img
-              src={page.coverImage}
-              alt={`${page.title || "Untitled"} cover`}
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/15 opacity-0 transition group-hover:opacity-100" />
-          <div className="absolute right-3 top-3 flex items-center gap-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
-            <button
-              type="button"
-              onClick={() => canopyInputRef.current?.click()}
-              disabled={isUploadingCanopy}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/25 bg-black/45 px-3 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-black/60 disabled:cursor-wait disabled:opacity-70"
-            >
-              {isUploadingCanopy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              변경
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleCanopyRemove()}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/25 bg-black/45 px-3 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-black/60"
-            >
-              <Trash2 className="h-4 w-4" />
-              제거
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {!hideControls ? (
-        <div className="flex flex-wrap items-center gap-2">
-        <div className="relative" ref={emojiPickerRef}>
-          {page.icon ? (
-            <button
-              type="button"
-              onClick={() => setIsEmojiPickerOpen((open) => !open)}
-              className="flex h-20 w-20 items-center justify-center rounded-[22px] bg-transparent text-5xl transition hover:bg-[var(--color-hover)]"
-              aria-label="페이지 이모지 변경"
-            >
-              {page.icon}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setIsEmojiPickerOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)] hover:text-[var(--color-text-primary)]"
-            >
-              <SmilePlus className="h-4 w-4" />
-              아이콘 추가
-            </button>
-          )}
-
-          {isEmojiPickerOpen ? (
-            <div className="absolute left-0 top-full z-30 mt-3 w-[20rem] rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] p-3 shadow-2xl">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <div>
-                  <div className="text-sm font-semibold text-[var(--color-text-primary)]">
-                    페이지 이모지
-                  </div>
-                  <div className="text-xs text-[var(--color-text-secondary)]">
-                    대표 이모지를 고르거나 직접 붙여넣으세요.
-                  </div>
-                </div>
+      {!hideCover ? (
+        <div className="relative" ref={canopyPickerRef}>
+          <div className="group relative mb-5 overflow-hidden rounded-[20px]">
+            {page.coverImage ? (
+              <div className="relative h-[220px] w-full">
+                <img
+                  src={page.coverImage}
+                  alt={`${page.title || "Untitled"} cover`}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="h-[120px] w-full from-[var(--color-surface)] to-[var(--color-background)]" />
+            )}
+            <div className="pointer-events-none absolute inset-0 opacity-0 transition group-hover:opacity-100" />
+            <div className="absolute right-3 top-3 flex items-center gap-2 opacity-0 transition group-hover:opacity-100">
+              <button
+                type="button"
+                onClick={() => setIsCanopyPickerOpen(true)}
+                disabled={isUploadingCanopy}
+                className="inline-flex items-center gap-2 rounded-lg disabled:opacity-70"
+              >
+                {isUploadingCanopy ? <Loader2 className="h-4 w-4 animate-spin" /> : page.coverImage ? <RefreshCw className="h-4 w-4" /> : <ImagePlus className="h-4 w-4" />}
+                {page.coverImage ? "변경" : "커버 추가"}
+              </button>
+              {page.coverImage ? (
                 <button
                   type="button"
-                  onClick={() => setIsEmojiPickerOpen(false)}
-                  className="rounded-md p-1.5 text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
-                  aria-label="이모지 선택기 닫기"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <input
-                value={customEmoji}
-                onChange={(event) => setCustomEmoji(event.target.value)}
-                placeholder="이모지 직접 입력"
-                className="mb-3 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none transition placeholder:text-[var(--color-text-placeholder)] focus:border-[var(--color-accent)]"
-              />
-
-              <div className="grid grid-cols-6 gap-2">
-                {emojiOptions.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => void handlePageIconSelect(emoji)}
-                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-transparent bg-[var(--color-surface)] text-2xl transition hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)]"
-                    aria-label={`이모지 ${emoji} 선택`}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-
-              {page.icon ? (
-                <button
-                  type="button"
-                  onClick={() => void handlePageIconRemove()}
-                  className="mt-3 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
+                  onClick={() => void handleCanopyRemove()}
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/25 bg-black/45 px-3 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-black/60"
                 >
                   <Trash2 className="h-4 w-4" />
-                  아이콘 제거
+                  제거
                 </button>
               ) : null}
             </div>
-          ) : null}
-        </div>
-
-        <div className="relative" ref={canopyPickerRef}>
-          <button
-            type="button"
-            onClick={() => setIsCanopyPickerOpen((open) => !open)}
-            disabled={isUploadingCanopy}
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)] hover:text-[var(--color-text-primary)] disabled:cursor-wait disabled:opacity-70"
-          >
-            {isUploadingCanopy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-            {page.coverImage ? "커버 변경" : "커버 추가"}
-          </button>
+          </div>
 
           {isCanopyPickerOpen ? (
-            <div className="absolute left-0 top-full z-30 mt-3 w-[24rem] rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] p-3 shadow-2xl">
+            <div className="absolute right-0 top-12 z-30 w-[24rem] rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] p-3 shadow-2xl">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div>
                   <div className="text-sm font-semibold text-[var(--color-text-primary)]">
@@ -332,6 +278,126 @@ export function GrovePageCanopy({
             </div>
           ) : null}
         </div>
+      ) : null}
+
+      {!hideControls ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative" ref={emojiPickerRef}>
+            {page.icon ? (
+              <button
+                type="button"
+                onClick={() => setIsEmojiPickerOpen((open) => !open)}
+                className="flex h-20 w-20 items-center justify-center rounded-[22px] bg-transparent text-5xl transition hover:bg-[var(--color-hover)]"
+                aria-label="페이지 아이콘 변경"
+              >
+                {page.icon.startsWith("http") || page.icon.startsWith("data:") ? (
+                  <img
+                    src={page.icon}
+                    alt="페이지 아이콘"
+                    className="h-16 w-16 rounded-xl object-cover"
+                  />
+                ) : (
+                  page.icon
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsEmojiPickerOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)] hover:text-[var(--color-text-primary)]"
+              >
+                <SmilePlus className="h-4 w-4" />
+              </button>
+            )}
+
+            {isEmojiPickerOpen ? (
+              <div className="absolute left-0 top-full z-30 mt-3 w-[22rem] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] shadow-2xl">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
+                  <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                    아이콘 선택
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsEmojiPickerOpen(false)}
+                    className="rounded-md p-1 text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
+                    aria-label="닫기"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Search Input - macOS style */}
+                <div className="border-b border-[var(--color-border)] px-4 py-3">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={customEmoji}
+                      onChange={(event) => setCustomEmoji(event.target.value)}
+                      placeholder="이모지 검색 또는 직접 입력"
+                      className="w-full rounded-lg bg-[var(--color-surface)] px-3 py-2 pl-9 text-sm text-[var(--color-text-primary)] outline-none transition placeholder:text-[var(--color-text-placeholder)]"
+                    />
+                    <svg
+                      className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-placeholder)]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Emoji Grid - No borders */}
+                <div className="max-h-[240px] overflow-y-auto p-3">
+                  <div className="grid grid-cols-8 gap-1">
+                    {emojiOptions.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => void handlePageIconSelect(emoji)}
+                        className="flex h-9 w-9 items-center justify-center rounded-md text-xl transition hover:bg-[var(--color-hover)]"
+                        aria-label={`${emoji} 선택`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Upload custom icon */}
+                <div className="border-t border-[var(--color-border)] px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => iconInputRef.current?.click()}
+                    disabled={isUploadingIcon}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--color-border)] py-3 text-sm text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)] hover:text-[var(--color-text-primary)] disabled:cursor-wait disabled:opacity-70"
+                  >
+                    {isUploadingIcon ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ImagePlus className="h-4 w-4" />
+                    )}
+                    이미지 아이콘 업로드
+                  </button>
+                </div>
+
+                {/* Footer with remove option */}
+                {page.icon ? (
+                  <div className="border-t border-[var(--color-border)] px-4 py-2">
+                    <button
+                      type="button"
+                      onClick={() => void handlePageIconRemove()}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg py-2 text-sm text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      아이콘 제거
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
