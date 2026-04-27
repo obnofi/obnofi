@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockDb } from "@/lib/mock-db";
+import { prisma } from "@obnofi/db";
+import { toPropertyValue } from "@/lib/prisma-transforms";
 
 export async function PATCH(
   request: NextRequest,
@@ -9,19 +10,27 @@ export async function PATCH(
     const { propertyValueId } = await params;
     const body = await request.json();
 
-    const propertyValue = mockDb.propertyValues.get(propertyValueId);
-    if (!propertyValue) {
+    const existing = await prisma.propertyValue.findUnique({
+      where: { id: propertyValueId },
+      select: { id: true },
+    });
+
+    if (!existing) {
       return NextResponse.json(
         { error: "Property value not found" },
         { status: 404 }
       );
     }
 
-    const updatedPropertyValue = mockDb.propertyValues.update(
-      propertyValueId,
-      body
-    );
-    return NextResponse.json(updatedPropertyValue);
+    const updateData: Record<string, unknown> = {};
+    if ("value" in body) updateData.value = body.value;
+
+    const updatedPropertyValue = await prisma.propertyValue.update({
+      where: { id: propertyValueId },
+      data: updateData,
+    });
+
+    return NextResponse.json(toPropertyValue(updatedPropertyValue));
   } catch {
     return NextResponse.json(
       { error: "Failed to update property value" },
@@ -36,16 +45,21 @@ export async function DELETE(
 ) {
   try {
     const { propertyValueId } = await params;
-    const propertyValue = mockDb.propertyValues.get(propertyValueId);
 
-    if (!propertyValue) {
+    const existing = await prisma.propertyValue.findUnique({
+      where: { id: propertyValueId },
+      select: { id: true },
+    });
+
+    if (!existing) {
       return NextResponse.json(
         { error: "Property value not found" },
         { status: 404 }
       );
     }
 
-    mockDb.propertyValues.delete(propertyValueId);
+    await prisma.propertyValue.delete({ where: { id: propertyValueId } });
+
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(

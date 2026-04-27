@@ -1,22 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockDb } from "@/lib/mock-db";
-import { PageType } from "@obnofi/types";
+import { prisma } from "@obnofi/db";
 import { getExampleDatabaseColumns } from "@/lib/database-utils";
+import {
+  getAuthenticatedUserId,
+  resolveWorkspaceForUser,
+} from "@/lib/workspace-resolution";
+import {
+  PAGE_INCLUDE,
+  toPage,
+  toPrismaPageType,
+  toPrismaPropertyType,
+  toPrismaViewType,
+  type PrismaPageRow,
+} from "@/lib/prisma-transforms";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const workspaceId = searchParams.get("workspaceId");
-
-    if (!workspaceId) {
-      return NextResponse.json(
-        { error: "workspaceId is required" },
-        { status: 400 }
-      );
+    const userId = await getAuthenticatedUserId(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const pages = mockDb.pages.getByWorkspace(workspaceId);
-    return NextResponse.json(pages);
+    const { searchParams } = new URL(request.url);
+    const requestedWorkspaceId = searchParams.get("workspaceId");
+
+    const workspace = await resolveWorkspaceForUser(userId, requestedWorkspaceId);
+    if (!workspace) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+
+    const prismaPages = await prisma.page.findMany({
+      where: { workspaceId: workspace.id, parentDatabaseId: null },
+      include: PAGE_INCLUDE,
+      orderBy: { updatedAt: "desc" },
+    });
+
+    return NextResponse.json(prismaPages.map(toPage));
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch pages" },
@@ -27,53 +46,96 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { title, type, parentId, workspaceId, databaseId } = body;
+    const userId = await getAuthenticatedUserId(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    if (!title || !type || !workspaceId) {
+    const body = await request.json();
+    const { title, type, parentId, workspaceId: requestedWorkspaceId } = body;
+
+    if (!title || !type) {
       return NextResponse.json(
-        { error: "title, type, and workspaceId are required" },
+        { error: "title and type are required" },
         { status: 400 }
       );
     }
 
-    const validTypes: PageType[] = ["document", "canvas", "database"];
+    const validTypes = ["document", "canvas", "database"];
     if (!validTypes.includes(type)) {
       return NextResponse.json({ error: "Invalid page type" }, { status: 400 });
     }
 
-    const newPage = mockDb.pages.create({
-      title,
-      type,
-      parentId: parentId || null,
-      workspaceId,
-      databaseId: databaseId || null,
-      parentDatabaseId: databaseId || null,
-      content: type === "document" ? { type: "doc", content: [{ type: "paragraph" }] } : null,
-      icon: null,
-      coverImage: null,
-      isPublic: false,
-      shareId: null,
-      sharePassword: null,
-    });
-
-    if (type === "database") {
-      const database = mockDb.databases.create(newPage.id);
-      getExampleDatabaseColumns().forEach((column) => {
-        mockDb.columns.create({
-          databaseId: database.id,
-          name: column.name,
-          type: column.type,
-          options: column.options,
-        });
-      });
-
-      const updatedPage = mockDb.pages.get(newPage.id);
-      return NextResponse.json(updatedPage, { status: 201 });
+    const workspace = await resolveWorkspaceForUser(userId, requestedWorkspaceId);
+    if (!workspace) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
     }
 
-    return NextResponse.json(newPage, { status: 201 });
-  } catch {
+    if (type === "database") {
+      const defaultColumns = getExampleDatabaseColumns();
+
+      const { page: newPage, databaseId } = await prisma.$transaction(
+        async (tx) => {
+          const page = await tx.page.create({
+            data: {
+              title,
+              type: toPrismaPageType(type),
+              parentId: parentId || null,
+              workspaceId: workspace.id,
+              isPublic: false,
+            },
+          });
+
+          const database = await tx.database.create({
+            data: { pageId: page.id },
+          });
+
+          await tx.property.createMany({
+            data: defaultColumns.map((col, order) => ({
+              databaseId: database.id,
+              name: col.name,
+              type: toPrismaPropertyType(col.type),
+              options: col.options ? (col.options as object[]) : undefined,
+              order,
+            })),
+          });
+
+          await tx.view.create({
+            data: {
+              databaseId: database.id,
+              name: "Table",
+              type: toPrismaViewType("table"),
+              order: 0,
+            },
+          });
+
+          return { page, databaseId: database.id };
+        },
+        { maxWait: 15000, timeout: 30000 }
+      );
+
+      const result = toPage({ ...newPage, database: { id: databaseId } } as PrismaPageRow);
+      return NextResponse.json(result, { status: 201 });
+    }
+
+    const newPage = await prisma.page.create({
+      data: {
+        title,
+        type: toPrismaPageType(type),
+        parentId: parentId || null,
+        workspaceId: workspace.id,
+        content:
+          type === "document"
+            ? { type: "doc", content: [{ type: "paragraph" }] }
+            : undefined,
+        isPublic: false,
+      },
+      include: PAGE_INCLUDE,
+    });
+
+    return NextResponse.json(toPage(newPage), { status: 201 });
+  } catch (e) {
+    console.error("[POST /api/pages]", e);
     return NextResponse.json(
       { error: "Failed to create page" },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockDb } from "@/lib/mock-db";
+import { prisma } from "@obnofi/db";
+import { toView, toPrismaViewType } from "@/lib/prisma-transforms";
 
 // GET /api/databases/[databaseId]/views
 export async function GET(
@@ -8,14 +9,22 @@ export async function GET(
 ) {
   try {
     const { databaseId } = await params;
-    const database = mockDb.databases.get(databaseId);
+
+    const database = await prisma.database.findUnique({
+      where: { id: databaseId },
+      select: { id: true },
+    });
 
     if (!database) {
       return NextResponse.json({ error: "Database not found" }, { status: 404 });
     }
 
-    const views = mockDb.views.getByDatabase(databaseId);
-    return NextResponse.json(views);
+    const views = await prisma.view.findMany({
+      where: { databaseId },
+      orderBy: { order: "asc" },
+    });
+
+    return NextResponse.json(views.map(toView));
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch views" },
@@ -34,24 +43,40 @@ export async function POST(
     const body = await request.json();
     const { name, type, config } = body;
 
-    const database = mockDb.databases.get(databaseId);
+    const database = await prisma.database.findUnique({
+      where: { id: databaseId },
+      include: {
+        properties: { select: { id: true }, orderBy: { order: "asc" } },
+      },
+    });
+
     if (!database) {
       return NextResponse.json({ error: "Database not found" }, { status: 404 });
     }
 
-    const view = mockDb.views.create({
-      databaseId,
-      name: name || `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
-      type,
-      config: config || {
-        visibleProperties: database.properties.map((p) => p.id),
-        propertyWidths: {},
-        sorts: [],
-        filters: [],
+    // Get current view count for order
+    const viewCount = await prisma.view.count({ where: { databaseId } });
+
+    const typeLabel = typeof type === "string"
+      ? type.charAt(0).toUpperCase() + type.slice(1)
+      : "Table";
+
+    const view = await prisma.view.create({
+      data: {
+        databaseId,
+        name: name || `New ${typeLabel}`,
+        type: toPrismaViewType(type || "table"),
+        config: config || {
+          visibleProperties: database.properties.map((p) => p.id),
+          propertyWidths: {},
+          sorts: [],
+          filters: [],
+        },
+        order: viewCount,
       },
     });
 
-    return NextResponse.json(view, { status: 201 });
+    return NextResponse.json(toView(view), { status: 201 });
   } catch {
     return NextResponse.json(
       { error: "Failed to create view" },

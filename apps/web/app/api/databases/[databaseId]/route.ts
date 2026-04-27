@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockDb } from "@/lib/mock-db";
+import { prisma } from "@obnofi/db";
+import { toDatabase } from "@/lib/prisma-transforms";
 
 export async function GET(
   _request: NextRequest,
@@ -7,13 +8,24 @@ export async function GET(
 ) {
   try {
     const { databaseId } = await params;
-    const database = mockDb.databases.get(databaseId);
+
+    const database = await prisma.database.findUnique({
+      where: { id: databaseId },
+      include: {
+        properties: { orderBy: { order: "asc" } },
+        views: { orderBy: { order: "asc" } },
+        rows: {
+          where: { parentDatabaseId: databaseId },
+          include: { propertyValues: true },
+        },
+      },
+    });
 
     if (!database) {
       return NextResponse.json({ error: "Database not found" }, { status: 404 });
     }
 
-    return NextResponse.json(database);
+    return NextResponse.json(toDatabase(database));
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch database" },
@@ -28,13 +40,19 @@ export async function DELETE(
 ) {
   try {
     const { databaseId } = await params;
-    const database = mockDb.databases.get(databaseId);
 
-    if (!database) {
+    const existing = await prisma.database.findUnique({
+      where: { id: databaseId },
+      select: { id: true },
+    });
+
+    if (!existing) {
       return NextResponse.json({ error: "Database not found" }, { status: 404 });
     }
 
-    mockDb.databases.delete(databaseId);
+    // Cascades handle properties, views, and rows
+    await prisma.database.delete({ where: { id: databaseId } });
+
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(

@@ -1,33 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockDb } from "@/lib/mock-db";
+import { prisma } from "@obnofi/db";
+import { PAGE_INCLUDE } from "@/lib/prisma-transforms";
+import {
+  getAuthenticatedUserId,
+  resolveWorkspaceForUser,
+} from "@/lib/workspace-resolution";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const workspaceId = searchParams.get("workspaceId");
-    const query = searchParams.get("q")?.toLowerCase().trim() || "";
-
-    if (!workspaceId) {
-      return NextResponse.json(
-        { error: "workspaceId is required" },
-        { status: 400 }
-      );
+    const userId = await getAuthenticatedUserId(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const pages = mockDb.pages.getByWorkspace(workspaceId);
-    const databasePages = pages.filter((page) => page.type === "database");
+    const { searchParams } = new URL(request.url);
+    const requestedWorkspaceId = searchParams.get("workspaceId");
+    const query = searchParams.get("q")?.trim() || "";
 
-    const results = databasePages
-      .filter((page) =>
-        query ? page.title.toLowerCase().includes(query) : true
-      )
+    const workspace = await resolveWorkspaceForUser(userId, requestedWorkspaceId);
+    if (!workspace) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+
+    const pages = await prisma.page.findMany({
+      where: {
+        workspaceId: workspace.id,
+        type: "DATABASE",
+        parentDatabaseId: null,
+        ...(query
+          ? { title: { contains: query, mode: "insensitive" } }
+          : {}),
+      },
+      include: PAGE_INCLUDE,
+    });
+
+    const results = pages
       .map((page) => ({
         id: page.id,
         title: page.title,
         icon: page.icon ?? null,
-        databaseId: page.databaseId ?? "",
+        databaseId: page.database?.id ?? null,
       }))
-      .filter((item) => item.databaseId);
+      .filter((item) => item.databaseId !== null);
 
     return NextResponse.json(results);
   } catch {

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockDb } from "@/lib/mock-db";
+import { prisma } from "@obnofi/db";
 import {
   createDefaultPropertyValue,
   DATABASE_COLUMN_TYPES,
   normalizePropertyOptions,
 } from "@/lib/database-utils";
+import { toProperty, toPrismaPropertyType } from "@/lib/prisma-transforms";
 
 export async function POST(
   request: NextRequest,
@@ -22,7 +23,11 @@ export async function POST(
       );
     }
 
-    const database = mockDb.databases.get(databaseId);
+    const database = await prisma.database.findUnique({
+      where: { id: databaseId },
+      select: { id: true },
+    });
+
     if (!database) {
       return NextResponse.json({ error: "Database not found" }, { status: 404 });
     }
@@ -33,22 +38,41 @@ export async function POST(
 
     const normalizedOptions = normalizePropertyOptions(type, name, options);
 
-    const column = mockDb.columns.create({
-      databaseId,
-      name,
-      type,
-      options: normalizedOptions,
+    // Get current property count for order
+    const propertyCount = await prisma.property.count({
+      where: { databaseId },
     });
 
-    database.rows.forEach((row) => {
-      mockDb.propertyValues.upsert(
-        row.id,
-        column.id,
-        createDefaultPropertyValue(column)
-      );
+    const property = await prisma.property.create({
+      data: {
+        databaseId,
+        name,
+        type: toPrismaPropertyType(type),
+        options: normalizedOptions ? (normalizedOptions as object[]) : undefined,
+        order: propertyCount,
+      },
     });
 
-    return NextResponse.json(column, { status: 201 });
+    // Create default PropertyValues for all existing rows
+    const rows = await prisma.page.findMany({
+      where: { parentDatabaseId: databaseId },
+      select: { id: true },
+    });
+
+    const mappedProperty = toProperty(property);
+
+    if (rows.length > 0) {
+      await prisma.propertyValue.createMany({
+        data: rows.map((row) => ({
+          pageId: row.id,
+          propertyId: property.id,
+          value: createDefaultPropertyValue(mappedProperty) as object,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    return NextResponse.json(mappedProperty, { status: 201 });
   } catch {
     return NextResponse.json(
       { error: "Failed to create column" },

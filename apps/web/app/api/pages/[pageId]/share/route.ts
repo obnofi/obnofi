@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import bcrypt from "bcryptjs";
-import { mockDb } from "@/lib/mock-db";
+import { prisma } from "@obnofi/db";
 
 export async function PATCH(
   request: NextRequest,
@@ -12,14 +12,18 @@ export async function PATCH(
     const body = await request.json();
     const { isPublic, password } = body;
 
-    const page = mockDb.pages.get(pageId);
+    const page = await prisma.page.findUnique({
+      where: { id: pageId },
+      select: { id: true, shareId: true, isPublic: true },
+    });
+
     if (!page) {
       return NextResponse.json({ error: "Page not found" }, { status: 404 });
     }
 
     const updateData: {
       isPublic: boolean;
-      shareId?: string;
+      shareId?: string | null;
       sharePassword?: string | null;
     } = { isPublic };
 
@@ -31,16 +35,20 @@ export async function PATCH(
         updateData.sharePassword = await bcrypt.hash(password, 10);
       }
     } else {
-      updateData.shareId = undefined;
+      updateData.shareId = null;
       updateData.sharePassword = null;
     }
 
-    const updatedPage = mockDb.pages.update(pageId, updateData);
+    const updatedPage = await prisma.page.update({
+      where: { id: pageId },
+      data: updateData,
+      select: { shareId: true, isPublic: true },
+    });
 
     return NextResponse.json({
       success: true,
-      shareId: updatedPage?.shareId,
-      isPublic: updatedPage?.isPublic,
+      shareId: updatedPage.shareId,
+      isPublic: updatedPage.isPublic,
     });
   } catch {
     return NextResponse.json(

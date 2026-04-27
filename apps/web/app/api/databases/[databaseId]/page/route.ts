@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockDb } from "@/lib/mock-db";
+import { prisma } from "@obnofi/db";
+import { fromPrismaPageType } from "@/lib/prisma-transforms";
 
 // GET /api/databases/[databaseId]/page
 // Returns the page info associated with this database
@@ -9,21 +10,22 @@ export async function GET(
 ) {
   try {
     const { databaseId } = await params;
-    const database = mockDb.databases.get(databaseId);
+
+    const database = await prisma.database.findUnique({
+      where: { id: databaseId },
+      include: {
+        page: { select: { id: true, title: true, type: true } },
+      },
+    });
 
     if (!database) {
       return NextResponse.json({ error: "Database not found" }, { status: 404 });
     }
 
-    const page = mockDb.pages.get(database.pageId);
-    if (!page) {
-      return NextResponse.json({ error: "Page not found" }, { status: 404 });
-    }
-
     return NextResponse.json({
-      id: page.id,
-      title: page.title,
-      type: page.type,
+      id: database.page.id,
+      title: database.page.title,
+      type: fromPrismaPageType(database.page.type),
     });
   } catch {
     return NextResponse.json(
