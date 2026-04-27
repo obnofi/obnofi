@@ -178,8 +178,5 @@ export const usePageStore = create<PageState>((set, get) => ({
     return pages.filter((p) => p.parentId === parentId);
   },
 
-  getPageTree: () => {
-    const { pages } = get();
-    return buildPageTree(pages);
-  },
+  getPageTree: () => buildPageTree(get().pages),
 }));

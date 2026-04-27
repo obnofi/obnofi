@@ -1,15 +1,17 @@
 import { lazy, Suspense } from 'react'
 import { Node, mergeAttributes } from '@tiptap/core'
-import { ReactNodeViewRenderer } from '@tiptap/react'
+import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
 
 const LazyDbDiagramBlock = lazy(() => import('@/src/components/blocks/db-diagram/DbDiagramBlock'))
 
 function DbDiagramBlockWrapper(props: NodeViewProps) {
   return (
-    <Suspense fallback={<div className="flex h-40 items-center justify-center text-sm text-[var(--color-text-secondary)]">Loading diagram...</div>}>
-      <LazyDbDiagramBlock {...(props as any)} />
-    </Suspense>
+    <NodeViewWrapper className="db-diagram-block">
+      <Suspense fallback={<div className="flex h-40 items-center justify-center text-sm text-[var(--color-text-secondary)]">Loading diagram...</div>}>
+        <LazyDbDiagramBlock {...(props as any)} />
+      </Suspense>
+    </NodeViewWrapper>
   )
 }
 

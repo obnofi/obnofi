@@ -11,6 +11,7 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import { Page, PageType } from "@obnofi/types";
+import { creatablePageLabels, creatablePageTypes } from "@/lib/pageCreation";
 
 interface DatabaseViewProps {
   databasePage: Page;
@@ -163,8 +164,7 @@ export function DatabaseView({
 
           {showNewMenu && (
             <div className="absolute top-full right-0 z-[99999] mt-1 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
-              {(["document", "canvas", "database"] as PageType[]).map(
-                (type) => (
+              {creatablePageTypes.map((type) => (
                   <button
                     key={type}
                     onClick={() => {
@@ -174,10 +174,9 @@ export function DatabaseView({
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
                   >
                     <span>{typeIcons[type]}</span>
-                    {typeLabels[type]}
+                    {creatablePageLabels[type]}
                   </button>
-                )
-              )}
+                ))}
             </div>
           )}
         </div>

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { NodeViewWrapper } from '@tiptap/react'
 import { ReactFlowProvider } from '@xyflow/react'
 import dynamic from 'next/dynamic'
 import { usePageStore } from '@/store/pageStore'
@@ -43,7 +42,7 @@ export default function DbDiagramBlock({ node, updateAttributes }: DbDiagramBloc
   }
 
   return (
-    <NodeViewWrapper className="db-diagram-block">
+    <>
       <div className="my-4 h-[500px]">
         <ReactFlowProvider>
           <DbDiagramLayout
@@ -62,6 +61,6 @@ export default function DbDiagramBlock({ node, updateAttributes }: DbDiagramBloc
           onClick={() => setIsFullscreen(false)}
         />
       )}
-    </NodeViewWrapper>
+    </>
   )
 }

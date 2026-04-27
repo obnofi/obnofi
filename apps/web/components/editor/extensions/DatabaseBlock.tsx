@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { InputRule, Node, mergeAttributes } from "@tiptap/core";
 import {
   NodeViewWrapper,
@@ -48,6 +48,7 @@ function DatabaseBlockView(props: ReactNodeViewProps) {
   } = attrs;
   const [databasePages, setDatabasePages] = useState<Page[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const isCreatingRef = useRef(false);
 
   const loadDatabasePages = useCallback(async () => {
     if (!workspaceId) {
@@ -68,10 +69,11 @@ function DatabaseBlockView(props: ReactNodeViewProps) {
   }, [loadDatabasePages]);
 
   const createDatabasePage = useCallback(async () => {
-    if (!workspaceId || !parentPageId || isCreating) {
+    if (!workspaceId || !parentPageId || isCreatingRef.current) {
       return;
     }
 
+    isCreatingRef.current = true;
     setIsCreating(true);
     const response = await fetch("/api/pages", {
       method: "POST",
@@ -84,6 +86,7 @@ function DatabaseBlockView(props: ReactNodeViewProps) {
       }),
     });
 
+    isCreatingRef.current = false;
     setIsCreating(false);
 
     if (!response.ok) {
@@ -97,7 +100,7 @@ function DatabaseBlockView(props: ReactNodeViewProps) {
       autoCreate: false,
     });
     await loadDatabasePages();
-  }, [isCreating, loadDatabasePages, parentPageId, props, workspaceId]);
+  }, [loadDatabasePages, parentPageId, props, workspaceId]);
 
   useEffect(() => {
     if (!props.editor.isEditable || !autoCreate || pageId) {
