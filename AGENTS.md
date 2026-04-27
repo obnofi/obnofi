@@ -25,8 +25,9 @@ Read these files **in this order** before starting any task:
 1. **`DB.md`** — Database notes and schema overview. Required before any feature that touches data.
 2. **`server/prisma/schema.prisma`** — Source of truth for the actual schema. Cross-reference with `DB.md`.
 3. **`DESIGN.md`** — Design system, Jungle System naming conventions, and visual rules.
-4. **`docs/architecture.md`** — Data model and architecture notes.
-5. **`docs/implementation-plan.md`** — Current implementation status and planned work.
+4. **`APIDOCS.md`** — All API endpoint specs. Required before adding or modifying any route.
+5. **`docs/architecture.md`** — Data model and architecture notes.
+6. **`docs/implementation-plan.md`** — Current implementation status and planned work.
 
 For design or UI tasks, also check:
 
@@ -53,6 +54,14 @@ All features, components, and code variables follow the **Jungle System** metaph
 | `fossilize` | Snapshot / version history |
 | `Grove` | Editor area |
 | `Clearing` | Canvas area |
+| `Canopy` | Page cover image / hero image (GrovePageCanopy) |
+| `Glyph` | Page icon display — emoji or type fallback icon (PageGlyph) |
+| `Chrome` | Full page header wrapper — Canopy + title + Glyph (GrovePageChrome) |
+| `Undergrowth` | Database block (inline spreadsheet/kanban) |
+| `Specimen` | A database row (a Page with `parentDatabaseId`) |
+| `Trait` | A database property/column (Property model) |
+| `Marking` | A SELECT / MULTI_SELECT option tag |
+| `Parrot` (앵무새) | Speech-to-text (음성인식) — `useSpeechRecognition` hook + `SpeechRecognitionButton` |
 
 When adding new features, extend this metaphor. Do not use generic names (`create`, `save`, `editor`) where a Jungle System equivalent exists or can be defined. If unsure, propose a name and document it in `DESIGN.md`.
 
@@ -73,9 +82,72 @@ Before implementing any new feature:
 
 - [ ] Read `DB.md` and `server/prisma/schema.prisma`
 - [ ] Confirm whether a schema migration is needed
+- [ ] Check `APIDOCS.md` — add new endpoints to the spec before implementing
 - [ ] Check `DESIGN.md` for relevant tokens and components
 - [ ] Apply Jungle System naming to all new identifiers
 - [ ] Identify which runtime the feature touches (frontend / backend / AI layer)
+
+---
+
+## Page Icon & Cover Image — Rules
+
+### icon 필드
+
+- `Page.icon`은 **이모지 문자열** (`"🌱"`)이다. 이모지 코드나 ID가 아님.
+- 아이콘이 없으면 `PageGlyph`가 `Page.type`에 따라 기본 SVG 아이콘을 렌더링한다 (DOCUMENT / CANVAS / DATABASE).
+- 아이콘 표시가 필요한 곳 어디서나 `<PageGlyph page={page} />` 재사용. 직접 이모지 렌더링 금지.
+
+### coverImage 필드
+
+- `Page.coverImage`는 **완전한 URL 문자열**이다. Preset이든 업로드든 저장 형식은 동일.
+  - Preset: `data:image/svg+xml;charset=UTF-8,...` (Data URL)
+  - 업로드: `https://{supabase}/storage/v1/object/public/clearing-assets/page-canopies/{pageId}/{uuid}.ext`
+- 업로드는 **클라이언트 → Supabase Storage 직접** (`uploadPageCanopyAsset(file, pageId)`). 별도 서버 API 경유 없음.
+- 업로드 후 반환된 URL을 `PATCH /api/pages/[pageId]`로 저장.
+- Preset은 `apps/web/lib/pageCanopyPresets.ts`에서 관리. 새 Preset 추가는 이 파일에만.
+
+### 컴포넌트 역할 분리
+
+| 컴포넌트 | 역할 |
+|---|---|
+| `PageGlyph` | 아이콘 **표시만** (읽기 전용) |
+| `GrovePageCanopy` | icon + coverImage **선택 및 편집** UI |
+| `GrovePageChrome` | GrovePageCanopy + PageTitleBlock **통합 래퍼** |
+
+페이지 헤더를 렌더링할 때는 항상 `GrovePageChrome`을 사용한다.
+
+---
+
+## Database Block — Critical Rules
+
+The Database block (`Undergrowth`) is the most complex feature. Violations here cause hard-to-trace bugs.
+
+### Naming — never mix old and new
+
+| Correct (use this) | Forbidden (legacy alias only) |
+|---|---|
+| `Property` | `Field`, `Column` |
+| `PropertyValue` | `Cell` |
+| `Page` (with `parentDatabaseId`) | `Row` as a standalone model |
+| `View` | `DatabaseView` |
+
+`Column` / `Field` / `Row` / `Cell` exist only as TypeScript aliases in `packages/types`. Never introduce new variables or API routes using these names.
+
+### Row = Page
+
+A database row **is a `Page`** with `parentDatabaseId` set. Do not create a separate `Row` model. When querying rows: `prisma.page.findMany({ where: { parentDatabaseId: id } })`.
+
+### Cell values live in PropertyValue
+
+Cell data is stored in `PropertyValue.value` as JSONB. The shape is a Discriminated Union on `type` — see `DB.md` for the full spec. Never store cell values anywhere else.
+
+### View config is JSONB
+
+Filters, sorts, groupBy, column widths, and visible properties are all in `View.config` (JSONB). Do not add new Prisma columns for these — extend `ViewConfig` in `packages/types` instead.
+
+### Optimistic updates
+
+`updateCell` in the Zustand store must apply the change to local state immediately, then sync to server. On failure, roll back to the previous value. Never await the server call before updating UI.
 
 ---
 
@@ -91,6 +163,38 @@ Before implementing any new feature:
 | Public sharing | `app/share/`, `components/share/` |
 | Graph view | `components/graph/`, `lib/graph/` |
 | Canvas | `components/canvas/` |
+| Speech-to-text (Parrot / 앵무새) | `hooks/useSpeechRecognition.ts`, `components/editor/SpeechRecognitionButton.tsx` |
+
+---
+
+## Parrot (앵무새) — Speech-to-Text Feature
+
+The Parrot feature adds microphone-based dictation to the Grove editor.
+
+### Files
+
+| File | Role |
+|---|---|
+| `apps/web/hooks/useSpeechRecognition.ts` | Core hook — wraps Web Speech API, exposes `start/stop/isListening/transcript/interimTranscript/isSupported` |
+| `apps/web/components/editor/SpeechRecognitionButton.tsx` | Mic toggle button + real-time interim text badge |
+
+### Integration point
+
+`SpeechRecognitionButton` is rendered in `Editor.tsx` in a small toolbar strip above `EditorContent` (only when `editable={true}`).
+Final text is inserted at the current TipTap cursor via `editor.chain().focus().insertContent(text).run()`.
+Interim text is displayed in gray next to the mic button — it is **not** inserted into the document.
+
+### Browser restrictions
+
+- **Supported**: Chrome 33+, Edge (Chromium-based)
+- **Not supported**: Firefox, Safari — `isSupported` returns `false`; the button renders as disabled with a tooltip explaining the limitation
+- No external libraries — uses `window.SpeechRecognition` / `window.webkitSpeechRecognition` only
+- Recognition config: `lang: 'ko-KR'`, `continuous: true`, `interimResults: true`
+
+### Do NOT
+
+- Add `@tiptap/extension-color` or `@tiptap/extension-text-style` just for interim gray text — show it in the UI widget instead
+- Make the hook depend on the editor instance — pass `onFinalResult` callback instead
 
 ---
 
