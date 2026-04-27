@@ -67,6 +67,24 @@ model User {
   ownedWorkspaces Workspace[]       @relation("WorkspaceOwner")
   memberships     WorkspaceMember[]
   comments        Comment[]
+  cliTokens       CliToken[]
+}
+
+// ── CLI TOKEN ──────────────────────────────────────────
+
+model CliToken {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String    @default("CLI Token")
+  tokenHash  String    @unique
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
 }
 
 // ── WORKSPACE ─────────────────────────────────────────
