@@ -1,0 +1,34 @@
+const profileImageFilenames = [
+  "spider.png",
+  "peacock.png",
+  "armadillo.png",
+  "parrot.png",
+  "elephant.png",
+  "black-panther.png",
+] as const;
+
+export const profileImagePresets = profileImageFilenames.map((filename) => `/profile/${filename}`);
+
+function hashSeed(seed: string) {
+  let hash = 0;
+
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
+  }
+
+  return hash;
+}
+
+export function pickProfileImagePreset(seed: string) {
+  const normalizedSeed = seed.trim();
+
+  if (!normalizedSeed) {
+    return profileImagePresets[0];
+  }
+
+  return profileImagePresets[hashSeed(normalizedSeed) % profileImagePresets.length];
+}
+
+export function isProfileImagePreset(image: string | null | undefined) {
+  return image ? profileImagePresets.includes(image) : false;
+}
