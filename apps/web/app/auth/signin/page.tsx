@@ -1,9 +1,18 @@
 "use client";
 
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { SiteLogo } from "@/components/branding/SiteLogo";
 
-export default function SignInPage() {
+const DEFAULT_CALLBACK = "/workspace/ws-1";
+
+function SignInContent() {
+  const searchParams = useSearchParams();
+  // NextAuth가 callbackUrl을 query에 포함시켜 이 페이지로 보냄.
+  // CLI auth 흐름 등 동적 redirect를 위해 읽어서 signIn에 전달.
+  const callbackUrl = searchParams.get("callbackUrl") ?? DEFAULT_CALLBACK;
+
   return (
     <div className="flex min-h-full flex-col items-center justify-center bg-[var(--color-background)] px-4">
       <div className="w-full max-w-sm">
@@ -23,7 +32,7 @@ export default function SignInPage() {
 
           {/* Google Sign In Button */}
           <button
-            onClick={() => signIn("google", { callbackUrl: "/workspace/ws-1" })}
+            onClick={() => signIn("google", { callbackUrl })}
             className="flex w-full items-center justify-center gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-4 py-2.5 text-sm font-medium text-[var(--color-text-primary)] transition-all hover:bg-[var(--color-hover)]"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -49,7 +58,7 @@ export default function SignInPage() {
 
           {/* 임시: 바로 들어가기 버튼 */}
           <button
-            onClick={() => signIn("credentials", { callbackUrl: "/workspace/ws-1" })}
+            onClick={() => signIn("credentials", { callbackUrl })}
             className="mt-3 flex w-full items-center justify-center rounded-md bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-accent-hover)]"
           >
             Skip Login (Dev Mode)
@@ -73,5 +82,14 @@ export default function SignInPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// useSearchParams()는 Suspense boundary 필요
+export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInContent />
+    </Suspense>
   );
 }
