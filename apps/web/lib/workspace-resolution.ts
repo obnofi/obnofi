@@ -29,32 +29,21 @@ export async function resolveWorkspaceForUser(
     });
   }
 
-  const ownedWorkspace = await prisma.workspace.findFirst({
-    where: {
-      members: {
-        some: {
-          userId,
-          role: "OWNER",
-        },
-      },
-    },
-    orderBy: { createdAt: "asc" },
-    select: { id: true },
-  });
+  // Run both queries in parallel; prefer owned workspace if found
+  const [ownedWorkspace, anyMembership] = await Promise.all([
+    prisma.workspace.findFirst({
+      where: { members: { some: { userId, role: "OWNER" } } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    }),
+    prisma.workspaceMember.findFirst({
+      where: { userId },
+      orderBy: { joinedAt: "asc" },
+      select: { workspaceId: true },
+    }),
+  ]);
 
-  if (ownedWorkspace) {
-    return ownedWorkspace;
-  }
-
-  const membership = await prisma.workspaceMember.findFirst({
-    where: { userId },
-    orderBy: { joinedAt: "asc" },
-    select: { workspaceId: true },
-  });
-
-  if (!membership) {
-    return null;
-  }
-
-  return { id: membership.workspaceId };
+  if (ownedWorkspace) return ownedWorkspace;
+  if (!anyMembership) return null;
+  return { id: anyMembership.workspaceId };
 }

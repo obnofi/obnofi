@@ -40,11 +40,38 @@ export function toPrismaViewType(t: string): PrismaViewType {
   return t.toUpperCase() as PrismaViewType;
 }
 
-// ── Include constant ───────────────────────────────────────────────────────
+// ── Select / Include constants ─────────────────────────────────────────────
 
-/** Use this everywhere a page is fetched so database.id is always available */
+/** Full fetch including content — use only when opening a single page for editing */
 export const PAGE_INCLUDE = {
   database: { select: { id: true } },
+} as const;
+
+/**
+ * All scalar fields except `content` — use for list queries (sidebar, search, etc.)
+ * where document body is not needed. Dramatically reduces payload size.
+ */
+export const PAGE_SELECT = {
+  id: true,
+  title: true,
+  type: true,
+  icon: true,
+  coverImage: true,
+  parentId: true,
+  workspaceId: true,
+  parentDatabaseId: true,
+  isPublic: true,
+  shareId: true,
+  sharePassword: true,
+  createdAt: true,
+  updatedAt: true,
+  database: { select: { id: true } },
+} as const;
+
+/** PAGE_SELECT + propertyValues — use for database rows in table/board views */
+export const PAGE_SELECT_WITH_PROPERTY_VALUES = {
+  ...PAGE_SELECT,
+  propertyValues: true,
 } as const;
 
 // ── Row types (Prisma result shapes) ──────────────────────────────────────
@@ -52,7 +79,7 @@ export const PAGE_INCLUDE = {
 export type PrismaPageRow = {
   id: string;
   title: string;
-  content: unknown | null;
+  content?: unknown | null; // optional — omitted in list/row queries
   type: PrismaPageType;
   icon: string | null;
   coverImage: string | null;
@@ -116,7 +143,7 @@ export function toPage(p: PrismaPageRow): Page {
   return {
     id: p.id,
     title: p.title,
-    content: (p.content as object | null) ?? null,
+    content: p.content !== undefined ? (p.content as object | null) ?? null : null,
     type: fromPrismaPageType(p.type),
     icon: p.icon ?? null,
     coverImage: p.coverImage ?? null,

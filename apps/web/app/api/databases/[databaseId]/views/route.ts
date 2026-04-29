@@ -43,19 +43,17 @@ export async function POST(
     const body = await request.json();
     const { name, type, config } = body;
 
-    const database = await prisma.database.findUnique({
-      where: { id: databaseId },
-      include: {
-        properties: { select: { id: true }, orderBy: { order: "asc" } },
-      },
-    });
+    const [database, viewCount] = await Promise.all([
+      prisma.database.findUnique({
+        where: { id: databaseId },
+        include: { properties: { select: { id: true }, orderBy: { order: "asc" } } },
+      }),
+      prisma.view.count({ where: { databaseId } }),
+    ]);
 
     if (!database) {
       return NextResponse.json({ error: "Database not found" }, { status: 404 });
     }
-
-    // Get current view count for order
-    const viewCount = await prisma.view.count({ where: { databaseId } });
 
     const typeLabel = typeof type === "string"
       ? type.charAt(0).toUpperCase() + type.slice(1)

@@ -7,6 +7,7 @@ import {
 } from "@/lib/workspace-resolution";
 import {
   PAGE_INCLUDE,
+  PAGE_SELECT,
   toPage,
   toPrismaPageType,
   toPrismaPropertyType,
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
 
     const prismaPages = await prisma.page.findMany({
       where: { workspaceId: workspace.id, parentDatabaseId: null },
-      include: PAGE_INCLUDE,
+      select: PAGE_SELECT, // content 제외 — 사이드바에 불필요
       orderBy: { updatedAt: "desc" },
     });
 

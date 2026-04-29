@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
 import { getExampleDatabaseColumns } from "@/lib/database-utils";
 import {
+  PAGE_SELECT_WITH_PROPERTY_VALUES,
   toDatabase,
   toPrismaPropertyType,
   toPrismaViewType,
@@ -19,30 +20,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const page = await prisma.page.findUnique({
-      where: { id: pageId },
-      select: { id: true },
-    });
+    // Check page existence and existing database in parallel
+    const [page, existingDb] = await Promise.all([
+      prisma.page.findUnique({ where: { id: pageId }, select: { id: true } }),
+      prisma.database.findUnique({ where: { pageId }, select: { id: true } }),
+    ]);
 
     if (!page) {
       return NextResponse.json({ error: "Page not found" }, { status: 404 });
     }
 
-    // Check if database already exists for this page
-    const existingDb = await prisma.database.findUnique({
-      where: { pageId },
-      include: {
-        properties: { orderBy: { order: "asc" } },
-        views: { orderBy: { order: "asc" } },
-        rows: {
-          where: { parentDatabaseId: undefined },
-          include: { propertyValues: true },
-        },
-      },
-    });
-
     if (existingDb) {
-      // Fix rows query: find rows where parentDatabaseId = existingDb.id
       const fullDb = await prisma.database.findUnique({
         where: { id: existingDb.id },
         include: {
@@ -50,7 +38,7 @@ export async function POST(request: NextRequest) {
           views: { orderBy: { order: "asc" } },
           rows: {
             where: { parentDatabaseId: existingDb.id },
-            include: { propertyValues: true },
+            select: PAGE_SELECT_WITH_PROPERTY_VALUES,
           },
         },
       });
@@ -59,23 +47,18 @@ export async function POST(request: NextRequest) {
 
     const defaultColumns = getExampleDatabaseColumns();
 
-    const database = await prisma.$transaction(async (tx) => {
-      const newDb = await tx.database.create({
-        data: { pageId },
-      });
+    const fullDb = await prisma.$transaction(async (tx) => {
+      const newDb = await tx.database.create({ data: { pageId } });
 
-      let order = 0;
-      for (const col of defaultColumns) {
-        await tx.property.create({
-          data: {
-            databaseId: newDb.id,
-            name: col.name,
-            type: toPrismaPropertyType(col.type),
-            options: col.options ? (col.options as object[]) : undefined,
-            order: order++,
-          },
-        });
-      }
+      await tx.property.createMany({
+        data: defaultColumns.map((col, idx) => ({
+          databaseId: newDb.id,
+          name: col.name,
+          type: toPrismaPropertyType(col.type),
+          options: col.options ? (col.options as object[]) : undefined,
+          order: idx,
+        })),
+      });
 
       await tx.view.create({
         data: {
@@ -86,19 +69,15 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return newDb;
-    });
-
-    const fullDb = await prisma.database.findUnique({
-      where: { id: database.id },
-      include: {
-        properties: { orderBy: { order: "asc" } },
-        views: { orderBy: { order: "asc" } },
-        rows: {
-          where: { parentDatabaseId: database.id },
-          include: { propertyValues: true },
+      // Fetch full result inside transaction — avoids extra round-trip after commit
+      return tx.database.findUnique({
+        where: { id: newDb.id },
+        include: {
+          properties: { orderBy: { order: "asc" } },
+          views: { orderBy: { order: "asc" } },
+          rows: { select: PAGE_SELECT_WITH_PROPERTY_VALUES },
         },
-      },
+      });
     });
 
     return NextResponse.json(toDatabase(fullDb!), { status: 201 });

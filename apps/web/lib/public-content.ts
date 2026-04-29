@@ -1,5 +1,3 @@
-import { Page } from "@obnofi/types";
-
 const WIKI_LINK_REGEX = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
 
 type JsonValue =
@@ -10,32 +8,31 @@ type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
+type PublicPageRef = { id: string; title: string };
+
 function normalizeTitle(value: string) {
   return value.trim().toLowerCase();
 }
 
-function sanitizeText(
-  text: string,
-  publicTitleMap: Map<string, Page>
-) {
+function sanitizeText(text: string, publicTitleMap: Map<string, PublicPageRef>) {
   return text.replace(WIKI_LINK_REGEX, (_, rawTarget: string, rawLabel?: string) => {
     const target = publicTitleMap.get(normalizeTitle(rawTarget));
     if (!target) {
       return rawLabel?.trim() || "Private reference";
     }
-
     return rawLabel?.trim() || target.title;
   });
 }
 
 function sanitizeNode(
   value: JsonValue,
-  publicTitleMap: Map<string, Page>,
-  publicPageIds: Set<string>
+  publicTitleMap: Map<string, PublicPageRef>,
+  publicPageIds: Set<string>,
+  publicPageById: Map<string, PublicPageRef>
 ): JsonValue {
   if (Array.isArray(value)) {
     return value
-      .map((item) => sanitizeNode(item, publicTitleMap, publicPageIds))
+      .map((item) => sanitizeNode(item, publicTitleMap, publicPageIds, publicPageById))
       .filter((item) => item !== null);
   }
 
@@ -61,10 +58,7 @@ function sanitizeNode(
       typeof attrs.pageId === "string" ? attrs.pageId : null;
 
     if (referencedPageId && publicPageIds.has(referencedPageId)) {
-      const referencedPage = Array.from(publicTitleMap.values()).find(
-        (page) => page.id === referencedPageId
-      );
-
+      const referencedPage = publicPageById.get(referencedPageId);
       return {
         type: "paragraph",
         content: [
@@ -81,10 +75,7 @@ function sanitizeNode(
     return {
       type: "paragraph",
       content: [
-        {
-          type: "text",
-          text: "Embedded database hidden because it is not public.",
-        },
+        { type: "text", text: "Embedded database hidden because it is not public." },
       ],
     };
   }
@@ -98,10 +89,7 @@ function sanitizeNode(
       typeof attrs.pageId === "string" ? attrs.pageId : null;
 
     if (referencedPageId && publicPageIds.has(referencedPageId)) {
-      const referencedPage = Array.from(publicTitleMap.values()).find(
-        (page) => page.id === referencedPageId
-      );
-
+      const referencedPage = publicPageById.get(referencedPageId);
       return {
         type: "paragraph",
         content: [
@@ -118,38 +106,40 @@ function sanitizeNode(
     return {
       type: "paragraph",
       content: [
-        {
-          type: "text",
-          text: "Embedded canvas hidden because it is not public.",
-        },
+        { type: "text", text: "Embedded canvas hidden because it is not public." },
       ],
     };
   }
 
   const next: Record<string, JsonValue> = {};
   for (const [key, entry] of Object.entries(record)) {
-    next[key] = sanitizeNode(entry, publicTitleMap, publicPageIds);
+    next[key] = sanitizeNode(entry, publicTitleMap, publicPageIds, publicPageById);
   }
   return next;
 }
 
+/**
+ * publicPages: already filtered to isPublic=true pages — pass only { id, title }.
+ * Caller is responsible for pre-filtering; this function does no additional filtering.
+ */
 export function sanitizePublicContent(
   content: object | null,
-  allPages: Page[]
+  publicPages: PublicPageRef[]
 ): object | null {
   if (!content) {
     return null;
   }
 
-  const publicPages = allPages.filter((page) => page.isPublic);
   const publicTitleMap = new Map(
     publicPages.map((page) => [normalizeTitle(page.title), page] as const)
   );
   const publicPageIds = new Set(publicPages.map((page) => page.id));
+  const publicPageById = new Map(publicPages.map((page) => [page.id, page] as const));
 
   return sanitizeNode(
     content as JsonValue,
     publicTitleMap,
-    publicPageIds
+    publicPageIds,
+    publicPageById
   ) as object;
 }

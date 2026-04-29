@@ -23,12 +23,12 @@ async function ensureUserProfileImage(userId: string, fallbackSeed: string) {
 
   const seededProfileImage = pickProfileImagePreset(fallbackSeed);
 
-  if (isProfileImagePreset(user?.image)) {
-    return user.image;
-  }
-
   if (!user) {
     return seededProfileImage;
+  }
+
+  if (isProfileImagePreset(user.image)) {
+    return user.image;
   }
 
   await prisma.user.update({
@@ -77,27 +77,26 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user && token.sub) {
         session.user.id = token.sub;
-        session.user.image = await ensureUserProfileImage(
-          token.sub,
-          token.email ?? session.user.email ?? token.sub
-        );
+        // Read image from JWT — set at sign-in, no DB call needed per request
+        if (typeof token.picture === "string") {
+          session.user.image = token.picture;
+        }
       }
       return session;
     },
     async jwt({ token, user }) {
       if (user) {
+        // Runs only at sign-in: persist correct preset image to DB and cache in JWT
         token.sub = user.id;
-        token.picture = pickProfileImagePreset(user.email ?? user.id);
+        token.picture = await ensureUserProfileImage(
+          user.id,
+          token.email ?? user.email ?? user.id
+        );
       }
       return token;
     },
-    async signIn({ user }) {
-      const userId = "id" in user && typeof user.id === "string" ? user.id : null;
-
-      if (userId) {
-        await ensureUserProfileImage(userId, user.email ?? userId);
-      }
-
+    async signIn() {
+      // DB work moved to jwt callback (runs once at sign-in)
       return true;
     },
   },

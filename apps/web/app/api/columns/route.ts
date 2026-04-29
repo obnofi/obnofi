@@ -45,10 +45,14 @@ export async function POST(request: NextRequest) {
 
     const normalizedOptions = normalizePropertyOptions(type, name, options);
 
-    // Get current property count for order
-    const propertyCount = await prisma.property.count({
-      where: { databaseId },
-    });
+    // Count properties (for order) and fetch existing rows in parallel
+    const [propertyCount, rows] = await Promise.all([
+      prisma.property.count({ where: { databaseId } }),
+      prisma.page.findMany({
+        where: { parentDatabaseId: databaseId },
+        select: { id: true },
+      }),
+    ]);
 
     const property = await prisma.property.create({
       data: {
@@ -61,12 +65,6 @@ export async function POST(request: NextRequest) {
     });
 
     const mappedProperty = toProperty(property);
-
-    // Create default PropertyValues for all existing rows
-    const rows = await prisma.page.findMany({
-      where: { parentDatabaseId: databaseId },
-      select: { id: true },
-    });
 
     if (rows.length > 0) {
       await prisma.propertyValue.createMany({

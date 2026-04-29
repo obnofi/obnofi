@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
-import { toDatabase } from "@/lib/prisma-transforms";
+import { PAGE_SELECT_WITH_PROPERTY_VALUES, toDatabase } from "@/lib/prisma-transforms";
 
 export async function GET(
   _request: NextRequest,
@@ -16,7 +16,7 @@ export async function GET(
         views: { orderBy: { order: "asc" } },
         rows: {
           where: { parentDatabaseId: databaseId },
-          include: { propertyValues: true },
+          select: PAGE_SELECT_WITH_PROPERTY_VALUES,
         },
       },
     });

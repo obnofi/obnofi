@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
 import {
   PAGE_INCLUDE,
+  PAGE_SELECT_WITH_PROPERTY_VALUES,
   toPage,
   toDatabase,
 } from "@/lib/prisma-transforms";
@@ -15,38 +16,29 @@ export async function GET(
     const view = request.nextUrl.searchParams.get("view");
 
     if (view === "full") {
-      // For database pages, do a deeper include with properties, views, rows
-      const page = await prisma.page.findUnique({
-        where: { id: pageId },
-        include: PAGE_INCLUDE,
-      });
+      // Database.pageId is @unique — query page and database in parallel
+      const [page, database] = await Promise.all([
+        prisma.page.findUnique({ where: { id: pageId }, include: PAGE_INCLUDE }),
+        prisma.database.findUnique({
+          where: { pageId },
+          include: {
+            properties: { orderBy: { order: "asc" } },
+            views: { orderBy: { order: "asc" } },
+            rows: {
+              // content 제외 — DB 테이블/보드 뷰에서 문서 본문 불필요
+              select: PAGE_SELECT_WITH_PROPERTY_VALUES,
+            },
+          },
+        }),
+      ]);
 
       if (!page) {
         return NextResponse.json({ error: "Page not found" }, { status: 404 });
       }
 
-      if (page.type !== "DATABASE" || !page.database?.id) {
+      if (page.type !== "DATABASE" || !database) {
         return NextResponse.json(
           { error: "Not a database page" },
-          { status: 404 }
-        );
-      }
-
-      const database = await prisma.database.findUnique({
-        where: { id: page.database.id },
-        include: {
-          properties: { orderBy: { order: "asc" } },
-          views: { orderBy: { order: "asc" } },
-          rows: {
-            where: { parentDatabaseId: page.database.id },
-            include: { propertyValues: true },
-          },
-        },
-      });
-
-      if (!database) {
-        return NextResponse.json(
-          { error: "Database not found" },
           { status: 404 }
         );
       }

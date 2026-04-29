@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
-import { PAGE_INCLUDE, toPage } from "@/lib/prisma-transforms";
+import { PAGE_INCLUDE } from "@/lib/prisma-transforms";
 import { sanitizePublicContent } from "@/lib/public-content";
 
 export async function GET(
@@ -30,18 +30,16 @@ export async function GET(
       });
     }
 
-    // Fetch all pages in the same workspace for sanitization
-    const allPrismaPages = await prisma.page.findMany({
-      where: { workspaceId: page.workspaceId },
-      include: PAGE_INCLUDE,
+    // Fetch only public pages — minimal fields needed for sanitization
+    const publicPages = await prisma.page.findMany({
+      where: { workspaceId: page.workspaceId, isPublic: true },
+      select: { id: true, title: true },
     });
-
-    const allPages = allPrismaPages.map(toPage);
 
     return NextResponse.json({
       id: page.id,
       title: page.title,
-      content: sanitizePublicContent(page.content as object | null, allPages),
+      content: sanitizePublicContent(page.content as object | null, publicPages),
       isPasswordProtected: false,
       createdAt: page.createdAt.toISOString(),
       updatedAt: page.updatedAt.toISOString(),

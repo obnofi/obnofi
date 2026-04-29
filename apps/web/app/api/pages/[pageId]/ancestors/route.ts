@@ -17,30 +17,26 @@ export async function GET(
       return NextResponse.json({ error: "Page not found" }, { status: 404 });
     }
 
-    const ancestors: Array<{ id: string; title: string; icon: string | null }> =
-      [];
+    // Single recursive CTE replaces the N+1 loop
+    const ancestors = await prisma.$queryRaw<
+      Array<{ id: string; title: string; icon: string | null }>
+    >`
+      WITH RECURSIVE ancestor_chain AS (
+        SELECT id, title, icon, "parentId", 0 AS depth
+        FROM "Page"
+        WHERE id = ${pageId}
 
-    let current = await prisma.page.findUnique({
-      where: { id: pageId },
-      select: { parentId: true },
-    });
+        UNION ALL
 
-    while (current?.parentId) {
-      const parent = await prisma.page.findUnique({
-        where: { id: current.parentId },
-        select: { id: true, title: true, icon: true, parentId: true },
-      });
-
-      if (!parent) break;
-
-      ancestors.unshift({
-        id: parent.id,
-        title: parent.title,
-        icon: parent.icon,
-      });
-
-      current = parent;
-    }
+        SELECT p.id, p.title, p.icon, p."parentId", a.depth + 1
+        FROM "Page" p
+        INNER JOIN ancestor_chain a ON p.id = a."parentId"
+      )
+      SELECT id, title, icon
+      FROM ancestor_chain
+      WHERE id != ${pageId}
+      ORDER BY depth DESC
+    `;
 
     return NextResponse.json(ancestors);
   } catch {
