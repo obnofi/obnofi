@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import {
   BaseEdge,
   getStraightPath,
@@ -36,7 +37,7 @@ function getCenteredAnchorPoints(
   };
 }
 
-export function FloatingGraphEdge({
+export const FloatingGraphEdge = memo(function FloatingGraphEdge({
   id,
   source,
   target,
@@ -72,4 +73,4 @@ export function FloatingGraphEdge({
       interactionWidth={interactionWidth}
     />
   );
-}
+});

@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import {
   addEdge,
   Background,
@@ -41,12 +40,24 @@ const edgeTypes: EdgeTypes = {
   floating: FloatingGraphEdge,
 };
 
+const FIT_VIEW_OPTIONS = { padding: 0.2 };
+const DELETE_KEY_CODE = ["Backspace", "Delete"];
+const DEFAULT_EDGE_OPTIONS = {
+  type: "floating",
+  animated: false,
+  zIndex: -1,
+  markerEnd: { type: MarkerType.ArrowClosed, color: "#9ca3af" },
+  style: { stroke: "#9ca3af", strokeWidth: 1, opacity: 0.55 },
+};
+const MINIMAP_NODE_COLOR = (node: { type?: string }) =>
+  node.type === "customDatabase" ? "#337EA9" : "#64748b";
+
 function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
-  const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<GraphNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<GraphEdge>([]);
+  const pagesRef = React.useRef<Page[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -57,39 +68,28 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
 
       try {
         const response = await fetch(`/api/pages?workspaceId=${workspaceId}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch pages");
-        }
+        if (!response.ok) throw new Error("Failed to fetch pages");
 
         const data = (await response.json()) as Page[];
         if (isMounted) {
-          setPages(data);
+          pagesRef.current = data;
+          const graph = buildGraphData(data);
+          setNodes(graph.nodes);
+          setEdges(graph.edges);
         }
       } catch (loadError) {
         if (isMounted) {
-          setError(
-            loadError instanceof Error ? loadError.message : "Unknown error"
-          );
+          setError(loadError instanceof Error ? loadError.message : "Unknown error");
         }
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
 
     void loadPages();
 
-    return () => {
-      isMounted = false;
-    };
-  }, [workspaceId]);
-
-  useEffect(() => {
-    const graph = buildGraphData(pages);
-    setNodes(graph.nodes);
-    setEdges(graph.edges);
-  }, [pages, setEdges, setNodes]);
+    return () => { isMounted = false; };
+  }, [workspaceId, setNodes, setEdges]);
 
   const onConnect = useCallback<OnConnect>(
     (connection) => {
@@ -125,9 +125,9 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
   );
 
   const handleAutoLayout = useCallback(() => {
-    const graph = buildGraphData(pages);
+    const graph = buildGraphData(pagesRef.current);
     setNodes(graph.nodes);
-  }, [pages, setNodes]);
+  }, [setNodes]);
 
   const handleClearManualEdges = useCallback(() => {
     setEdges((currentEdges) =>
@@ -196,21 +196,16 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               fitView
-              fitViewOptions={{ padding: 0.2 }}
+              fitViewOptions={FIT_VIEW_OPTIONS}
               minZoom={0.2}
               maxZoom={1.5}
               nodesDraggable
               nodesConnectable
               elementsSelectable
-              deleteKeyCode={["Backspace", "Delete"]}
+              deleteKeyCode={DELETE_KEY_CODE}
               connectionLineType={ConnectionLineType.Straight}
-              defaultEdgeOptions={{
-                type: "floating",
-                animated: false,
-                zIndex: -1,
-                markerEnd: { type: MarkerType.ArrowClosed, color: "#9ca3af" },
-                style: { stroke: "#9ca3af", strokeWidth: 1, opacity: 0.55 },
-              }}
+              defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
+              onlyRenderVisibleElements
               className="graph-view-flow bg-[var(--color-background)]"
             >
               <Panel
@@ -238,9 +233,7 @@ function WorkspaceGraphCanvas({ workspaceId }: WorkspaceGraphPageProps) {
                 pannable
                 zoomable
                 className="!bg-[var(--color-surface)]"
-                nodeColor={(node) =>
-                  node.type === "customDatabase" ? "#337EA9" : "#64748b"
-                }
+                nodeColor={MINIMAP_NODE_COLOR}
               />
               <Controls />
               <Background gap={28} size={0.7} color="var(--color-border)" />

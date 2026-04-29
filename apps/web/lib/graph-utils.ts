@@ -5,6 +5,7 @@ export interface CustomNoteNodeData extends Record<string, unknown> {
   title: string;
   path: string;
   pageId: string;
+  animationIndex: number;
 }
 
 export interface CustomDatabaseNodeData extends Record<string, unknown> {
@@ -12,6 +13,7 @@ export interface CustomDatabaseNodeData extends Record<string, unknown> {
   path: string;
   pageId: string;
   databaseId: string | null | undefined;
+  animationIndex: number;
 }
 
 export type GraphNode = Node<CustomNoteNodeData, "customNote"> | Node<CustomDatabaseNodeData, "customDatabase">;
@@ -26,6 +28,12 @@ type PageReference = {
   pageTitle?: string;
 };
 
+type ContentData = {
+  pageReferences: PageReference[];
+  canvasPageIds: string[];
+  wikiLinks: string[];
+};
+
 function normalizeLinkTarget(value: string) {
   return value
     .split("|")[0]
@@ -33,106 +41,39 @@ function normalizeLinkTarget(value: string) {
     .toLowerCase();
 }
 
-function collectText(value: unknown): string[] {
-  if (!value) {
-    return [];
-  }
+function collectContentData(value: unknown, result: ContentData): void {
+  if (!value) return;
 
   if (typeof value === "string") {
-    return [value];
+    for (const match of value.matchAll(LINK_REGEX)) {
+      result.wikiLinks.push(match[1].trim());
+    }
+    return;
   }
 
   if (Array.isArray(value)) {
-    return value.flatMap((item) => collectText(item));
+    for (const item of value) collectContentData(item, result);
+    return;
   }
 
-  if (typeof value === "object") {
-    return Object.values(value).flatMap((item) => collectText(item));
-  }
-
-  return [];
-}
-
-function collectPageReferences(value: unknown): PageReference[] {
-  if (!value) {
-    return [];
-  }
-
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => collectPageReferences(item));
-  }
-
-  if (typeof value !== "object") {
-    return [];
-  }
+  if (typeof value !== "object") return;
 
   const record = value as Record<string, unknown>;
   const attrs = record.attrs;
-  const refs: PageReference[] = [];
 
-  if (record.type === "pageLink" && attrs && typeof attrs === "object") {
-    const linkAttrs = attrs as Record<string, unknown>;
-    const pageId =
-      typeof linkAttrs.pageId === "string" ? linkAttrs.pageId : undefined;
-    const pageTitle =
-      typeof linkAttrs.pageTitle === "string" ? linkAttrs.pageTitle : undefined;
-
-    if (pageId || pageTitle) {
-      refs.push({ pageId, pageTitle });
+  if (attrs && typeof attrs === "object") {
+    if (record.type === "pageLink") {
+      const linkAttrs = attrs as Record<string, unknown>;
+      const pageId = typeof linkAttrs.pageId === "string" ? linkAttrs.pageId : undefined;
+      const pageTitle = typeof linkAttrs.pageTitle === "string" ? linkAttrs.pageTitle : undefined;
+      if (pageId || pageTitle) result.pageReferences.push({ pageId, pageTitle });
+    } else if (record.type === "canvasEmbed") {
+      const canvasAttrs = attrs as Record<string, unknown>;
+      if (typeof canvasAttrs.pageId === "string") result.canvasPageIds.push(canvasAttrs.pageId);
     }
   }
 
-  Object.values(record).forEach((item) => {
-    refs.push(...collectPageReferences(item));
-  });
-
-  return refs;
-}
-
-function collectEmbeddedCanvasPageIds(value: unknown): string[] {
-  if (!value) {
-    return [];
-  }
-
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => collectEmbeddedCanvasPageIds(item));
-  }
-
-  if (typeof value !== "object") {
-    return [];
-  }
-
-  const record = value as Record<string, unknown>;
-  const attrs = record.attrs;
-  const pageIds: string[] = [];
-
-  if (record.type === "canvasEmbed" && attrs && typeof attrs === "object") {
-    const canvasAttrs = attrs as Record<string, unknown>;
-    if (typeof canvasAttrs.pageId === "string") {
-      pageIds.push(canvasAttrs.pageId);
-    }
-  }
-
-  Object.values(record).forEach((item) => {
-    pageIds.push(...collectEmbeddedCanvasPageIds(item));
-  });
-
-  return pageIds;
-}
-
-export function extractLinks(content: object | null): string[] {
-  if (!content) {
-    return [];
-  }
-
-  const links: string[] = [];
-  const sourceText = collectText(content).join(" ");
-
-  for (const match of sourceText.matchAll(LINK_REGEX)) {
-    links.push(match[1].trim());
-  }
-
-  return links;
+  for (const item of Object.values(record)) collectContentData(item, result);
 }
 
 export function buildGraphData(pages: Page[]): {
@@ -141,9 +82,17 @@ export function buildGraphData(pages: Page[]): {
 } {
   const nodes: Array<Node<CustomNoteNodeData, "customNote"> | Node<CustomDatabaseNodeData, "customDatabase">> = [];
   const edges: GraphEdge[] = [];
-  const embeddedCanvasPageIds = new Set(
-    pages.flatMap((page) => collectEmbeddedCanvasPageIds(page.content))
-  );
+
+  // Single pass: collect all content data per page
+  const embeddedCanvasPageIds = new Set<string>();
+  const pageContentData = new Map<string, ContentData>();
+  for (const page of pages) {
+    const data: ContentData = { pageReferences: [], canvasPageIds: [], wikiLinks: [] };
+    collectContentData(page.content, data);
+    pageContentData.set(page.id, data);
+    for (const id of data.canvasPageIds) embeddedCanvasPageIds.add(id);
+  }
+
   const graphPages = pages.filter(
     (page) => !(page.type === "canvas" && embeddedCanvasPageIds.has(page.id))
   );
@@ -152,96 +101,49 @@ export function buildGraphData(pages: Page[]): {
   const edgeSet = new Set<string>();
 
   const addEdge = (source: string, target: string) => {
-    if (source === target || !pageIds.has(source) || !pageIds.has(target)) {
-      return;
-    }
-
+    if (source === target || !pageIds.has(source) || !pageIds.has(target)) return;
     const edgeId = `${source}-${target}`;
     const reverseEdgeId = `${target}-${source}`;
-
-    // Keep the graph visually undirected by avoiding mirrored duplicates.
-    if (edgeSet.has(edgeId) || edgeSet.has(reverseEdgeId)) {
-      return;
-    }
-
-    edges.push({
-      id: edgeId,
-      source,
-      target,
-      type: "floating",
-      zIndex: -1,
-    });
+    if (edgeSet.has(edgeId) || edgeSet.has(reverseEdgeId)) return;
+    edges.push({ id: edgeId, source, target, type: "floating", zIndex: -1 });
     edgeSet.add(edgeId);
   };
 
-  // Create nodes
+  const total = graphPages.length;
+  const radius = 300;
+
   graphPages.forEach((page, index) => {
-    // Simple circular layout as initial positions
-    const angle = (index / graphPages.length) * 2 * Math.PI;
-    const radius = 300;
+    const angle = (index / total) * 2 * Math.PI;
+    const x = Math.cos(angle) * radius + 420;
+    const y = Math.sin(angle) * radius + 320;
 
-    const isDatabase = page.type === "database";
-
-    if (isDatabase) {
+    if (page.type === "database") {
       nodes.push({
-        id: page.id,
-        type: "customDatabase",
-        zIndex: 1,
-        position: {
-          x: Math.cos(angle) * radius + 420,
-          y: Math.sin(angle) * radius + 320,
-        },
-        data: {
-          title: page.title,
-          path: `/workspace/${page.workspaceId}?page=${page.id}`,
-          pageId: page.id,
-          databaseId: page.databaseId,
-        },
+        id: page.id, type: "customDatabase", zIndex: 1,
+        position: { x, y },
+        data: { title: page.title, path: `/workspace/${page.workspaceId}?page=${page.id}`, pageId: page.id, databaseId: page.databaseId, animationIndex: index },
       } as Node<CustomDatabaseNodeData, "customDatabase">);
     } else {
       nodes.push({
-        id: page.id,
-        type: "customNote",
-        zIndex: 1,
-        position: {
-          x: Math.cos(angle) * radius + 420,
-          y: Math.sin(angle) * radius + 320,
-        },
-        data: {
-          title: page.title,
-          path: `/workspace/${page.workspaceId}?page=${page.id}`,
-          pageId: page.id,
-        },
+        id: page.id, type: "customNote", zIndex: 1,
+        position: { x, y },
+        data: { title: page.title, path: `/workspace/${page.workspaceId}?page=${page.id}`, pageId: page.id, animationIndex: index },
       } as Node<CustomNoteNodeData, "customNote">);
     }
-  });
 
-  // Create edges from page hierarchy and explicit page links.
-  graphPages.forEach((page) => {
-    if (page.parentId) {
-      addEdge(page.parentId, page.id);
+    if (page.parentId) addEdge(page.parentId, page.id);
+
+    const contentData = pageContentData.get(page.id);
+    if (contentData) {
+      for (const ref of contentData.pageReferences) {
+        const targetId = ref.pageId ?? (ref.pageTitle ? pageMap.get(normalizeLinkTarget(ref.pageTitle)) : undefined);
+        if (targetId) addEdge(page.id, targetId);
+      }
+      for (const linkTitle of contentData.wikiLinks) {
+        const targetId = pageMap.get(normalizeLinkTarget(linkTitle));
+        if (targetId) addEdge(page.id, targetId);
+      }
     }
-
-    collectPageReferences(page.content).forEach((reference) => {
-      const targetId =
-        reference.pageId ??
-        (reference.pageTitle
-          ? pageMap.get(normalizeLinkTarget(reference.pageTitle))
-          : undefined);
-
-      if (targetId) {
-        addEdge(page.id, targetId);
-      }
-    });
-
-    const links = extractLinks(page.content);
-
-    links.forEach((linkTitle) => {
-      const targetId = pageMap.get(normalizeLinkTarget(linkTitle));
-      if (targetId) {
-        addEdge(page.id, targetId);
-      }
-    });
   });
 
   return { nodes, edges };
