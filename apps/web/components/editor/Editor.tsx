@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import Collaboration from "@tiptap/extension-collaboration";
+import * as Y from "yjs";
+import { WebsocketProvider } from "y-websocket";
+import { GroveCollaborationCursor } from "@/components/editor/extensions/GroveCollaborationCursor";
 import "tippy.js/dist/tippy.css";
+import { useSession } from "next-auth/react";
 import { DatabaseBlock } from "@/components/editor/extensions/DatabaseBlock";
 import { CanvasBlock } from "@/components/editor/extensions/CanvasBlock";
 import { ButtonBlock } from "@/components/editor/extensions/ButtonBlock";
@@ -34,6 +39,24 @@ import { SpeechInputIndicator } from "@/components/editor/SpeechInputIndicator";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 
+const CURSOR_COLORS = [
+  "#958DF1",
+  "#F98181",
+  "#FBBC88",
+  "#70CFF8",
+  "#94FADB",
+  "#B9F18D",
+  "#F6A6C1",
+];
+
+function userColor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return CURSOR_COLORS[hash % CURSOR_COLORS.length];
+}
+
 interface EditorProps {
   content: object | null;
   editable?: boolean;
@@ -59,7 +82,10 @@ export function Editor({
   const editorRef = useRef<TiptapEditor | null>(null);
   const editorShellRef = useRef<HTMLDivElement | null>(null);
   const onUpdateRef = useRef(onUpdate);
+
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { data: session } = useSession();
 
   const handleSpeechFinalResult = useCallback((text: string) => {
     editorRef.current?.chain().focus().insertContent(text).run();
@@ -71,6 +97,49 @@ export function Editor({
   useEffect(() => {
     onUpdateRef.current = onUpdate;
   }, [onUpdate]);
+
+  // Yjs doc and WebSocket provider — created once per pageId, client-side only
+  const collaborating = Boolean(pageId && editable);
+
+  const ydoc = useMemo(
+    () => (collaborating ? new Y.Doc() : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pageId, editable]
+  );
+
+  const provider = useMemo(() => {
+    if (!ydoc || !collaborating) return null;
+    const wsUrl =
+      process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001";
+    return new WebsocketProvider(wsUrl, "ws", ydoc, {
+      connect: false,
+      params: { docId: pageId! },
+    });
+  }, [ydoc, collaborating, pageId]);
+
+  // Connect / disconnect lifecycle
+  useEffect(() => {
+    if (!provider) return;
+    provider.connect();
+    return () => {
+      provider.disconnect();
+      provider.destroy();
+    };
+  }, [provider]);
+
+  useEffect(() => {
+    return () => {
+      ydoc?.destroy();
+    };
+  }, [ydoc]);
+
+  // Push local user info into awareness when session loads
+  useEffect(() => {
+    if (!provider || !session?.user) return;
+    const name = session.user.name ?? session.user.email ?? "Anonymous";
+    const color = userColor(session.user.email ?? name);
+    provider.awareness.setLocalStateField("user", { name, color });
+  }, [provider, session]);
 
   const handleDatabaseSelect = useCallback(
     (databaseId: string, selectedPageId: string) => {
@@ -123,32 +192,30 @@ export function Editor({
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Placeholder.configure({
-        placeholder,
-      }),
-      DatabaseBlock.configure({
-        workspaceId,
-        pageId,
-      }),
-      CanvasBlock.configure({
-        workspaceId,
-        pageId,
-      }),
+      Placeholder.configure({ placeholder }),
+      ...(ydoc && provider
+        ? [
+            Collaboration.configure({ document: ydoc }),
+            GroveCollaborationCursor.configure({
+              awareness: provider.awareness,
+              user: {
+                name: session?.user?.name ?? "Anonymous",
+                color: userColor(session?.user?.email ?? ""),
+              },
+            }),
+          ]
+        : []),
+      DatabaseBlock.configure({ workspaceId, pageId }),
+      CanvasBlock.configure({ workspaceId, pageId }),
       ButtonBlock,
       CodeBlock,
       GroveColumn,
       ColumnLayoutBlock,
       MathBlock,
-      LinkedDatabaseBlock.configure({
-        workspaceId,
-        pageId,
-      }),
+      LinkedDatabaseBlock.configure({ workspaceId, pageId }),
       CustomEmojiNode,
       PersonalEmojiExtension,
-      DbDiagramExtension.configure({
-        workspaceId,
-        pageId,
-      }),
+      DbDiagramExtension.configure({ workspaceId, pageId }),
       PageLinkExtension,
       PageLinkMark.configure({ workspaceId }),
       SubPageBlock,
@@ -161,10 +228,9 @@ export function Editor({
         onInsertPageLink: handleOpenPageLinkModal,
       }),
     ],
-    content: content || {
-      type: "doc",
-      content: [{ type: "paragraph" }],
-    },
+    content: ydoc
+      ? undefined
+      : content || { type: "doc", content: [{ type: "paragraph" }] },
     editable,
     immediatelyRender: false,
     editorProps: {

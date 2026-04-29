@@ -25,6 +25,7 @@
     "@prisma/client": "^6.19.3",
     "@supabase/supabase-js": "^2.103.3",
     "@tanstack/react-table": "^8.21.3",
+    "@tiptap/extension-collaboration": "3.22.3",
     "@tiptap/extension-placeholder": "^3.22.3",
     "@tiptap/react": "^3.22.3",
     "@tiptap/starter-kit": "^3.22.3",
@@ -46,6 +47,8 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tippy.js": "^6.3.7",
+    "y-websocket": "3.0.0",
+    "yjs": "^13.6.20",
     "zod": "^4.3.6",
     "zustand": "^5.0.12"
   },
