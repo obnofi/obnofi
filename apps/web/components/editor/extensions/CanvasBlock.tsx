@@ -96,7 +96,12 @@ function CanvasBlockView(props: ReactNodeViewProps) {
   }, [autoCreate, createCanvasPage, pageId, props.editor.isEditable]);
 
   return (
-    <NodeViewWrapper className="my-4">
+    <NodeViewWrapper
+      className="my-4"
+      contentEditable={false}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
       <div
         data-testid="inline-canvas-embed"
         data-state={

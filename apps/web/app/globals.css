@@ -696,3 +696,36 @@ body {
 }
 
 /* Graph View - edge stacking is controlled via React Flow edge zIndex */
+
+@keyframes graphNodeAppear {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.22); opacity: 1; }
+  80%  { transform: scale(0.90); }
+  100% { transform: scale(1); }
+}
+
+/* Collaboration cursors (CollaborationCursor extension) */
+.collaboration-cursor__caret {
+  border-left: 2px solid;
+  border-right: 2px solid;
+  margin-left: -1px;
+  margin-right: -1px;
+  pointer-events: none;
+  position: relative;
+  word-break: normal;
+}
+
+.collaboration-cursor__label {
+  border-radius: 3px 3px 3px 0;
+  color: #fff;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  left: -1px;
+  line-height: normal;
+  padding: 0.1rem 0.3rem;
+  position: absolute;
+  top: -1.4em;
+  user-select: none;
+  white-space: nowrap;
+}

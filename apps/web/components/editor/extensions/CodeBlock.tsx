@@ -212,7 +212,13 @@ function CodeBlockView(props: ReactNodeViewProps) {
   }, [currentLang.sandpackTemplate, localCode]);
 
   return (
-    <NodeViewWrapper className="my-4" data-testid="code-block">
+    <NodeViewWrapper
+      className="my-4"
+      data-testid="code-block"
+      contentEditable={false}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
       <div className="not-prose overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
         {/* 헤더 */}
         <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2">
@@ -221,6 +227,10 @@ function CodeBlockView(props: ReactNodeViewProps) {
             <button
               type="button"
               onClick={toggleExpand}
+              onMouseDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
               className="flex items-center justify-center rounded p-1 text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
               title={isExpanded ? "접기" : "펼치기"}
             >
@@ -236,6 +246,10 @@ function CodeBlockView(props: ReactNodeViewProps) {
               <button
                 type="button"
                 onClick={() => isEditable && setIsLangDropdownOpen(!isLangDropdownOpen)}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
                 disabled={!isEditable}
                 className="flex items-center gap-1 rounded px-2 py-1 text-sm font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               >

@@ -1,5 +1,6 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import { InputRule, Node, mergeAttributes } from "@tiptap/core";
 import {
   NodeViewWrapper,
@@ -18,6 +19,10 @@ function ButtonBlockView(props: ReactNodeViewProps) {
   const attrs = props.node.attrs as ButtonBlockAttrs;
   const { label, url, variant } = attrs;
   const isEditable = props.editor.isEditable;
+  const stopEditorSelection = (event: MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
 
   const buttonClassName =
     variant === "secondary"
@@ -25,11 +30,18 @@ function ButtonBlockView(props: ReactNodeViewProps) {
       : "bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)]";
 
   return (
-    <NodeViewWrapper className="my-2" data-testid="button-block">
+    <NodeViewWrapper
+      className="my-2"
+      data-testid="button-block"
+      contentEditable={false}
+      onMouseDown={stopEditorSelection}
+      onClick={(event) => event.stopPropagation()}
+    >
       <div className="not-prose">
         <button
           type="button"
           data-testid="button-block-preview"
+          onMouseDown={stopEditorSelection}
           onClick={() => {
             if (isEditable || !url) return;
             window.open(url, "_blank", "noopener,noreferrer");

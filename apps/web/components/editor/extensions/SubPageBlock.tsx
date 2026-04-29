@@ -50,10 +50,18 @@ function SubPageBlockView(props: ReactNodeViewProps) {
   }
 
   return (
-    <NodeViewWrapper contentEditable={false}>
+    <NodeViewWrapper
+      contentEditable={false}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
       <button
         type="button"
         onClick={handleOpen}
+        onMouseDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
         className="inline-flex cursor-pointer items-center gap-1.5 rounded px-0.5 text-[#111110] transition-colors hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
       >
         <span className="shrink-0 leading-none">

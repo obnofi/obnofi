@@ -125,7 +125,12 @@ function DatabaseBlockView(props: ReactNodeViewProps) {
   }, [databaseId, databasePages, pageId]);
 
   return (
-    <NodeViewWrapper className="my-4">
+    <NodeViewWrapper
+      className="my-4"
+      contentEditable={false}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
       <DatabasePageCard
         pageId={pageId}
         containerTestId="inline-database-embed"

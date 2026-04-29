@@ -337,6 +337,8 @@ export function WorkspacePage({
                     const icon =
                       type === "document" ? (
                         <FileText className="h-4 w-4" />
+                      ) : type === "canvas" ? (
+                        <Palette className="h-4 w-4" />
                       ) : (
                         <Database className="h-4 w-4" />
                       );

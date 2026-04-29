@@ -30,7 +30,12 @@ function LinkedDatabaseBlockView(props: ReactNodeViewProps) {
   const { pageId, workspaceId } = attrs;
 
   return (
-    <NodeViewWrapper className="my-4">
+    <NodeViewWrapper
+      className="my-4"
+      contentEditable={false}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
       <DatabasePageCard
         pageId={pageId}
         containerTestId="linked-database-embed"

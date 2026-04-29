@@ -160,6 +160,7 @@ model Page {
   files          File[]
 
   @@index([workspaceId])
+  @@index([workspaceId, type])
   @@index([parentId])
   @@index([parentDatabaseId])
   @@index([shareId])

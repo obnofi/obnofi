@@ -24,7 +24,13 @@ function MathBlockView(props: ReactNodeViewProps) {
   const isEditable = props.editor.isEditable;
 
   return (
-    <NodeViewWrapper className="not-prose my-4" data-testid="math-block">
+    <NodeViewWrapper
+      className="not-prose my-4"
+      data-testid="math-block"
+      contentEditable={false}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
       <div className="grove-math-block">
         <div className="grove-math-block__preview" aria-label="Math preview">
           <Sigma className="grove-math-block__icon" aria-hidden="true" />
@@ -36,6 +42,7 @@ function MathBlockView(props: ReactNodeViewProps) {
             value={expression}
             placeholder="LaTeX 수식을 입력하세요"
             rows={2}
+            onMouseDown={(event) => event.stopPropagation()}
             onChange={(event) => {
               props.updateAttributes({ expression: event.target.value });
             }}
