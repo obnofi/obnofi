@@ -158,6 +158,7 @@ model Page {
   outgoingLinks  PageLink[]      @relation("LinkSource")
   incomingLinks  PageLink[]      @relation("LinkTarget")
   files          File[]
+  yjsDocument    YjsDocument?
 
   @@index([workspaceId])
   @@index([workspaceId, type])
@@ -368,6 +369,16 @@ model FeedItem {
 }
 
 // ── TEMPLATE ──────────────────────────────────────────
+
+// ── YJS DOCUMENT STATE ────────────────────────────────
+
+model YjsDocument {
+  pageId    String   @id
+  state     Bytes
+  updatedAt DateTime @updatedAt
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+}
 
 model Template {
   id          String   @id @default(cuid())

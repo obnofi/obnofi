@@ -15,9 +15,11 @@ export interface Page {
   icon?: string | null;
   coverImage?: string | null;
   parentId: string | null;
+  order: number;
   workspaceId: string;
   createdAt: string;
   updatedAt: string;
+  yjsUpdatedAt?: string | null;
   isPublic: boolean;
   shareId: string | null;
   sharePassword: string | null;
@@ -54,6 +56,7 @@ export interface UpdatePageInput {
   icon?: string | null;
   coverImage?: string | null;
   parentId?: string | null;
+  order?: number;
   isPublic?: boolean;
 }
 

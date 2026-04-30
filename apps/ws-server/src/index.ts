@@ -6,24 +6,54 @@ import * as awarenessProtocol from 'y-protocols/awareness'
 import * as encoding from 'lib0/encoding'
 import * as decoding from 'lib0/decoding'
 import type { WebSocket } from 'ws'
+import { prisma } from '@obnofi/db'
 
 const MSG_SYNC = 0
 const MSG_AWARENESS = 1
 const PING_TIMEOUT = 30000
+const PERSIST_DEBOUNCE = 1000
 
 interface DocEntry {
   doc: Y.Doc
   awareness: awarenessProtocol.Awareness
   conns: Set<WebSocket>
+  persistTimer: ReturnType<typeof setTimeout> | null
 }
 
 const docs = new Map<string, DocEntry>()
 
-function getOrCreateDoc(docId: string): DocEntry {
+async function persistDoc(pageId: string, doc: Y.Doc) {
+  const state = Buffer.from(Y.encodeStateAsUpdate(doc))
+  await prisma.yjsDocument.upsert({
+    where: { pageId },
+    update: { state },
+    create: { pageId, state },
+  })
+}
+
+async function loadDoc(pageId: string, doc: Y.Doc): Promise<boolean> {
+  try {
+    const record = await prisma.yjsDocument.findUnique({ where: { pageId } })
+    if (record) {
+      Y.applyUpdate(doc, new Uint8Array(record.state))
+      return true
+    }
+  } catch {
+    // DB 오류 시 빈 문서로 계속
+  }
+  return false
+}
+
+async function getOrCreateDoc(docId: string): Promise<DocEntry> {
   let entry = docs.get(docId)
   if (!entry) {
     const doc = new Y.Doc()
     const awareness = new awarenessProtocol.Awareness(doc)
+
+    entry = { doc, awareness, conns: new Set(), persistTimer: null }
+    docs.set(docId, entry)
+
+    await loadDoc(docId, doc)
 
     doc.on('update', (update: Uint8Array, origin: unknown) => {
       const encoder = encoding.createEncoder()
@@ -35,6 +65,14 @@ function getOrCreateDoc(docId: string): DocEntry {
           conn.send(msg)
         }
       })
+
+      if (entry!.persistTimer) {
+        clearTimeout(entry!.persistTimer)
+      }
+      entry!.persistTimer = setTimeout(() => {
+        persistDoc(docId, doc).catch(() => {})
+        entry!.persistTimer = null
+      }, PERSIST_DEBOUNCE)
     })
 
     awareness.on('update', ({ added, updated, removed }: { added: number[]; updated: number[]; removed: number[] }) => {
@@ -49,22 +87,22 @@ function getOrCreateDoc(docId: string): DocEntry {
         }
       })
     })
-
-    entry = { doc, awareness, conns: new Set() }
-    docs.set(docId, entry)
   }
   return entry
 }
 
-function closeConn(entry: DocEntry, conn: WebSocket) {
+function closeConn(entry: DocEntry, conn: WebSocket, docId: string) {
   if (!entry.conns.has(conn)) return
   entry.conns.delete(conn)
 
   if (entry.conns.size === 0) {
+    if (entry.persistTimer) {
+      clearTimeout(entry.persistTimer)
+      entry.persistTimer = null
+    }
+    persistDoc(docId, entry.doc).catch(() => {})
     entry.doc.destroy()
-    docs.delete(
-      [...docs.entries()].find(([, v]) => v === entry)?.[0] ?? ''
-    )
+    docs.delete(docId)
   }
 }
 
@@ -78,7 +116,6 @@ function handleMessage(conn: WebSocket, entry: DocEntry, data: Uint8Array) {
       encoding.writeVarUint(encoder, MSG_SYNC)
       const syncMsgType = syncProtocol.readSyncMessage(decoder, encoder, entry.doc, conn)
       if (syncMsgType === syncProtocol.messageYjsSyncStep1) {
-        // reply immediately
         conn.send(encoding.toUint8Array(encoder))
       } else if (encoding.length(encoder) > 1) {
         conn.send(encoding.toUint8Array(encoder))
@@ -92,9 +129,9 @@ function handleMessage(conn: WebSocket, entry: DocEntry, data: Uint8Array) {
   }
 }
 
-function setupConnection(conn: WebSocket, docId: string) {
+async function setupConnection(conn: WebSocket, docId: string) {
   conn.binaryType = 'arraybuffer'
-  const entry = getOrCreateDoc(docId)
+  const entry = await getOrCreateDoc(docId)
   entry.conns.add(conn)
 
   conn.on('message', (rawData: ArrayBuffer | Buffer) => {
@@ -105,7 +142,7 @@ function setupConnection(conn: WebSocket, docId: string) {
   let pongReceived = true
   const pingInterval = setInterval(() => {
     if (!pongReceived) {
-      closeConn(entry, conn)
+      closeConn(entry, conn, docId)
       clearInterval(pingInterval)
       return
     }
@@ -114,7 +151,7 @@ function setupConnection(conn: WebSocket, docId: string) {
       try {
         conn.ping()
       } catch {
-        closeConn(entry, conn)
+        closeConn(entry, conn, docId)
         clearInterval(pingInterval)
       }
     }
@@ -123,7 +160,7 @@ function setupConnection(conn: WebSocket, docId: string) {
   conn.on('pong', () => { pongReceived = true })
 
   conn.on('close', () => {
-    closeConn(entry, conn)
+    closeConn(entry, conn, docId)
     clearInterval(pingInterval)
   })
 
@@ -153,7 +190,10 @@ fastify.register(async (fastify) => {
   fastify.get('/ws', { websocket: true }, (socket, req) => {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
     const docId = url.searchParams.get('docId') ?? 'default'
-    setupConnection(socket as unknown as WebSocket, docId)
+    setupConnection(socket as unknown as WebSocket, docId).catch((err) => {
+      fastify.log.error(err)
+      socket.close()
+    })
   })
 })
 

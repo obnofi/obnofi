@@ -45,6 +45,7 @@ export function toPrismaViewType(t: string): PrismaViewType {
 /** Full fetch including content — use only when opening a single page for editing */
 export const PAGE_INCLUDE = {
   database: { select: { id: true } },
+  yjsDocument: { select: { updatedAt: true } },
 } as const;
 
 /**
@@ -58,6 +59,7 @@ export const PAGE_SELECT = {
   icon: true,
   coverImage: true,
   parentId: true,
+  order: true,
   workspaceId: true,
   parentDatabaseId: true,
   isPublic: true,
@@ -66,6 +68,7 @@ export const PAGE_SELECT = {
   createdAt: true,
   updatedAt: true,
   database: { select: { id: true } },
+  yjsDocument: { select: { updatedAt: true } },
 } as const;
 
 /** PAGE_SELECT + propertyValues — use for database rows in table/board views */
@@ -84,6 +87,7 @@ export type PrismaPageRow = {
   icon: string | null;
   coverImage: string | null;
   parentId: string | null;
+  order: number;
   workspaceId: string;
   parentDatabaseId: string | null;
   isPublic: boolean;
@@ -92,6 +96,7 @@ export type PrismaPageRow = {
   createdAt: Date;
   updatedAt: Date;
   database?: { id: string } | null;
+  yjsDocument?: { updatedAt: Date } | null;
 };
 
 type PrismaPropertyRow = {
@@ -148,9 +153,11 @@ export function toPage(p: PrismaPageRow): Page {
     icon: p.icon ?? null,
     coverImage: p.coverImage ?? null,
     parentId: p.parentId ?? null,
+    order: p.order,
     workspaceId: p.workspaceId,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
+    yjsUpdatedAt: p.yjsDocument?.updatedAt.toISOString() ?? null,
     isPublic: p.isPublic,
     shareId: p.shareId ?? null,
     sharePassword: p.sharePassword ?? null,

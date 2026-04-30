@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { useEditor, EditorContent, type Editor as TiptapEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Collaboration from "@tiptap/extension-collaboration";
-import * as Y from "yjs";
-import { WebsocketProvider } from "y-websocket";
 import { GroveCollaborationCursor } from "@/components/editor/extensions/GroveCollaborationCursor";
+import { useCollaboration, userColor } from "@/lib/collaboration/CollaborationContext";
 import "tippy.js/dist/tippy.css";
 import { useSession } from "next-auth/react";
 import { DatabaseBlock } from "@/components/editor/extensions/DatabaseBlock";
@@ -37,44 +36,35 @@ import { BlockActionBar } from "@/components/editor/BlockActionBar";
 import { SpeechRecognitionButton } from "@/components/editor/SpeechRecognitionButton";
 import { SpeechInputIndicator } from "@/components/editor/SpeechInputIndicator";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
-import type { Editor as TiptapEditor } from "@tiptap/core";
-
-const CURSOR_COLORS = [
-  "#958DF1",
-  "#F98181",
-  "#FBBC88",
-  "#70CFF8",
-  "#94FADB",
-  "#B9F18D",
-  "#F6A6C1",
-];
-
-function userColor(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return CURSOR_COLORS[hash % CURSOR_COLORS.length];
-}
 
 interface EditorProps {
   content: object | null;
+  pageUpdatedAt?: string;
+  yjsUpdatedAt?: string | null;
   editable?: boolean;
+  /** 에디터 내용 변경 시 호출 — 최신 JSON content 전달 */
   onUpdate?: (content: object) => void;
+  /** 변경 발생 알림 (자동저장 트리거용) */
+  onEdit?: () => void;
   placeholder?: string;
   workspaceId?: string;
   pageId?: string;
   onContentContainerReady?: (node: HTMLDivElement | null) => void;
+  onEditorReady?: (editor: TiptapEditor | null) => void;
 }
 
 export function Editor({
   content,
+  pageUpdatedAt,
+  yjsUpdatedAt,
   editable = true,
   onUpdate,
+  onEdit,
   placeholder = "Type something...",
   workspaceId,
   pageId,
   onContentContainerReady,
+  onEditorReady,
 }: EditorProps) {
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [isButtonModalOpen, setIsButtonModalOpen] = useState(false);
@@ -82,10 +72,14 @@ export function Editor({
   const editorRef = useRef<TiptapEditor | null>(null);
   const editorShellRef = useRef<HTMLDivElement | null>(null);
   const onUpdateRef = useRef(onUpdate);
+  const onEditRef = useRef(onEdit);
 
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Yjs sync 완료 전 setContent로 인한 가짜 onUpdate 방지
+  const isApplyingInitialContent = useRef(false);
+  const initialContentApplied = useRef(false);
 
   const { data: session } = useSession();
+  const { ydoc, provider, isSynced } = useCollaboration();
 
   const handleSpeechFinalResult = useCallback((text: string) => {
     editorRef.current?.chain().focus().insertContent(text).run();
@@ -94,90 +88,61 @@ export function Editor({
   const { interimTranscript, isListening, isSupported, start, stop } =
     useSpeechRecognition({ onFinalResult: handleSpeechFinalResult });
 
+  useEffect(() => { onUpdateRef.current = onUpdate; }, [onUpdate]);
+  useEffect(() => { onEditRef.current = onEdit; }, [onEdit]);
+  useEffect(() => { onEditorReady?.(editorRef.current); }, [onEditorReady]);
+
+  // 협업 모드: sync 완료 후 Yjs 문서가 비어있으면 DB content로 초기화
   useEffect(() => {
-    onUpdateRef.current = onUpdate;
-  }, [onUpdate]);
+    if (!isSynced || !ydoc || initialContentApplied.current) return;
+    const editor = editorRef.current;
+    if (!editor || !content) return;
 
-  // Yjs doc and WebSocket provider — created once per pageId, client-side only
-  const collaborating = Boolean(pageId && editable);
+    const docContent = editor.getJSON().content ?? [];
+    const isEmpty =
+      docContent.length === 0 ||
+      (docContent.length === 1 &&
+        docContent[0].type === "paragraph" &&
+        !docContent[0].content?.length);
 
-  const ydoc = useMemo(
-    () => (collaborating ? new Y.Doc() : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pageId, editable]
-  );
+    const dbContent = content as { content?: unknown[] };
+    const pageUpdatedAtMs = pageUpdatedAt ? new Date(pageUpdatedAt).getTime() : 0;
+    const yjsUpdatedAtMs = yjsUpdatedAt ? new Date(yjsUpdatedAt).getTime() : 0;
+    const shouldRestoreFromPage =
+      pageUpdatedAtMs > yjsUpdatedAtMs ||
+      (isEmpty && dbContent?.content && dbContent.content.length > 0);
 
-  const provider = useMemo(() => {
-    if (!ydoc || !collaborating) return null;
-    const wsUrl =
-      process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001";
-    return new WebsocketProvider(wsUrl, "ws", ydoc, {
-      connect: false,
-      params: { docId: pageId! },
-    });
-  }, [ydoc, collaborating, pageId]);
-
-  // Connect / disconnect lifecycle
-  useEffect(() => {
-    if (!provider) return;
-    provider.connect();
-    return () => {
-      provider.disconnect();
-      provider.destroy();
-    };
-  }, [provider]);
-
-  useEffect(() => {
-    return () => {
-      ydoc?.destroy();
-    };
-  }, [ydoc]);
-
-  // Push local user info into awareness when session loads
-  useEffect(() => {
-    if (!provider || !session?.user) return;
-    const name = session.user.name ?? session.user.email ?? "Anonymous";
-    const color = userColor(session.user.email ?? name);
-    provider.awareness.setLocalStateField("user", { name, color });
-  }, [provider, session]);
+    if (shouldRestoreFromPage && dbContent?.content && dbContent.content.length > 0) {
+      initialContentApplied.current = true;
+      isApplyingInitialContent.current = true;
+      editor.commands.setContent(content);
+      setTimeout(() => { isApplyingInitialContent.current = false; }, 0);
+    } else {
+      initialContentApplied.current = true;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, isSynced, pageUpdatedAt, ydoc, yjsUpdatedAt]);
 
   const handleDatabaseSelect = useCallback(
     (databaseId: string, selectedPageId: string) => {
-      const editor = editorRef.current;
-      if (!editor) return;
-
-      editor
-        .chain()
+      editorRef.current
+        ?.chain()
         .focus()
         .insertContent({
           type: "linkedDatabaseEmbed",
-          attrs: {
-            databaseId,
-            pageId: selectedPageId,
-            workspaceId: workspaceId ?? null,
-          },
+          attrs: { databaseId, pageId: selectedPageId, workspaceId: workspaceId ?? null },
         })
         .run();
     },
     [workspaceId]
   );
 
-  const handleOpenLinkModal = useCallback(() => {
-    setIsLinkModalOpen(true);
-  }, []);
-
-  const handleOpenButtonModal = useCallback(() => {
-    setIsButtonModalOpen(true);
-  }, []);
-
-  const handleOpenPageLinkModal = useCallback(() => {
-    setIsPageLinkModalOpen(true);
-  }, []);
-
+  const handleOpenLinkModal = useCallback(() => setIsLinkModalOpen(true), []);
+  const handleOpenButtonModal = useCallback(() => setIsButtonModalOpen(true), []);
+  const handleOpenPageLinkModal = useCallback(() => setIsPageLinkModalOpen(true), []);
   const handleButtonInsert = useCallback((label: string, url: string) => {
     editorRef.current?.commands.insertButtonBlock({ label, url });
   }, []);
-
   const handlePageLinkInsert = useCallback(
     (selectedPageId: string, selectedPageTitle: string) => {
       editorRef.current?.commands.insertPageLink({
@@ -191,7 +156,7 @@ export function Editor({
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure(ydoc ? { undoRedo: false } : {}),
       Placeholder.configure({ placeholder }),
       ...(ydoc && provider
         ? [
@@ -201,6 +166,7 @@ export function Editor({
               user: {
                 name: session?.user?.name ?? "Anonymous",
                 color: userColor(session?.user?.email ?? ""),
+                image: session?.user?.image ?? null,
               },
             }),
           ]
@@ -240,18 +206,21 @@ export function Editor({
       },
     },
     onUpdate: ({ editor }) => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = setTimeout(() => {
-        onUpdateRef.current?.(editor.getJSON());
-      }, 500);
+      if (isApplyingInitialContent.current) return;
+      const json = editor.getJSON();
+      onUpdateRef.current?.(json);
+      onEditRef.current?.();
     },
   });
 
   editorRef.current = editor ?? null;
 
-  if (!editor) {
-    return null;
-  }
+  useEffect(() => {
+    onEditorReady?.(editor ?? null);
+    return () => onEditorReady?.(null);
+  }, [editor, onEditorReady]);
+
+  if (!editor) return null;
 
   return (
     <>
@@ -265,7 +234,6 @@ export function Editor({
           editable ? "cursor-text" : ""
         }`}
       >
-        {/* not-prose: Tailwind Typography 스타일이 툴바에 영향주지 않도록 격리 */}
         {editable && (
           <div className="not-prose flex justify-end pb-1">
             <SpeechRecognitionButton
