@@ -3,7 +3,7 @@ import { prisma } from "@obnofi/db";
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { isProfileImagePreset, pickProfileImagePreset } from "@/lib/profileImagePresets";
+import { pickProfileImagePreset } from "@/lib/profileImagePresets";
 
 const googleClientId =
   process.env.GOOGLE_CLIENT_ID ??
@@ -15,32 +15,60 @@ const googleClientSecret =
   process.env.AUTH_GOOGLE_SECRET ??
   "temp-client-secret";
 
-async function ensureUserProfileImage(userId: string, fallbackSeed: string) {
+async function ensureUserProfileImage(
+  userId: string,
+  fallbackSeed: string
+) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { image: true },
   });
 
-  const seededProfileImage = pickProfileImagePreset(fallbackSeed);
+  const initialProfileImage = pickProfileImagePreset(fallbackSeed);
 
   if (!user) {
-    return seededProfileImage;
+    return initialProfileImage;
   }
 
-  if (isProfileImagePreset(user.image)) {
+  if (typeof user.image === "string" && user.image.length > 0) {
     return user.image;
   }
 
   await prisma.user.update({
     where: { id: userId },
-    data: { image: seededProfileImage },
+    data: { image: initialProfileImage },
   });
 
-  return seededProfileImage;
+  return initialProfileImage;
 }
 
+async function setUserProfileImagePreset(userId: string, fallbackSeed: string) {
+  const initialProfileImage = pickProfileImagePreset(fallbackSeed);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { image: initialProfileImage },
+  });
+
+  return initialProfileImage;
+}
+
+const baseAdapter = PrismaAdapter(prisma);
+
+const adapter = {
+  ...baseAdapter,
+  async createUser(user: Parameters<NonNullable<typeof baseAdapter.createUser>>[0]) {
+    const fallbackSeed = user.email ?? user.name ?? "obnofi-user";
+
+    return baseAdapter.createUser({
+      ...user,
+      image: pickProfileImagePreset(fallbackSeed),
+    });
+  },
+};
+
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter,
   providers: [
     GoogleProvider({
       clientId: googleClientId,
@@ -77,6 +105,9 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user && token.sub) {
         session.user.id = token.sub;
+        if (typeof token.name === "string") {
+          session.user.name = token.name;
+        }
         // Read image from JWT — set at sign-in, no DB call needed per request
         if (typeof token.picture === "string") {
           session.user.image = token.picture;
@@ -84,15 +115,27 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session, isNewUser }) {
       if (user) {
-        // Runs only at sign-in: persist correct preset image to DB and cache in JWT
         token.sub = user.id;
-        token.picture = await ensureUserProfileImage(
-          user.id,
-          token.email ?? user.email ?? user.id
-        );
+        const fallbackSeed = token.email ?? user.email ?? user.id;
+
+        // New sign-ups should always start from an obnofi preset, not the OAuth provider image.
+        token.picture =
+          trigger === "signUp" || isNewUser
+            ? await setUserProfileImagePreset(user.id, fallbackSeed)
+            : await ensureUserProfileImage(user.id, fallbackSeed);
       }
+
+      if (trigger === "update") {
+        if (typeof session?.name === "string") {
+          token.name = session.name;
+        }
+        if (typeof session?.image === "string") {
+          token.picture = session.image;
+        }
+      }
+
       return token;
     },
     async signIn() {

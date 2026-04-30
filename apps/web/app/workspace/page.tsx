@@ -16,9 +16,7 @@ export default async function WorkspaceRootPage() {
   // DB 초기화 후 세션 쿠키가 남아있는 경우를 방어: User 레코드 보장
   await prisma.user.upsert({
     where: { id: userId },
-    update: {
-      image: pickProfileImagePreset(session.user.email ?? userId),
-    },
+    update: {},
     create: {
       id: userId,
       email: session.user.email!,
