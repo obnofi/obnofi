@@ -6,6 +6,8 @@ interface PageState {
   currentPage: Page | null;
   isLoading: boolean;
   error: string | null;
+  /** SSR/fetch로 페이지 목록이 채워진 워크스페이스 id. 같은 워크스페이스에서 중복 fetch를 막는 데 사용. */
+  initializedWorkspaceId: string | null;
 
   // Actions
   fetchPages: (workspaceId: string) => Promise<void>;
@@ -14,9 +16,10 @@ interface PageState {
   updatePage: (pageId: string, input: UpdatePageInput) => Promise<void>;
   deletePage: (pageId: string) => Promise<void>;
   setCurrentPage: (page: Page | null) => void;
-  setPages: (pages: Page[]) => void;
+  setPages: (pages: Page[], workspaceId?: string) => void;
   getChildPages: (parentId: string | null) => Page[];
   getPageTree: () => PageTreeNode[];
+  getPageTrail: (pageId: string) => Page[];
 }
 
 export interface PageTreeNode extends Page {
@@ -43,15 +46,16 @@ function buildPageTree(pages: Page[]): PageTreeNode[] {
     }
   });
 
-  // Sort by updatedAt descending
-  const sortByDate = (nodes: PageTreeNode[]) => {
+  // Sort siblings by explicit order first, then updatedAt for a stable tie-breaker.
+  const sortNodes = (nodes: PageTreeNode[]) => {
     nodes.sort(
       (a, b) =>
+        a.order - b.order ||
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     );
-    nodes.forEach((node) => sortByDate(node.children));
+    nodes.forEach((node) => sortNodes(node.children));
   };
-  sortByDate(roots);
+  sortNodes(roots);
 
   return roots;
 }
@@ -61,6 +65,7 @@ export const usePageStore = create<PageState>((set, get) => ({
   currentPage: null,
   isLoading: false,
   error: null,
+  initializedWorkspaceId: null,
 
   fetchPages: async (workspaceId: string) => {
     set({ isLoading: true, error: null });
@@ -68,7 +73,7 @@ export const usePageStore = create<PageState>((set, get) => ({
       const response = await fetch(`/api/pages?workspaceId=${workspaceId}`);
       if (!response.ok) throw new Error("Failed to fetch pages");
       const pages = await response.json();
-      set({ pages, isLoading: false });
+      set({ pages, isLoading: false, initializedWorkspaceId: workspaceId });
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Unknown error",
@@ -117,6 +122,30 @@ export const usePageStore = create<PageState>((set, get) => ({
   },
 
   updatePage: async (pageId: string, input: UpdatePageInput) => {
+    const previousState = get();
+    const previousPages = previousState.pages;
+    const previousCurrentPage = previousState.currentPage;
+    const optimisticPage = previousPages.find((page) => page.id === pageId);
+
+    if (!optimisticPage) {
+      return;
+    }
+
+    const nextPage: Page = {
+      ...optimisticPage,
+      ...input,
+      updatedAt: new Date().toISOString(),
+    };
+
+    set((state) => ({
+      pages: state.pages.map((page) => (page.id === pageId ? nextPage : page)),
+      currentPage:
+        state.currentPage?.id === pageId
+          ? { ...state.currentPage, ...input, updatedAt: nextPage.updatedAt }
+          : state.currentPage,
+      error: null,
+    }));
+
     try {
       const response = await fetch(`/api/pages/${pageId}`, {
         method: "PATCH",
@@ -132,6 +161,8 @@ export const usePageStore = create<PageState>((set, get) => ({
       }));
     } catch (error) {
       set({
+        pages: previousPages,
+        currentPage: previousCurrentPage,
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }
@@ -171,7 +202,12 @@ export const usePageStore = create<PageState>((set, get) => ({
 
   setCurrentPage: (page: Page | null) => set({ currentPage: page }),
 
-  setPages: (pages: Page[]) => set({ pages }),
+  setPages: (pages: Page[], workspaceId?: string) =>
+    set(
+      workspaceId !== undefined
+        ? { pages, initializedWorkspaceId: workspaceId }
+        : { pages }
+    ),
 
   getChildPages: (parentId: string | null) => {
     const { pages } = get();
@@ -179,4 +215,20 @@ export const usePageStore = create<PageState>((set, get) => ({
   },
 
   getPageTree: () => buildPageTree(get().pages),
+
+  getPageTrail: (pageId: string) => {
+    const { pages } = get();
+    const pageMap = new Map(pages.map((page) => [page.id, page]));
+    const trail: Page[] = [];
+    const visited = new Set<string>();
+    let cursor = pageMap.get(pageId) ?? null;
+
+    while (cursor && !visited.has(cursor.id)) {
+      trail.unshift(cursor);
+      visited.add(cursor.id);
+      cursor = cursor.parentId ? pageMap.get(cursor.parentId) ?? null : null;
+    }
+
+    return trail;
+  },
 }));

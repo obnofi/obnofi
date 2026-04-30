@@ -15,6 +15,22 @@ import {
   type PrismaPageRow,
 } from "@/lib/prisma-transforms";
 
+const PAGE_ORDER_STEP = 1024;
+
+async function getNextSiblingOrder(workspaceId: string, parentId: string | null) {
+  const lastSibling = await prisma.page.findFirst({
+    where: {
+      workspaceId,
+      parentId,
+      parentDatabaseId: null,
+    },
+    orderBy: [{ order: "desc" }, { updatedAt: "desc" }],
+    select: { order: true },
+  });
+
+  return (lastSibling?.order ?? -PAGE_ORDER_STEP) + PAGE_ORDER_STEP;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const userId = await getAuthenticatedUserId(request);
@@ -33,7 +49,7 @@ export async function GET(request: NextRequest) {
     const prismaPages = await prisma.page.findMany({
       where: { workspaceId: workspace.id, parentDatabaseId: null },
       select: PAGE_SELECT, // content 제외 — 사이드바에 불필요
-      orderBy: { updatedAt: "desc" },
+      orderBy: [{ order: "asc" }, { updatedAt: "desc" }],
     });
 
     return NextResponse.json(prismaPages.map(toPage));
@@ -72,6 +88,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
     }
 
+    const order = await getNextSiblingOrder(workspace.id, parentId || null);
+
     if (type === "database") {
       const defaultColumns = getExampleDatabaseColumns();
 
@@ -82,6 +100,7 @@ export async function POST(request: NextRequest) {
               title,
               type: toPrismaPageType(type),
               parentId: parentId || null,
+              order,
               workspaceId: workspace.id,
               isPublic: false,
             },
@@ -124,6 +143,7 @@ export async function POST(request: NextRequest) {
         title,
         type: toPrismaPageType(type),
         parentId: parentId || null,
+        order,
         workspaceId: workspace.id,
         content:
           type === "document"

@@ -81,6 +81,7 @@ export async function PATCH(
     if ("icon" in body) updateData.icon = body.icon;
     if ("coverImage" in body) updateData.coverImage = body.coverImage;
     if ("parentId" in body) updateData.parentId = body.parentId;
+    if ("order" in body) updateData.order = body.order;
     if ("isPublic" in body) updateData.isPublic = body.isPublic;
 
     const updatedPage = await prisma.page.update({

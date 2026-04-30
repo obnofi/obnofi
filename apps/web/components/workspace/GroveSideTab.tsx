@@ -5,6 +5,7 @@ import { CalendarDays, ChevronRight, Maximize2, Minimize2, Tag, X } from "lucide
 import { DatabasePageCard } from "@/components/database/DatabasePageCard";
 import { PropertyCell } from "@/components/database/PropertyCell";
 import { Editor } from "@/components/editor/Editor";
+import { CollaborationProvider } from "@/lib/collaboration/CollaborationContext";
 import { patchGroveCell } from "@/lib/groveCatalogApi";
 import { useGroveCatalogStore } from "@/store/useGroveCatalogStore";
 import { usePageStore } from "@/store/pageStore";
@@ -317,13 +318,19 @@ export function GroveSideTab({ workspaceId }: { workspaceId: string }) {
                     />
                   ) : null}
                   {page.type !== "database" ? (
-                    <Editor
-                      content={page.content ?? emptyDoc}
-                      onUpdate={handlePageContentUpdate}
-                      workspaceId={activeWorkspaceId ?? workspaceId}
+                    <CollaborationProvider
+                      key={page.id}
                       pageId={page.id}
-                      placeholder="페이지 내용을 입력하세요..."
-                    />
+                      active={page.type === "document"}
+                    >
+                      <Editor
+                        content={page.content ?? emptyDoc}
+                        onUpdate={handlePageContentUpdate}
+                        workspaceId={activeWorkspaceId ?? workspaceId}
+                        pageId={page.id}
+                        placeholder="페이지 내용을 입력하세요..."
+                      />
+                    </CollaborationProvider>
                   ) : null}
                 </>
               ) : (

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import type { Editor as TiptapEditor } from "@tiptap/react";
 import {
   ChevronRight,
-  Settings,
   Plus,
   FileText,
   Palette,
@@ -19,12 +19,18 @@ import { useUIStore } from "@/store/useUIStore";
 import { GrovePageCanopy } from "@/components/workspace/GrovePageCanopy";
 import { PageTitleBlock } from "@/components/workspace/PageTitleBlock";
 import { TableOfContents } from "@/components/workspace/TableOfContents";
+import { CollaborationProvider } from "@/lib/collaboration/CollaborationContext";
+import { CollaborationAvatars } from "@/components/workspace/CollaborationAvatars";
+import { SaveStatusIndicator } from "@/components/workspace/SaveStatusIndicator";
+import { useAutoSave } from "@/hooks/useAutoSave";
 import {
   creatablePageDescriptions,
   creatablePageLabels,
   creatablePageTypes,
   createPageTitles,
 } from "@/lib/pageCreation";
+import { exportPageAsHtml, exportPageAsPdf } from "@/lib/exportPage";
+import type { PageExportFormat } from "@/components/workspace/PageSettingsMenu";
 
 // Dynamically import heavy components
 const Editor = dynamic(() => import("@/components/editor/Editor").then(mod => mod.Editor), {
@@ -32,7 +38,7 @@ const Editor = dynamic(() => import("@/components/editor/Editor").then(mod => mo
   ssr: false
 });
 
-const SharePopover = dynamic(() => import("@/components/share/SharePopover").then(mod => mod.SharePopover), {
+const PageSettingsMenu = dynamic(() => import("@/components/workspace/PageSettingsMenu").then(mod => mod.PageSettingsMenu), {
   ssr: false
 });
 
@@ -83,14 +89,33 @@ export function WorkspacePage({
     setCurrentPage,
     setPages,
     getPageTree,
+    getPageTrail,
   } = usePageStore();
-
-  const openGrovePageSideTab = useUIStore((state) => state.openGrovePageSideTab);
   const isDatabaseModalOpen = useUIStore((state) => state.databaseModal.isOpen);
   const isGroveSideTabOpen = useUIStore((state) => state.groveSideTab.isOpen);
 
   const [title, setTitle] = useState(initialPage?.title || "");
   const [isLoading, setIsLoading] = useState(!initialPage);
+  const editorInstanceRef = useRef<TiptapEditor | null>(null);
+
+  // 최신 editor content를 ref에 보관 — useAutoSave가 getContent()로 접근
+  const latestContentRef = useRef<object>(
+    initialPage?.content ?? { type: "doc", content: [{ type: "paragraph" }] }
+  );
+  const handleEditorUpdate = useCallback((content: object) => {
+    latestContentRef.current = content;
+  }, []);
+
+  const { scheduleSave, save } = useAutoSave({
+    pageId,
+    getContent: () => editorInstanceRef.current?.getJSON() ?? latestContentRef.current,
+    debounceMs: 5000,
+    intervalMs: 45000,
+    onSaved: (content) => {
+      // 저장 성공 후 pageStore도 최신 상태로 갱신
+      if (currentPage) setCurrentPage({ ...currentPage, content });
+    },
+  });
   const [pendingChildType, setPendingChildType] = useState<PageType | null>(null);
   const [expandedPages, setExpandedPages] = useState<Set<string>>(new Set());
   const [groveContentElement, setGroveContentElement] = useState<HTMLDivElement | null>(null);
@@ -101,9 +126,10 @@ export function WorkspacePage({
       setCurrentPage(initialPage);
     }
     if (initialPages) {
-      setPages(initialPages);
+      // workspaceId를 함께 전달 — layout이 같은 워크스페이스에 대한 중복 fetch를 스킵하도록.
+      setPages(initialPages, workspaceId);
     }
-  }, [initialPage, initialPages, setCurrentPage, setPages]);
+  }, [initialPage, initialPages, workspaceId, setCurrentPage, setPages]);
 
   useEffect(() => {
     // initialPages가 없을 때만 fetch (SSR로 이미 받은 경우 중복 방지)
@@ -124,16 +150,14 @@ export function WorkspacePage({
   useEffect(() => {
     if (currentPage) {
       setTitle(currentPage.title);
+      latestContentRef.current =
+        currentPage.content ?? { type: "doc", content: [{ type: "paragraph" }] };
     }
   }, [currentPage]);
 
   const handleTitleChange = async (newTitle: string) => {
     setTitle(newTitle);
     await updatePage(pageId, { title: newTitle });
-  };
-
-  const handleContentUpdate = async (content: object) => {
-    await updatePage(pageId, { content });
   };
 
   const handlePageChromeUpdate = async (input: Partial<Pick<Page, "icon" | "coverImage">>) => {
@@ -156,16 +180,23 @@ export function WorkspacePage({
     router.push(`/workspace/${workspaceId}?page=${selectedPageId}`);
   };
 
-  useEffect(() => {
-    const handleShareUpdate = (e: Event) => {
-      const { isPublic, shareId } = (e as CustomEvent).detail;
-      if (currentPage) {
-        setCurrentPage({ ...currentPage, isPublic, shareId });
-      }
-    };
-    window.addEventListener("share-update", handleShareUpdate);
-    return () => window.removeEventListener("share-update", handleShareUpdate);
-  }, [currentPage, setCurrentPage]);
+  const handleExportPage = useCallback(
+    (format: PageExportFormat) => {
+      if (!currentPage || currentPage.type !== "document") return;
+      const params = {
+        editor: editorInstanceRef.current,
+        page: {
+          title: currentPage.title,
+          icon: currentPage.icon,
+          coverImage: currentPage.coverImage,
+          type: currentPage.type,
+        },
+      };
+      if (format === "pdf") exportPageAsPdf(params);
+      else exportPageAsHtml(params);
+    },
+    [currentPage]
+  );
 
   useEffect(() => {
     setExpandedPages((prev) => {
@@ -195,7 +226,7 @@ export function WorkspacePage({
     setPendingChildType(null);
 
     if (newPage) {
-      openGrovePageSideTab(newPage.id, workspaceId);
+      router.push(`/workspace/${workspaceId}?page=${newPage.id}`);
     }
   };
 
@@ -209,27 +240,18 @@ export function WorkspacePage({
 
   const pageTree = useMemo(() => getPageTree(), [pages]); // eslint-disable-line react-hooks/exhaustive-deps
   const pageTrail = useMemo(() => {
-    if (!currentPage) {
+    if (!pageId) {
       return [];
     }
 
-    const trail = [currentPage];
-    const visited = new Set<string>([currentPage.id]);
-    let parentId = currentPage.parentId;
+    const trail = getPageTrail(pageId);
 
-    while (parentId && !visited.has(parentId)) {
-      const parent = pages.find((page) => page.id === parentId);
-      if (!parent) {
-        break;
-      }
-
-      trail.unshift(parent);
-      visited.add(parent.id);
-      parentId = parent.parentId;
+    if (currentPage) {
+      return trail.map((page) => (page.id === currentPage.id ? currentPage : page));
     }
 
     return trail;
-  }, [currentPage, pages]);
+  }, [currentPage, getPageTrail, pageId, pages]);
 
   if (isLoading) {
     return (
@@ -248,7 +270,11 @@ export function WorkspacePage({
   }
 
   return (
-    <>
+    <CollaborationProvider
+      key={pageId}
+      pageId={pageId}
+      active={currentPage.type === "document"}
+    >
       {/* Top Bar */}
       <header className="h-12 border-b border-[var(--color-border)] flex items-center justify-between px-4 shrink-0 bg-[var(--color-background)]">
         <div className="flex min-w-0 items-center gap-1 text-[14px]">
@@ -285,9 +311,23 @@ export function WorkspacePage({
           })}
         </div>
         <div className="flex items-center gap-2">
-          <SharePopover pageId={pageId} isPublic={currentPage.isPublic} shareId={currentPage.shareId} onShareUpdateAction="share-update" />
-          <button className="p-2 hover:bg-[var(--color-hover)] rounded"><Settings className="w-4 h-4 text-[var(--color-text-secondary)]" /></button>
-          <button className="p-2 hover:bg-[var(--color-hover)] rounded"><Sparkles className="w-4 h-4 text-[var(--color-text-secondary)]" /></button>
+          <SaveStatusIndicator onRetry={() => void save()} />
+          <CollaborationAvatars />
+          <button className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]">
+            <Sparkles className="h-4 w-4" />
+          </button>
+          <PageSettingsMenu
+            pageId={pageId}
+            workspaceId={workspaceId}
+            isPublic={currentPage.isPublic}
+            shareId={currentPage.shareId}
+            onShareUpdate={(isPublic, shareId) => {
+              if (currentPage) setCurrentPage({ ...currentPage, isPublic, shareId });
+            }}
+            onExport={
+              currentPage.type === "document" ? handleExportPage : undefined
+            }
+          />
         </div>
       </header>
 
@@ -373,12 +413,18 @@ export function WorkspacePage({
               <Editor
                 key={pageId}
                 content={currentPage.content}
+                pageUpdatedAt={currentPage.updatedAt}
+                yjsUpdatedAt={currentPage.yjsUpdatedAt}
                 editable={true}
-                onUpdate={handleContentUpdate}
+                onUpdate={handleEditorUpdate}
+                onEdit={scheduleSave}
                 placeholder="Type something..."
                 workspaceId={workspaceId}
                 pageId={pageId}
                 onContentContainerReady={setGroveContentElement}
+                onEditorReady={(editor) => {
+                  editorInstanceRef.current = editor;
+                }}
               />
             </div>
             <TableOfContents container={groveContentElement} />
@@ -403,6 +449,6 @@ export function WorkspacePage({
       {/* Database View Modal - available on all pages */}
       {isDatabaseModalOpen && <DatabaseViewModal />}
       {isGroveSideTabOpen && <GroveSideTab workspaceId={workspaceId} />}
-    </>
+    </CollaborationProvider>
   );
 }

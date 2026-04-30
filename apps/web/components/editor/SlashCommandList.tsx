@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import type { Editor } from "@tiptap/react";
+import { useRouter } from "next/navigation";
 import {
   Type,
   Heading1,
@@ -58,7 +59,6 @@ import {
 import type { SlashCommandItem } from "@/components/editor/extensions/SlashCommandExtension";
 import { CATEGORIES } from "@/components/editor/extensions/SlashCommandExtension";
 import { usePageStore } from "@/store/pageStore";
-import { useUIStore } from "@/store/useUIStore";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Type,
@@ -180,10 +180,10 @@ export function SlashCommandList({
   onInsertButton,
   onInsertPageLink,
 }: SlashCommandListProps) {
+  const router = useRouter();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const { createPage } = usePageStore();
-  const openGrovePageSideTab = useUIStore((state) => state.openGrovePageSideTab);
 
   // Build groups with stable global indices in category display order
   const { groups, flatItems } = useMemo<{
@@ -320,7 +320,7 @@ export function SlashCommandList({
                 workspaceId,
                 parentPageId: pageId,
               });
-              openGrovePageSideTab(newPage.id, workspaceId);
+              router.push(`/workspace/${workspaceId}?page=${newPage.id}`);
             }
           })();
           return;
@@ -328,7 +328,7 @@ export function SlashCommandList({
           chain.run();
       }
     },
-    [editor, range, workspaceId, pageId, createPage, openGrovePageSideTab]
+    [editor, range, workspaceId, pageId, createPage, router]
   );
 
   // Reset selected index when item list changes
