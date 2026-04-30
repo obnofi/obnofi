@@ -1,15 +1,20 @@
 "use client";
 
 import { Editor } from "@/components/editor/Editor";
+import { PageGlyph } from "@/components/workspace/PageGlyph";
 
 interface PublicPageViewProps {
   title: string;
+  icon: string | null;
+  coverImage: string | null;
   content: object | null;
   updatedAt: string;
 }
 
 export function PublicPageView({
   title,
+  icon,
+  coverImage,
   content,
   updatedAt,
 }: PublicPageViewProps) {
@@ -19,12 +24,29 @@ export function PublicPageView({
     day: "numeric",
   });
 
+  const fakePage = { icon, type: "document" as const };
+
   return (
     <div className="min-h-screen bg-white dark:bg-[#111110]">
-      <div className="max-w-4xl mx-auto">
-        <div className="h-48 bg-gradient-to-b from-zinc-100 to-white dark:from-zinc-900 dark:to-[#111110]" />
+      {coverImage ? (
+        <div
+          className="h-48 w-full bg-cover bg-center"
+          style={{ backgroundImage: `url(${coverImage})` }}
+        />
+      ) : (
+        <div className="h-12" />
+      )}
 
-        <article className="px-8 pb-20 -mt-20">
+      <div className="max-w-4xl mx-auto">
+        <article className="px-8 pb-20">
+          <div className={coverImage ? "-mt-6 mb-3" : "mb-3"}>
+            <PageGlyph
+              page={fakePage}
+              emojiClassName="text-5xl leading-none"
+              typeClassName="w-10 h-10 text-zinc-400"
+            />
+          </div>
+
           <h1 className="text-4xl font-bold text-[#111110] dark:text-zinc-100 mb-4">
             {title}
           </h1>

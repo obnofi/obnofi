@@ -7,6 +7,8 @@ import { PasswordPrompt } from "@/components/share/PasswordPrompt";
 interface PageData {
   id: string;
   title: string;
+  icon: string | null;
+  coverImage: string | null;
   content: object | null;
   updatedAt: string;
 }
@@ -48,6 +50,8 @@ export function SharePageClient({
   return (
     <PublicPageView
       title={pageData.title}
+      icon={pageData.icon}
+      coverImage={pageData.coverImage}
       content={pageData.content}
       updatedAt={pageData.updatedAt}
     />

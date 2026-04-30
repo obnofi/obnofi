@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Share2, Copy, Check, Lock, Globe, Link2 } from "lucide-react";
+import { copyToClipboard } from "@/lib/copyToClipboard";
 
 interface SharePopoverProps {
   pageId: string;
@@ -59,7 +60,8 @@ export function SharePopover({
 
   const handleCopyLink = async () => {
     if (!shareUrl) return;
-    await navigator.clipboard.writeText(shareUrl);
+    const copiedToClipboard = await copyToClipboard(shareUrl);
+    if (!copiedToClipboard) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

@@ -39,6 +39,8 @@ export default async function SharePage({ params }: SharePageProps) {
           : {
               id: page.id,
               title: page.title,
+              icon: page.icon ?? null,
+              coverImage: page.coverImage ?? null,
               content: page.content,
               updatedAt: page.updatedAt,
             }
