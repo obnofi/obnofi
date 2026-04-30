@@ -211,6 +211,77 @@ curl -s "http://localhost:3000/api/databases/search" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+## Profile
+
+현재 로그인한 사용자의 프로필을 조회/수정합니다. 웹 세션이 필요합니다.
+
+대표 응답 shape:
+
+```json
+{
+  "id": "user_id",
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "image": "https://lh3.googleusercontent.com/...",
+  "createdAt": "2026-04-30T00:00:00.000Z"
+}
+```
+
+### `GET /api/profile`
+
+현재 세션 유저의 프로필을 반환합니다.
+
+- 인증되지 않았으면 `401`
+- 유저 레코드가 없으면 `404`
+
+### `PATCH /api/profile`
+
+현재 세션 유저의 프로필을 수정합니다.
+
+요청 본문:
+
+```json
+{
+  "name": "Jane Doe",
+  "image": "/profile/parrot.png"
+}
+```
+
+규칙:
+
+- `name`은 필수이며 공백 제거 후 1~80자입니다.
+- `image`는 선택값이며, 전달하면 해당 URL 문자열로 저장합니다.
+- `image`를 생략하면 기존 프로필 이미지를 유지합니다.
+
+## Workspaces
+
+사용자가 접근 가능한 워크스페이스 목록을 조회합니다.
+
+### `GET /api/workspaces`
+
+현재 사용자 멤버십 기준의 워크스페이스 목록을 반환합니다. 세션 쿠키 또는 Bearer 토큰이 필요합니다.
+
+성공 응답:
+
+```json
+[
+  {
+    "id": "workspace_id",
+    "name": "My Workspace",
+    "slug": "ws-user-123",
+    "icon": null,
+    "ownerId": "user_id",
+    "role": "OWNER",
+    "createdAt": "2026-04-30T00:00:00.000Z",
+    "updatedAt": "2026-04-30T00:00:00.000Z"
+  }
+]
+```
+
+- 반환 순서는 소유자 워크스페이스가 먼저 오고, 그다음 가입 순서입니다.
+- 인증되지 않았으면 `401`
+- 조회 실패 시 `500`
+
 ## Pages
 
 페이지 타입은 소문자 문자열을 사용합니다.
