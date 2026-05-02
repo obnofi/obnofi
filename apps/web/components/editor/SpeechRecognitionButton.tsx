@@ -16,6 +16,7 @@ export function SpeechRecognitionButton({
 }: SpeechRecognitionButtonProps) {
   return (
     <div
+      data-export-ignore="true"
       title={
         !isSupported
           ? "이 브라우저는 음성인식을 지원하지 않습니다. Chrome 또는 Edge를 사용해 주세요."

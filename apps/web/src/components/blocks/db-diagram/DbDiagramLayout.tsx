@@ -154,7 +154,7 @@ export default function DbDiagramLayout({
         </div>
 
         {/* Right: action buttons + fullscreen toggle */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div data-export-ignore="true" className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => erdCanvasRef.current?.addTable()}
             className="px-2.5 py-1 bg-[#2E7D45] text-white text-xs font-medium rounded hover:bg-[#236338] transition-colors flex items-center gap-1"

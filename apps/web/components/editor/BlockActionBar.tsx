@@ -104,6 +104,7 @@ export function BlockActionBar({ editor, container }: BlockActionBarProps) {
   return (
     <div
       data-block-action-bar="true"
+      data-export-ignore="true"
       className="grove-block-action-bar"
       style={{
         left: position.left,

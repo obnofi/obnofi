@@ -185,6 +185,7 @@ export function WorkspacePage({
       if (!currentPage || currentPage.type !== "document") return;
       const params = {
         editor: editorInstanceRef.current,
+        contentElement: groveContentElement,
         page: {
           title: currentPage.title,
           icon: currentPage.icon,
@@ -195,7 +196,7 @@ export function WorkspacePage({
       if (format === "pdf") exportPageAsPdf(params);
       else exportPageAsHtml(params);
     },
-    [currentPage]
+    [currentPage, groveContentElement]
   );
 
   useEffect(() => {

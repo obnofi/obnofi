@@ -14,6 +14,7 @@ export function SpeechInputIndicator({
 
   return (
     <div
+      data-export-ignore="true"
       role="status"
       aria-live="polite"
       aria-label="음성인식 결과 미리보기"

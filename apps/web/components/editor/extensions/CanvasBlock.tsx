@@ -109,7 +109,10 @@ function CanvasBlockView(props: ReactNodeViewProps) {
         }
         className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 not-prose dark:border-zinc-800 dark:bg-zinc-900/70"
       >
-        <div className="flex items-center justify-end gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+        <div
+          data-export-ignore="true"
+          className="flex items-center justify-end gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800"
+        >
             {workspaceId && canvasPage ? (
               <button
                 type="button"

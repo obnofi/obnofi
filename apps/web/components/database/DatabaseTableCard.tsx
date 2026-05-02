@@ -120,7 +120,10 @@ export function DatabaseTableCard({
       className="overflow-hidden not-prose bg-[var(--color-background)]"
     >
       {showTopBar ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+        <div
+          data-export-ignore="true"
+          className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
+        >
           <div className="flex items-center gap-2">
             {headerLabel ? (
               <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">
