@@ -33,6 +33,7 @@ import { DbDiagramExtension } from "@/src/components/editor/extensions/DbDiagram
 import { SubPageBlock } from "@/components/editor/extensions/SubPageBlock";
 import { BlockActionsExtension } from "@/components/editor/extensions/BlockActionsExtension";
 import { BlockActionBar } from "@/components/editor/BlockActionBar";
+import { CollaboratorBlockAvatars } from "@/components/editor/CollaboratorBlockAvatars";
 import { SpeechRecognitionButton } from "@/components/editor/SpeechRecognitionButton";
 import { SpeechInputIndicator } from "@/components/editor/SpeechInputIndicator";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
@@ -249,6 +250,12 @@ export function Editor({
         />
         {editable ? (
           <BlockActionBar editor={editor} container={editorShellRef.current} />
+        ) : null}
+        {ydoc && provider ? (
+          <CollaboratorBlockAvatars
+            editor={editor}
+            container={editorShellRef.current}
+          />
         ) : null}
         <SpeechInputIndicator
           isListening={isListening}
