@@ -132,6 +132,14 @@ enum Role {
 model Page {
   id               String   @id @default(cuid())
   title            String   @default("Untitled")
+  groveTitleLevel  Int      @default(1)
+  bodyFontSizePt   Int      @default(12)
+  heading1FontSizePt Int    @default(30)
+  heading2FontSizePt Int    @default(23)
+  heading3FontSizePt Int    @default(18)
+  heading4FontSizePt Int    @default(16)
+  heading5FontSizePt Int    @default(14)
+  highlightColors  String[] @default(["yellow", "green", "blue", "pink"])
   content          Json?
   type             PageType @default(DOCUMENT)
   icon             String?

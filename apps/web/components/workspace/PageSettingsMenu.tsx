@@ -18,24 +18,52 @@ import {
 } from "lucide-react";
 import { useCollaboration } from "@/lib/collaboration/CollaborationContext";
 import { copyToClipboard } from "@/lib/copyToClipboard";
+import type {
+  HeadingLevel,
+  PageHeadingFontSizes,
+  PageHighlightColor,
+  PageType,
+} from "@obnofi/types";
+import { PAGE_HIGHLIGHT_BG_COLORS } from "@/lib/highlightColors";
 
 export type PageExportFormat = "pdf" | "html";
+
+const headingLevels = [1, 2, 3, 4, 5] as const satisfies readonly HeadingLevel[];
+const pageHighlightColorOptions: PageHighlightColor[] = [
+  "yellow",
+  "green",
+  "blue",
+  "purple",
+  "pink",
+  "red",
+  "orange",
+];
 
 interface PageSettingsMenuProps {
   pageId: string;
   workspaceId: string;
+  pageType: PageType;
+  headingFontSizes: PageHeadingFontSizes;
+  highlightColors: PageHighlightColor[];
   isPublic: boolean;
   shareId: string | null;
   onShareUpdate: (isPublic: boolean, shareId: string | null) => void;
+  onHeadingFontSizesChange: (sizes: PageHeadingFontSizes) => void;
+  onHighlightColorsChange: (colors: PageHighlightColor[]) => void;
   onExport?: (format: PageExportFormat) => void;
 }
 
 export function PageSettingsMenu({
   pageId,
   workspaceId,
+  pageType,
+  headingFontSizes,
+  highlightColors,
   isPublic,
   shareId,
   onShareUpdate,
+  onHeadingFontSizesChange,
+  onHighlightColorsChange,
   onExport,
 }: PageSettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -43,6 +71,11 @@ export function PageSettingsMenu({
   const [publishCopied, setPublishCopied] = useState(false);
   const [collabCopied, setCollabCopied] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isHeadingFontSizeOpen, setIsHeadingFontSizeOpen] = useState(false);
+  const [isHighlightColorsOpen, setIsHighlightColorsOpen] = useState(false);
+  const [draftHeadingFontSizes, setDraftHeadingFontSizes] =
+    useState<PageHeadingFontSizes>(headingFontSizes);
+  const [editingHeadingLevel, setEditingHeadingLevel] = useState<HeadingLevel | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +95,8 @@ export function PageSettingsMenu({
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setIsOpen(false);
         setIsExportOpen(false);
+        setIsHeadingFontSizeOpen(false);
+        setIsHighlightColorsOpen(false);
       }
     };
     if (isOpen) document.addEventListener("mousedown", handleClickOutside);
@@ -69,13 +104,115 @@ export function PageSettingsMenu({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) setIsExportOpen(false);
+    if (!isOpen) {
+      setIsExportOpen(false);
+      setIsHeadingFontSizeOpen(false);
+      setIsHighlightColorsOpen(false);
+      setEditingHeadingLevel(null);
+    }
   }, [isOpen]);
+
+  useEffect(() => {
+    setDraftHeadingFontSizes(headingFontSizes);
+  }, [headingFontSizes]);
 
   const handleExport = (format: PageExportFormat) => {
     onExport?.(format);
     setIsExportOpen(false);
     setIsOpen(false);
+  };
+
+  const handleHeadingFontSizeChange = async (
+    headingLevel: HeadingLevel,
+    nextSize: number
+  ) => {
+    const headingKey = `h${headingLevel}` as keyof PageHeadingFontSizes;
+    if (headingFontSizes[headingKey] === nextSize) {
+      return;
+    }
+
+    const nextHeadingFontSizes: PageHeadingFontSizes = {
+      ...headingFontSizes,
+      [headingKey]: nextSize,
+    };
+    onHeadingFontSizesChange(nextHeadingFontSizes);
+
+    try {
+      const response = await fetch(`/api/pages/${pageId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          headingFontSizes: {
+            [headingKey]: nextSize,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update heading font size");
+      }
+
+      const updatedPage = await response.json();
+      onHeadingFontSizesChange(updatedPage.headingFontSizes);
+    } catch {
+      onHeadingFontSizesChange(headingFontSizes);
+    }
+  };
+
+  const handleHeadingFontSizeDraftChange = (
+    headingLevel: HeadingLevel,
+    value: string
+  ) => {
+    const headingKey = `h${headingLevel}` as keyof PageHeadingFontSizes;
+    const parsedValue = Number.parseInt(value, 10);
+
+    setDraftHeadingFontSizes((current) => ({
+      ...current,
+      [headingKey]: Number.isNaN(parsedValue) ? current[headingKey] : parsedValue,
+    }));
+  };
+
+  const commitHeadingFontSizeDraft = async (headingLevel: HeadingLevel) => {
+    const headingKey = `h${headingLevel}` as keyof PageHeadingFontSizes;
+    const nextSize = draftHeadingFontSizes[headingKey];
+
+    if (!Number.isInteger(nextSize) || nextSize < 8 || nextSize > 48) {
+      setDraftHeadingFontSizes(headingFontSizes);
+      setEditingHeadingLevel(null);
+      return;
+    }
+
+    await handleHeadingFontSizeChange(headingLevel, nextSize);
+    setEditingHeadingLevel(null);
+  };
+
+  const handleHighlightColorsToggle = async (color: PageHighlightColor) => {
+    const nextHighlightColors = highlightColors.includes(color)
+      ? highlightColors.filter((item) => item !== color)
+      : [...highlightColors, color];
+
+    if (nextHighlightColors.length === 0) {
+      return;
+    }
+
+    onHighlightColorsChange(nextHighlightColors);
+
+    try {
+      const response = await fetch(`/api/pages/${pageId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ highlightColors: nextHighlightColors }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update highlight colors");
+      }
+
+      const updatedPage = await response.json();
+      onHighlightColorsChange(updatedPage.highlightColors);
+    } catch {
+      onHighlightColorsChange(highlightColors);
+    }
   };
 
   const handleTogglePublish = async () => {
@@ -152,8 +289,8 @@ export function PageSettingsMenu({
                 aria-label={isPublic ? "게시 취소" : "게시"}
               >
                 <span
-                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                    isPublic ? "translate-x-4" : "translate-x-0.5"
+                  className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                    isPublic ? "translate-x-4" : "translate-x-0"
                   }`}
                 />
               </button>
@@ -218,16 +355,145 @@ export function PageSettingsMenu({
               )}
             </button>
 
-            <DisabledMenuItem
-              label="글꼴 크기"
-              hint="준비 중"
-              trailing={<ChevronRight className="h-3.5 w-3.5" />}
-            />
-            <DisabledMenuItem
-              label="형광펜 색깔"
-              hint="준비 중"
-              trailing={<ChevronRight className="h-3.5 w-3.5" />}
-            />
+            {pageType === "document" ? (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setIsHeadingFontSizeOpen((value) => !value)}
+                  className="flex w-full items-center justify-between rounded-md px-2 py-2 hover:bg-[var(--color-hover)]"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Type className="h-4 w-4 text-[var(--color-text-secondary)]" />
+                    <div className="text-left">
+                      <p className="text-[13px] font-medium text-[var(--color-text-primary)]">
+                        제목 크기
+                      </p>
+                      <p className="text-[11px] text-[var(--color-text-placeholder)]">
+                        H1 {headingFontSizes.h1}pt · H2 {headingFontSizes.h2}pt
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight
+                    className={`h-3.5 w-3.5 text-[var(--color-text-placeholder)] transition-transform ${
+                      isHeadingFontSizeOpen ? "rotate-90" : ""
+                    }`}
+                  />
+                </button>
+
+                {isHeadingFontSizeOpen ? (
+                  <div className="ml-6 mt-0.5 flex flex-col gap-0.5 border-l border-[var(--color-border)] pl-2">
+                    {headingLevels.map((headingLevel) => {
+                      const headingKey = `h${headingLevel}` as keyof PageHeadingFontSizes;
+                      return (
+                        <div
+                          key={headingLevel}
+                          className="rounded-md px-2 py-2 hover:bg-[var(--color-hover)]"
+                        >
+                          {editingHeadingLevel === headingLevel ? (
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-[13px] font-medium text-[var(--color-text-primary)]">
+                                H{headingLevel}:
+                              </span>
+                              <input
+                                type="number"
+                                min={8}
+                                max={48}
+                                step={1}
+                                autoFocus
+                                value={draftHeadingFontSizes[headingKey]}
+                                onChange={(event) =>
+                                  handleHeadingFontSizeDraftChange(
+                                    headingLevel,
+                                    event.target.value
+                                  )
+                                }
+                                onBlur={() => void commitHeadingFontSizeDraft(headingLevel)}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    event.currentTarget.blur();
+                                  }
+                                  if (event.key === "Escape") {
+                                    setDraftHeadingFontSizes(headingFontSizes);
+                                    setEditingHeadingLevel(null);
+                                  }
+                                }}
+                                className="w-20 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-right text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)]"
+                              />
+                              <span className="text-[11px] text-[var(--color-text-secondary)]">
+                                px
+                              </span>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onDoubleClick={() => setEditingHeadingLevel(headingLevel)}
+                              className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[12px] text-[var(--color-text-secondary)] transition hover:bg-[var(--color-background)] hover:text-[var(--color-text-primary)]"
+                              title="더블클릭해서 수정"
+                            >
+                              <span>H{headingLevel}:</span>
+                              <span>{draftHeadingFontSizes[headingKey]}px</span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {pageType === "document" ? (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setIsHighlightColorsOpen((value) => !value)}
+                  className="flex w-full items-center justify-between rounded-md px-2 py-2 hover:bg-[var(--color-hover)]"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Highlighter className="h-4 w-4 text-[var(--color-text-secondary)]" />
+                    <div className="text-left">
+                      <p className="text-[13px] font-medium text-[var(--color-text-primary)]">
+                        형광펜 색깔
+                      </p>
+                      <p className="text-[11px] text-[var(--color-text-placeholder)]">
+                        선택 툴바에 표시할 색상
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight
+                    className={`h-3.5 w-3.5 text-[var(--color-text-placeholder)] transition-transform ${
+                      isHighlightColorsOpen ? "rotate-90" : ""
+                    }`}
+                  />
+                </button>
+
+                {isHighlightColorsOpen ? (
+                  <div className="ml-6 mt-0.5 flex flex-wrap gap-2 border-l border-[var(--color-border)] pl-4 py-2">
+                    {pageHighlightColorOptions.map((color) => {
+                      const isSelected = highlightColors.includes(color);
+                      return (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => void handleHighlightColorsToggle(color)}
+                          className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] transition ${
+                            isSelected
+                              ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)]"
+                              : "bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
+                          }`}
+                        >
+                          <span
+                            className="h-3 w-3 rounded-full"
+                            style={{ backgroundColor: PAGE_HIGHLIGHT_BG_COLORS[color] }}
+                          />
+                          <span>{color}</span>
+                          {isSelected ? <Check className="h-3 w-3" /> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="h-px bg-[var(--color-border)]" />

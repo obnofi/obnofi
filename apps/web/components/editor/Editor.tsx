@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, type CSSProperties } from "react";
 import { useEditor, EditorContent, type Editor as TiptapEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -36,10 +36,16 @@ import { BlockActionBar } from "@/components/editor/BlockActionBar";
 import { CollaboratorBlockAvatars } from "@/components/editor/CollaboratorBlockAvatars";
 import { SpeechRecognitionButton } from "@/components/editor/SpeechRecognitionButton";
 import { SpeechInputIndicator } from "@/components/editor/SpeechInputIndicator";
+import { TextHighlightToolbar } from "@/components/editor/TextHighlightToolbar";
+import { TextHighlightMark } from "@/components/editor/extensions/TextHighlightMark";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import type { PageHeadingFontSizes, PageHighlightColor } from "@obnofi/types";
 
 interface EditorProps {
   content: object | null;
+  bodyFontSizePt?: number;
+  headingFontSizes?: PageHeadingFontSizes;
+  highlightColors?: PageHighlightColor[];
   pageUpdatedAt?: string;
   yjsUpdatedAt?: string | null;
   editable?: boolean;
@@ -56,6 +62,9 @@ interface EditorProps {
 
 export function Editor({
   content,
+  bodyFontSizePt = 12,
+  headingFontSizes = { h1: 30, h2: 23, h3: 18, h4: 16, h5: 14 },
+  highlightColors = ["yellow", "green", "blue", "pink"],
   pageUpdatedAt,
   yjsUpdatedAt,
   editable = true,
@@ -159,6 +168,7 @@ export function Editor({
     extensions: [
       StarterKit.configure(ydoc ? { undoRedo: false } : {}),
       Placeholder.configure({ placeholder }),
+      TextHighlightMark,
       ...(ydoc && provider
         ? [
             Collaboration.configure({ document: ydoc }),
@@ -231,6 +241,16 @@ export function Editor({
           editorShellRef.current = node;
           onContentContainerReady?.(node);
         }}
+        style={
+          {
+            "--grove-body-font-size": `${bodyFontSizePt}pt`,
+            "--grove-h1-font-size": `${headingFontSizes.h1}pt`,
+            "--grove-h2-font-size": `${headingFontSizes.h2}pt`,
+            "--grove-h3-font-size": `${headingFontSizes.h3}pt`,
+            "--grove-h4-font-size": `${headingFontSizes.h4}pt`,
+            "--grove-h5-font-size": `${headingFontSizes.h5}pt`,
+          } as CSSProperties
+        }
         className={`editor prose max-w-none text-[#111110] dark:prose-invert dark:text-zinc-100 [&:focus-within]:outline-none [&_*]:focus-visible:outline-none ${
           editable ? "cursor-text" : ""
         }`}
@@ -250,6 +270,9 @@ export function Editor({
         />
         {editable ? (
           <BlockActionBar editor={editor} container={editorShellRef.current} />
+        ) : null}
+        {editable ? (
+          <TextHighlightToolbar editor={editor} colors={highlightColors} />
         ) : null}
         {ydoc && provider ? (
           <CollaboratorBlockAvatars

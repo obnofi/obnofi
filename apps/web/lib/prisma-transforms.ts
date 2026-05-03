@@ -4,6 +4,9 @@ import {
   ViewType as PrismaViewType,
 } from "@obnofi/db";
 import type {
+  GroveTitleLevel,
+  PageHeadingFontSizes,
+  PageHighlightColor,
   Page,
   Property,
   PropertyValue,
@@ -55,6 +58,14 @@ export const PAGE_INCLUDE = {
 export const PAGE_SELECT = {
   id: true,
   title: true,
+  groveTitleLevel: true,
+  bodyFontSizePt: true,
+  heading1FontSizePt: true,
+  heading2FontSizePt: true,
+  heading3FontSizePt: true,
+  heading4FontSizePt: true,
+  heading5FontSizePt: true,
+  highlightColors: true,
   type: true,
   icon: true,
   coverImage: true,
@@ -82,6 +93,14 @@ export const PAGE_SELECT_WITH_PROPERTY_VALUES = {
 export type PrismaPageRow = {
   id: string;
   title: string;
+  groveTitleLevel?: number | null;
+  bodyFontSizePt?: number | null;
+  heading1FontSizePt?: number | null;
+  heading2FontSizePt?: number | null;
+  heading3FontSizePt?: number | null;
+  heading4FontSizePt?: number | null;
+  heading5FontSizePt?: number | null;
+  highlightColors?: string[] | null;
   content?: unknown | null; // optional — omitted in list/row queries
   type: PrismaPageType;
   icon: string | null;
@@ -145,9 +164,23 @@ type PrismaDatabaseRow = {
 // ── Mappers ────────────────────────────────────────────────────────────────
 
 export function toPage(p: PrismaPageRow): Page {
+  const headingFontSizes: PageHeadingFontSizes = {
+    h1: p.heading1FontSizePt ?? 30,
+    h2: p.heading2FontSizePt ?? 23,
+    h3: p.heading3FontSizePt ?? 18,
+    h4: p.heading4FontSizePt ?? 16,
+    h5: p.heading5FontSizePt ?? 14,
+  };
+
   return {
     id: p.id,
     title: p.title,
+    groveTitleLevel: (p.groveTitleLevel ?? 1) as GroveTitleLevel,
+    bodyFontSizePt: p.bodyFontSizePt ?? 12,
+    headingFontSizes,
+    highlightColors: (p.highlightColors?.length
+      ? p.highlightColors
+      : ["yellow", "green", "blue", "pink"]) as PageHighlightColor[],
     content: p.content !== undefined ? (p.content as object | null) ?? null : null,
     type: fromPrismaPageType(p.type),
     icon: p.icon ?? null,

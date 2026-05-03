@@ -417,6 +417,15 @@ curl -s "http://localhost:3000/api/databases/search" \
 ```json
 {
   "title": "optional",
+  "bodyFontSizePt": 12,
+  "headingFontSizes": {
+    "h1": 30,
+    "h2": 23,
+    "h3": 18,
+    "h4": 16,
+    "h5": 14
+  },
+  "highlightColors": ["yellow", "green", "blue", "pink"],
   "content": {},
   "icon": "🌱",
   "coverImage": "https://... or data:image/...",
@@ -424,6 +433,14 @@ curl -s "http://localhost:3000/api/databases/search" \
   "isPublic": true
 }
 ```
+
+규칙:
+
+- `bodyFontSizePt`는 페이지 본문 글꼴 크기이며 `8`~`32` 사이 정수만 허용됩니다.
+- 값의 단위는 `pt`입니다.
+- `headingFontSizes`는 페이지 heading 표시 크기이며 `h1`~`h5` 각각 `8`~`48` 사이 정수 `pt`만 허용됩니다.
+- `highlightColors`는 페이지 형광펜 팔레트이며 비어 있지 않은 배열이어야 합니다.
+- 허용 색상은 `yellow | green | blue | purple | pink | red | orange` 입니다.
 
 성공 응답:
 

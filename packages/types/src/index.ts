@@ -6,10 +6,32 @@ export * from "./db-diagram";
 
 // Re-export common types at the top level
 export type PageType = "document" | "canvas" | "database";
+export type GroveTitleLevel = 1 | 2 | 3 | 4 | 5;
+export type HeadingLevel = 1 | 2 | 3 | 4 | 5;
+export type PageHighlightColor =
+  | "yellow"
+  | "green"
+  | "blue"
+  | "purple"
+  | "pink"
+  | "red"
+  | "orange";
+
+export interface PageHeadingFontSizes {
+  h1: number;
+  h2: number;
+  h3: number;
+  h4: number;
+  h5: number;
+}
 
 export interface Page {
   id: string;
   title: string;
+  groveTitleLevel: GroveTitleLevel;
+  bodyFontSizePt: number;
+  headingFontSizes: PageHeadingFontSizes;
+  highlightColors: PageHighlightColor[];
   content: object | null;
   type: PageType;
   icon?: string | null;
@@ -52,6 +74,10 @@ export interface CreatePageInput {
 
 export interface UpdatePageInput {
   title?: string;
+  groveTitleLevel?: GroveTitleLevel;
+  bodyFontSizePt?: number;
+  headingFontSizes?: Partial<PageHeadingFontSizes>;
+  highlightColors?: PageHighlightColor[];
   content?: object | null;
   icon?: string | null;
   coverImage?: string | null;

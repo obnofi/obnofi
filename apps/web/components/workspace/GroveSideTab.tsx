@@ -325,6 +325,9 @@ export function GroveSideTab({ workspaceId }: { workspaceId: string }) {
                     >
                       <Editor
                         content={page.content ?? emptyDoc}
+                        bodyFontSizePt={page.bodyFontSizePt}
+                        headingFontSizes={page.headingFontSizes}
+                        highlightColors={page.highlightColors}
                         onUpdate={handlePageContentUpdate}
                         workspaceId={activeWorkspaceId ?? workspaceId}
                         pageId={page.id}

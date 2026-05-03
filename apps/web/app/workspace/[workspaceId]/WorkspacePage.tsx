@@ -113,7 +113,7 @@ export function WorkspacePage({
     intervalMs: 45000,
     onSaved: (content) => {
       // 저장 성공 후 pageStore도 최신 상태로 갱신
-      if (currentPage) setCurrentPage({ ...currentPage, content });
+      setCurrentPage((page) => (page ? { ...page, content } : page));
     },
   });
   const [pendingChildType, setPendingChildType] = useState<PageType | null>(null);
@@ -163,6 +163,14 @@ export function WorkspacePage({
   const handlePageChromeUpdate = async (input: Partial<Pick<Page, "icon" | "coverImage">>) => {
     await updatePage(pageId, input);
   };
+
+  const handleHeadingFontSizesChange = useCallback((headingFontSizes: Page["headingFontSizes"]) => {
+    setCurrentPage((page) => (page ? { ...page, headingFontSizes } : page));
+  }, [setCurrentPage]);
+
+  const handleHighlightColorsChange = useCallback((highlightColors: Page["highlightColors"]) => {
+    setCurrentPage((page) => (page ? { ...page, highlightColors } : page));
+  }, [setCurrentPage]);
 
   const handleToggleExpand = (pageId: string) => {
     setExpandedPages(prev => {
@@ -320,11 +328,18 @@ export function WorkspacePage({
           <PageSettingsMenu
             pageId={pageId}
             workspaceId={workspaceId}
+            pageType={currentPage.type}
+            headingFontSizes={currentPage.headingFontSizes}
+            highlightColors={currentPage.highlightColors}
             isPublic={currentPage.isPublic}
             shareId={currentPage.shareId}
             onShareUpdate={(isPublic, shareId) => {
-              if (currentPage) setCurrentPage({ ...currentPage, isPublic, shareId });
+              setCurrentPage((page) =>
+                page ? { ...page, isPublic, shareId } : page
+              );
             }}
+            onHeadingFontSizesChange={handleHeadingFontSizesChange}
+            onHighlightColorsChange={handleHighlightColorsChange}
             onExport={
               currentPage.type === "document" ? handleExportPage : undefined
             }
@@ -414,6 +429,9 @@ export function WorkspacePage({
               <Editor
                 key={pageId}
                 content={currentPage.content}
+                bodyFontSizePt={currentPage.bodyFontSizePt}
+                headingFontSizes={currentPage.headingFontSizes}
+                highlightColors={currentPage.highlightColors}
                 pageUpdatedAt={currentPage.updatedAt}
                 yjsUpdatedAt={currentPage.yjsUpdatedAt}
                 editable={true}

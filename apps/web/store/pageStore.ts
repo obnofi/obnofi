@@ -15,7 +15,12 @@ interface PageState {
   createPage: (input: CreatePageInput) => Promise<Page | null>;
   updatePage: (pageId: string, input: UpdatePageInput) => Promise<void>;
   deletePage: (pageId: string) => Promise<void>;
-  setCurrentPage: (page: Page | null) => void;
+  setCurrentPage: (
+    page:
+      | Page
+      | null
+      | ((currentPage: Page | null) => Page | null)
+  ) => void;
   setPages: (pages: Page[], workspaceId?: string) => void;
   getChildPages: (parentId: string | null) => Page[];
   getPageTree: () => PageTreeNode[];
@@ -200,7 +205,22 @@ export const usePageStore = create<PageState>((set, get) => ({
     }
   },
 
-  setCurrentPage: (page: Page | null) => set({ currentPage: page }),
+  setCurrentPage: (pageOrUpdater) =>
+    set((state) => {
+      const nextCurrentPage =
+        typeof pageOrUpdater === "function"
+          ? pageOrUpdater(state.currentPage)
+          : pageOrUpdater;
+
+      return {
+        currentPage: nextCurrentPage,
+        pages: nextCurrentPage
+          ? state.pages.map((page) =>
+              page.id === nextCurrentPage.id ? nextCurrentPage : page
+            )
+          : state.pages,
+      };
+    }),
 
   setPages: (pages: Page[], workspaceId?: string) =>
     set(
