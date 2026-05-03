@@ -1,8 +1,21 @@
-import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth/next";
+import { notFound, redirect } from "next/navigation";
 import { SharePageClient } from "./SharePageClient";
+import { authOptions } from "@/lib/auth";
 
 interface SharePageProps {
   params: Promise<{ shareId: string }>;
+}
+
+interface PublicPageResponse {
+  id: string;
+  workspaceId: string;
+  title: string;
+  icon: string | null;
+  coverImage: string | null;
+  content: object | null;
+  updatedAt: string;
+  isPasswordProtected: boolean;
 }
 
 async function getPublicPage(shareId: string) {
@@ -16,13 +29,14 @@ async function getPublicPage(shareId: string) {
       return null;
     }
 
-    return response.json();
+    return (await response.json()) as PublicPageResponse;
   } catch {
     return null;
   }
 }
 
 export default async function SharePage({ params }: SharePageProps) {
+  const session = await getServerSession(authOptions);
   const { shareId } = await params;
   const page = await getPublicPage(shareId);
 
@@ -30,22 +44,20 @@ export default async function SharePage({ params }: SharePageProps) {
     notFound();
   }
 
+  const workspacePath = `/workspace/${page.workspaceId}?page=${page.id}`;
+
+  if (!page.isPasswordProtected) {
+    if (!session?.user) {
+      redirect(`/auth/signin?callbackUrl=${encodeURIComponent(workspacePath)}`);
+    }
+    redirect(workspacePath);
+  }
+
   return (
     <SharePageClient
       shareId={shareId}
-      initialData={
-        page.isPasswordProtected
-          ? null
-          : {
-              id: page.id,
-              title: page.title,
-              icon: page.icon ?? null,
-              coverImage: page.coverImage ?? null,
-              content: page.content,
-              updatedAt: page.updatedAt,
-            }
-      }
-      isPasswordProtected={page.isPasswordProtected}
+      redirectPath={workspacePath}
+      requiresSignIn={!session?.user}
     />
   );
 }

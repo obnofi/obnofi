@@ -38,6 +38,7 @@ export async function GET(
     if (page.sharePassword) {
       return NextResponse.json({
         id: page.id,
+        workspaceId: page.workspaceId,
         title: page.title,
         icon: page.icon,
         coverImage: page.coverImage,
@@ -65,6 +66,7 @@ export async function GET(
 
     return NextResponse.json({
       id: page.id,
+      workspaceId: page.workspaceId,
       title: page.title,
       icon: page.icon,
       coverImage: page.coverImage,

@@ -94,8 +94,8 @@ export function SharePopover({
                 onClick={!isLoading ? handleToggleShare : undefined}
               >
                 <div
-                  className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                    isPublic ? "translate-x-6" : "translate-x-1"
+                  className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${
+                    isPublic ? "translate-x-5" : "translate-x-0"
                   }`}
                 />
               </div>

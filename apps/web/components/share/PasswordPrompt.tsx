@@ -3,25 +3,12 @@
 import { useState } from "react";
 import { Lock, Eye, EyeOff } from "lucide-react";
 
-interface PageData {
-  id: string;
-  title: string;
-  content: object | null;
-  updatedAt: string;
-}
-
 interface PasswordPromptProps {
   shareId: string;
-  onSuccessAction: string;
+  onSuccess: () => void;
 }
 
-export function PasswordPrompt({ shareId, onSuccessAction }: PasswordPromptProps) {
-  const handleSuccess = (data: PageData) => {
-    if (typeof window !== "undefined") {
-      const event = new CustomEvent(onSuccessAction, { detail: data });
-      window.dispatchEvent(event);
-    }
-  };
+export function PasswordPrompt({ shareId, onSuccess }: PasswordPromptProps) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -40,8 +27,7 @@ export function PasswordPrompt({ shareId, onSuccessAction }: PasswordPromptProps
       });
 
       if (response.ok) {
-        const data = await response.json();
-        handleSuccess(data);
+        onSuccess();
       } else {
         setError("Incorrect password. Please try again.");
       }

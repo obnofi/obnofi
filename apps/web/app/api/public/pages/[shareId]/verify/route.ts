@@ -62,6 +62,7 @@ export async function POST(
 
     return NextResponse.json({
       id: page.id,
+      workspaceId: page.workspaceId,
       title: page.title,
       icon: page.icon,
       coverImage: page.coverImage,
