@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Monitor, Sun, Moon, Globe, Home, Clock, FileText } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Sun, Moon, Globe, Home, Clock, FileText } from "lucide-react";
+import { applyTheme, getResolvedTheme, type ObnofiTheme } from "@/lib/theme";
 
 // Reusable Components
 function SettingSection({
@@ -147,9 +148,18 @@ function RadioGroup<T extends string>({
 
 // Appearance Settings Page
 export default function AppearanceSettingsPage() {
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("dark");
+  const [theme, setTheme] = useState<ObnofiTheme>("light");
   const [language, setLanguage] = useState<"ko" | "en">("ko");
   const [startPage, setStartPage] = useState<"last" | "home" | "specific">("last");
+
+  useEffect(() => {
+    setTheme(getResolvedTheme());
+  }, []);
+
+  const handleThemeChange = (value: ObnofiTheme) => {
+    applyTheme(value);
+    setTheme(value);
+  };
 
   return (
     <div>
@@ -167,10 +177,10 @@ export default function AppearanceSettingsPage() {
             options={[
               { value: "light", label: "Light", icon: <Sun className="h-4 w-4" /> },
               { value: "dark", label: "Dark", icon: <Moon className="h-4 w-4" /> },
-              { value: "system", label: "System", icon: <Monitor className="h-4 w-4" /> },
+              { value: "jungle", label: "Jungle", icon: <Globe className="h-4 w-4" /> },
             ]}
             value={theme}
-            onChange={setTheme}
+            onChange={(value) => handleThemeChange(value as ObnofiTheme)}
           />
         </SettingRow>
       </SettingSection>

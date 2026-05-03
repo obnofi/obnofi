@@ -28,16 +28,26 @@ export default function RootLayout({
             (() => {
               const root = document.documentElement;
               const media = window.matchMedia("(prefers-color-scheme: dark)");
-              const applyTheme = (isDark) => {
-                root.classList.toggle("dark", isDark);
-                root.style.colorScheme = isDark ? "dark" : "light";
+              const storedTheme = window.localStorage.getItem("obnofi-theme");
+              const applyTheme = (theme) => {
+                root.classList.remove("dark", "jungle");
+                if (theme === "dark") {
+                  root.classList.add("dark");
+                  root.style.colorScheme = "dark";
+                  return;
+                }
+                if (theme === "jungle") {
+                  root.classList.add("jungle");
+                  root.style.colorScheme = "light";
+                  return;
+                }
+                root.style.colorScheme = "light";
               };
-              applyTheme(media.matches);
-              const onChange = (event) => applyTheme(event.matches);
-              if (typeof media.addEventListener === "function") {
-                media.addEventListener("change", onChange);
-              } else if (typeof media.addListener === "function") {
-                media.addListener(onChange);
+
+              if (storedTheme === "light" || storedTheme === "dark" || storedTheme === "jungle") {
+                applyTheme(storedTheme);
+              } else {
+                applyTheme(media.matches ? "dark" : "light");
               }
             })();
           `}

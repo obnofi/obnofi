@@ -71,6 +71,28 @@ html.dark {
   color-scheme: dark;
 }
 
+html.jungle {
+  --color-accent:           #2F6B3B;
+  --color-accent-hover:     #24552E;
+  --color-accent-subtle:    #DCEBD8;
+  --color-background:       #F5F3E8;
+  --color-surface:          #ECE8D8;
+  --color-hover:            #E0DAC5;
+  --color-selected:         #D7D0B9;
+  --color-border:           #CFC6AE;
+  --color-text-primary:     #2E3324;
+  --color-text-secondary:   #66705A;
+  --color-text-placeholder: #AAA48F;
+  --color-tooltip-bg:       #24311F;
+  --color-board-surface:    #F1EDDF;
+  --color-board-grid:       rgba(46, 51, 36, 0.08);
+  --color-board-card:       #FBF8ED;
+  --color-sticky-sun:       #E7D77A;
+  --color-sticky-rose:      #E5B5C1;
+  --color-sticky-sky:       #C9DFD6;
+  color-scheme: light;
+}
+
 @theme inline {
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
