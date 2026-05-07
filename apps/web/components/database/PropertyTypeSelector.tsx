@@ -32,27 +32,6 @@ interface PropertyTypeSelectorProps {
   disabled?: boolean;
 }
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Type,
-  Hash,
-  List,
-  ListChecks,
-  Kanban,
-  Calendar,
-  User,
-  CheckSquare,
-  Link,
-  Mail,
-  Phone,
-  Paperclip,
-  ArrowLeftRight,
-  Calculator,
-  FunctionSquare,
-  Clock,
-  UserPlus,
-  Edit3,
-};
-
 const typeCategories = {
   basic: {
     label: "Basic",

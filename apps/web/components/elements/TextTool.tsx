@@ -50,7 +50,6 @@ export function TextTool({
   element,
   isSelected,
   autoEdit = false,
-  onPointerDown,
 }: {
   element: TextElement;
   isSelected: boolean;

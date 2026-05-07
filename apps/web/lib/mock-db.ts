@@ -43,25 +43,6 @@ const mockViews = store.views;
 const mockColumns = store.columns;
 const mockPropertyValues = store.propertyValues;
 
-function createDefaultColumns(databaseId: string) {
-  mockDb.columns.create({
-    databaseId,
-    name: "Status",
-    type: "select",
-    options: [
-      { id: `opt-${Date.now()}-todo`, label: "To Do", color: "gray" },
-      { id: `opt-${Date.now()}-progress`, label: "In Progress", color: "yellow" },
-      { id: `opt-${Date.now()}-done`, label: "Done", color: "green" },
-    ],
-  });
-
-  mockDb.columns.create({
-    databaseId,
-    name: "Notes",
-    type: "text",
-  });
-}
-
 export const mockDb = {
   pages: {
     get: (id: string): Page | undefined => mockPages.get(id),
@@ -350,4 +331,3 @@ export const mockDb = {
     },
   },
 };
-

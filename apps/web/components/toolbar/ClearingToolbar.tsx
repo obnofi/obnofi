@@ -19,7 +19,6 @@ import {
   Type,
   Undo2,
   Redo2,
-  Waypoints,
   ThumbsUp,
   Heart,
   Laugh,

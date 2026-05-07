@@ -14,7 +14,6 @@ interface ViewTabsProps {
 
 export function ViewTabs({
   databasePage,
-  onDatabaseChange,
   onOpenRow,
   onCreateRow,
   onCreateProperty,

@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import {
   Plus,
   Search,
-  Filter,
   Grid3X3,
   List,
   MoreHorizontal,
@@ -37,7 +36,6 @@ const typeLabels: Record<PageType, string> = {
 };
 
 export function DatabaseView({
-  databasePage,
   childPages,
   onCreateChildAction,
   onSelectChildAction,

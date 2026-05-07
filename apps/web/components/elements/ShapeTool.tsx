@@ -89,7 +89,6 @@ export function ShapeTool({
   element,
   isSelected,
   scale,
-  onPointerDown,
 }: {
   element: ShapeElement;
   isSelected: boolean;

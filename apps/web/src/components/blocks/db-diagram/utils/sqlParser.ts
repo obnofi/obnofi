@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Parser } from 'node-sql-parser'
 import type { DbSchema, TableDef, ColumnDef, ForeignKeyDef } from '@obnofi/types/db-diagram'
 

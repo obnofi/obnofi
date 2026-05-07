@@ -271,7 +271,7 @@ export function GroveSideTab({ workspaceId }: { workspaceId: string }) {
                   {/* Breadcrumb */}
                   {ancestors.length > 0 && (
                     <nav className="mb-4 flex flex-wrap items-center gap-1 text-sm">
-                      {ancestors.map((ancestor, index) => (
+                      {ancestors.map((ancestor) => (
                         <span key={ancestor.id} className="flex items-center">
                           <button
                             type="button"

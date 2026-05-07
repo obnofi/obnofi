@@ -5,7 +5,6 @@ import type { EmbedElement as EmbedElementType } from "@obnofi/types/clearing";
 export function EmbedElement({
   element,
   isSelected,
-  onPointerDown,
 }: {
   element: EmbedElementType;
   isSelected: boolean;

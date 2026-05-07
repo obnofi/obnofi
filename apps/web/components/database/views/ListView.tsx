@@ -17,7 +17,7 @@ function getVal(row: Page, propId: string) {
   )?.value;
 }
 
-export function ListView({ properties, rows, onCreateRow, onOpenRow }: ListViewProps) {
+export function ListView({ properties, rows, onCreateRow }: ListViewProps) {
   const statusProp = properties.find((p) => p.type === "select" || p.type === "status");
   const dateProp = properties.find((p) => p.type === "date");
   const tagProp = properties.find((p) => p.type === "multi_select");

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react'
 import {
   ReactFlow,
@@ -8,6 +9,10 @@ import {
   type Node,
   type Edge,
   type Connection,
+  type EdgeTypes,
+  type NodeTypes,
+  type NodeChange,
+  type EdgeChange,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -18,8 +23,8 @@ import type { TableNodeData, TableDef, DbSchema } from '@obnofi/types/db-diagram
 interface ErdCanvasProps {
   nodes: Node[]
   edges: Edge[]
-  onNodesChange: (changes: any[]) => void
-  onEdgesChange: (changes: any[]) => void
+  onNodesChange: (changes: NodeChange[]) => void
+  onEdgesChange: (changes: EdgeChange[]) => void
   onConnect: (connection: Connection) => void
   onSchemaChange: (schema: DbSchema) => void
 }
@@ -29,12 +34,12 @@ export interface ErdCanvasHandle {
   fitView: () => void
 }
 
-const nodeTypes = {
-  tableNode: TableNode as any
+const nodeTypes: NodeTypes = {
+  tableNode: TableNode
 }
 
-const edgeTypes = {
-  relationEdge: RelationEdge as any
+const edgeTypes: EdgeTypes = {
+  relationEdge: RelationEdge
 }
 
 const ErdCanvas = forwardRef<ErdCanvasHandle, ErdCanvasProps>(function ErdCanvas({

@@ -12,7 +12,6 @@ import type {
   Filter,
   FilterGroup,
   FilterOperator,
-  PropertyValue,
   PropertyType,
   RollupFunction,
 } from '@obnofi/types/core';
@@ -127,6 +126,7 @@ export class DatabaseQueryEngine {
     filterValue: unknown,
     propertyType: PropertyType
   ): boolean {
+    void propertyType;
     switch (operator) {
       // Equality
       case 'equals':
@@ -357,6 +357,7 @@ export class DatabaseQueryEngine {
   }
 
   private valueToGroupKey(value: unknown, type?: PropertyType): string {
+    void type;
     if (value === null || value === undefined) return 'Uncategorized';
     
     if (Array.isArray(value)) {
@@ -457,6 +458,7 @@ export class ComputedPropertyEngine {
       },
       
       formatDate: (date: string, format: string) => {
+        void format;
         const d = new Date(date);
         // Simple format implementation
         return d.toLocaleDateString();

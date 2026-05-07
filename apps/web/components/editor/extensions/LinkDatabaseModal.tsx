@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, Database, X, Loader2 } from "lucide-react";
-import { Page } from "@obnofi/types";
 
 interface LinkDatabaseModalProps {
   isOpen: boolean;

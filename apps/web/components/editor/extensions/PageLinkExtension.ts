@@ -3,7 +3,7 @@ import { usePageStore } from "@/store/pageStore";
 import type { Page } from "@obnofi/types";
 
 export interface PageLinkOptions {
-  HTMLAttributes: Record<string, any>;
+  HTMLAttributes: Record<string, unknown>;
 }
 
 export interface PageLinkAttributes {

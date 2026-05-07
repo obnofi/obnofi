@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { memo, useState, useCallback } from 'react'
 import { BaseEdge, EdgeLabelRenderer, getBezierPath } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
@@ -21,22 +22,9 @@ const RelationEdge = memo(function RelationEdge(props: EdgeProps) {
     curvature: 0.3
   })
 
-  if (!foreignKey) {
-    return (
-      <BaseEdge
-        path={edgePath}
-        markerEnd={markerEnd}
-        markerStart={markerStart}
-        style={{
-          stroke: selected ? '#2E7D45' : '#9ca3af',
-          strokeWidth: selected ? 3 : 2
-        }}
-      />
-    )
-  }
-
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
+    if (!foreignKey) return
     setIsEditing(true)
     setEditFk(foreignKey)
   }, [foreignKey])
@@ -52,6 +40,20 @@ const RelationEdge = memo(function RelationEdge(props: EdgeProps) {
     setIsEditing(false)
     setEditFk(foreignKey)
   }, [foreignKey])
+
+  if (!foreignKey) {
+    return (
+      <BaseEdge
+        path={edgePath}
+        markerEnd={markerEnd}
+        markerStart={markerStart}
+        style={{
+          stroke: selected ? '#2E7D45' : '#9ca3af',
+          strokeWidth: selected ? 3 : 2
+        }}
+      />
+    )
+  }
 
   return (
     <>

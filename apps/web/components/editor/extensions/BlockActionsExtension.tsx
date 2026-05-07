@@ -110,39 +110,6 @@ function isActionableBlock(
   return node.isBlock && !!parent && actionableParentNames.has(parent.type.name);
 }
 
-function getActionableBlockAtResolvedPos(
-  doc: ProseMirrorNode,
-  pos: number
-): ActionableBlockInfo | null {
-  const $pos = doc.resolve(pos);
-
-  for (let depth = $pos.depth; depth > 0; depth -= 1) {
-    const node = $pos.node(depth);
-    const parent = $pos.node(depth - 1);
-
-    if (!isActionableBlock(node, parent)) {
-      continue;
-    }
-
-    const blockPos = $pos.before(depth);
-    const id = String(node.attrs.blockId ?? "");
-
-    if (!id) {
-      return null;
-    }
-
-    return {
-      id,
-      pos: blockPos,
-      node,
-      parentNode: parent,
-      parentPos: depth > 1 ? $pos.before(depth - 1) : 0,
-    };
-  }
-
-  return null;
-}
-
 function findBlockById(
   doc: ProseMirrorNode,
   blockId: string
@@ -618,7 +585,7 @@ function createBlockActionsPlugin() {
         },
       },
     },
-    view(view) {
+    view() {
       return {
         update(updatedView) {
           const pluginState = blockActionsPluginKey.getState(updatedView.state);

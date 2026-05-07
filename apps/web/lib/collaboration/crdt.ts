@@ -3,7 +3,7 @@
  * For real-time collaborative editing
  */
 
-import type { ID, Block, BlockOperation, OperationType } from '@obnofi/types/core';
+import type { ID, OperationType } from '@obnofi/types/core';
 
 // ============================================
 // Types

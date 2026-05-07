@@ -5,7 +5,6 @@ import { Plus, X, GripVertical } from "lucide-react";
 import { SelectOption, SelectOptionColor } from "@obnofi/types/database";
 import {
   getOptionBgColor,
-  getOptionTextColor,
   getRandomOptionColor,
 } from "@/lib/property-utils";
 

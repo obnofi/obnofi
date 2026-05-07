@@ -1,6 +1,6 @@
 import { Extension } from "@tiptap/core";
 import Suggestion from "@tiptap/suggestion";
-import { AiCommandItem, AiCommandType } from "@obnofi/types/ai";
+import { AiCommandItem } from "@obnofi/types/ai";
 import { aiSuggestion } from "./AiSuggestion";
 
 export const aiCommands: AiCommandItem[] = [

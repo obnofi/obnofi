@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import type { Connection } from '@xyflow/react'
-import type { DbSchema, ForeignKeyDef } from '@obnofi/types/db-diagram'
+import type { DbSchema } from '@obnofi/types/db-diagram'
 import { useDbDiagramSync } from '@/src/hooks/useDbDiagramSync'
 import SqlEditorPanel from './SqlEditorPanel'
 import ErdCanvas, { type ErdCanvasHandle } from './ErdCanvas'
@@ -36,7 +36,6 @@ CREATE TABLE IF NOT EXISTS roles (
 export default function DbDiagramLayout({
   initialSql = DEFAULT_SQL,
   onSqlChange,
-  onLayoutChange,
   isFullscreen = false,
   onToggleFullscreen,
   pageName,

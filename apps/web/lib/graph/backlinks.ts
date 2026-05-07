@@ -3,7 +3,7 @@
  * Tracks page references and generates graph data
  */
 
-import type { ID, Page, Block, RichText, GraphData, GraphNode, GraphEdge, BacklinkInfo } from '@obnofi/types/core';
+import type { ID, Page, Block, GraphData, GraphNode, GraphEdge, BacklinkInfo } from '@obnofi/types/core';
 
 export interface LinkIndex {
   // Forward: page -> pages it links to
@@ -46,7 +46,7 @@ export class BacklinkManager {
     }
 
     // Also check property values for relations
-    for (const [propId, propValue] of Object.entries(page.propertyValues)) {
+    for (const [, propValue] of Object.entries(page.propertyValues)) {
       if (propValue.type === 'relation' && Array.isArray(propValue.value)) {
         (propValue.value as ID[]).forEach(id => links.add(id));
       }
@@ -102,7 +102,7 @@ export class BacklinkManager {
       }
 
       // Check relation properties
-      for (const [propId, propValue] of Object.entries(sourcePage.propertyValues)) {
+      for (const [, propValue] of Object.entries(sourcePage.propertyValues)) {
         if (propValue.type === 'relation' && Array.isArray(propValue.value)) {
           if ((propValue.value as ID[]).includes(pageId)) {
             backlinks.push({
@@ -290,7 +290,7 @@ export class BacklinkManager {
   getOrphanedPages(): ID[] {
     const orphaned: ID[] = [];
 
-    for (const [pageId, page] of this.pages) {
+    for (const [pageId] of this.pages) {
       const outgoing = this.index.outgoing.get(pageId);
       const incoming = this.index.incoming.get(pageId);
 
@@ -308,7 +308,7 @@ export class BacklinkManager {
   getHubPages(limit = 10): Array<{ id: ID; incomingCount: number; outgoingCount: number }> {
     const scores: Array<{ id: ID; incomingCount: number; outgoingCount: number }> = [];
 
-    for (const [pageId, page] of this.pages) {
+    for (const [pageId] of this.pages) {
       const incoming = this.index.incoming.get(pageId)?.size || 0;
       const outgoing = this.index.outgoing.get(pageId)?.size || 0;
 
@@ -372,7 +372,7 @@ export class BacklinkManager {
 
   private getPageTitle(page: Page): string {
     // Try to get title from title property
-    for (const [propId, propValue] of Object.entries(page.propertyValues)) {
+    for (const [, propValue] of Object.entries(page.propertyValues)) {
       if (propValue.type === 'title' && propValue.value) {
         return String(propValue.value);
       }
@@ -500,7 +500,7 @@ export class SearchIndex {
   }
 
   private extractTitle(page: Page): string {
-    for (const [propId, propValue] of Object.entries(page.propertyValues)) {
+    for (const [, propValue] of Object.entries(page.propertyValues)) {
       if (propValue.type === 'title' && propValue.value) {
         return String(propValue.value);
       }

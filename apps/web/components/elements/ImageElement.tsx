@@ -11,7 +11,6 @@ export function ImageElement({
   element,
   isSelected,
   scale,
-  onPointerDown,
 }: {
   element: ImageElementType;
   isSelected: boolean;

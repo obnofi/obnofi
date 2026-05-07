@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import dynamic from 'next/dynamic'
@@ -18,7 +19,7 @@ interface DbDiagramBlockProps {
 }
 
 export default function DbDiagramBlock({ node, updateAttributes }: DbDiagramBlockProps) {
-  const { sql = '', layout = {}, pageId = null } = node.attrs
+  const { sql = '', pageId = null } = node.attrs
   const { pages } = usePageStore()
   const parentPage = pageId ? pages.find(p => p.id === pageId) : null
   const pageName = parentPage?.title || null

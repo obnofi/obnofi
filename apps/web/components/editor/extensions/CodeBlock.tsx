@@ -14,13 +14,11 @@ import {
   ChevronDown,
   ChevronRight,
   X,
-  Eye,
   RotateCcw,
 } from "lucide-react";
 import {
   SandpackProvider,
   SandpackLayout,
-  SandpackCodeEditor,
   SandpackPreview,
   SandpackConsole,
   useSandpack,
@@ -135,10 +133,6 @@ function CodeBlockView(props: ReactNodeViewProps) {
     if (!isRunnable) return;
     setShowPreview(true);
   }, [isRunnable]);
-
-  const closePreview = useCallback(() => {
-    setShowPreview(false);
-  }, []);
 
   // Sandpack 파일 구성
   const getSandpackFiles = useCallback(() => {

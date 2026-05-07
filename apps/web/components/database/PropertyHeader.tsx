@@ -13,11 +13,9 @@ import { Property, PropertyType, SelectOption } from "@obnofi/types";
 import { PropertyTypeSelector } from "./PropertyTypeSelector";
 import { PropertyOptionsEditor } from "./PropertyOptionsEditor";
 import {
-  getPropertyTypeIcon,
   getPropertyTypeLabel,
   requiresOptions,
 } from "@/lib/database-utils";
-import * as LucideIcons from "lucide-react";
 
 interface PropertyHeaderProps {
   property: Property;
@@ -64,10 +62,6 @@ export function PropertyHeader({
     }
     setIsEditingName(false);
   };
-
-  const IconComponent =
-    (LucideIcons[getPropertyTypeIcon(property.type) as keyof typeof LucideIcons] as
-      React.ComponentType<{ className?: string }>) || LucideIcons.HelpCircle;
 
   return (
     <div className="group relative h-full">
@@ -202,7 +196,7 @@ export function PropertyHeader({
           <div className="w-full max-w-md rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-medium text-[var(--color-text-primary)]">
-                Edit options for "{property.name}"
+                Edit options for &quot;{property.name}&quot;
               </h3>
               <button
                 onClick={() => setIsEditingOptions(false)}

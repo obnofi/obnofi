@@ -61,7 +61,6 @@ interface DatabaseTableCardProps {
 export function DatabaseTableCard({
   databasePage,
   isLoading,
-  onDatabaseChange,
   onOpenRow,
   onCreateRow,
   onCreateProperty,

@@ -3,7 +3,6 @@
 import {
   Property,
   PropertyValueData,
-  PropertyType,
   SelectOption,
 } from "@obnofi/types/database";
 import {
@@ -39,13 +38,6 @@ export function PropertyCell({
 }: PropertyCellProps) {
   // Use default value if none provided
   const currentValue = value ?? createDefaultValue(property.type);
-
-  const handleChange = (newValue: unknown) => {
-    onChange({
-      type: property.type,
-      value: newValue,
-    } as PropertyValueData);
-  };
 
   switch (property.type) {
     case "text":

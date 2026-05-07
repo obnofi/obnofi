@@ -7,8 +7,6 @@ import type { SectionElement } from "@obnofi/types/clearing";
 type ResizeHandle = "nw" | "ne" | "sw" | "se" | "n" | "s" | "w" | "e";
 
 const HANDLE_SIZE = 10;
-const HEADER_HEIGHT = 36;
-
 // Section color presets - Figma style
 const SECTION_COLORS = [
   { name: "Fern", color: "#2E7D45", bg: "rgba(46,125,69,0.08)" },
@@ -22,7 +20,6 @@ const SECTION_COLORS = [
 export function SectionTool({
   element,
   isSelected,
-  onPointerDown,
   onResize,
 }: {
   element: SectionElement;
