@@ -23,7 +23,7 @@ async function focusEditorTail(page: import("@playwright/test").Page) {
 test("Tiptap 블록 에디터 기본 동작", async ({ page }) => {
   await gotoWorkspaceDocument(page);
 
-  const editor = await focusEditorTail(page);
+  await focusEditorTail(page);
   await page.keyboard.type(editorText);
 
   await expect(editor).toContainText(editorText);
@@ -50,7 +50,7 @@ test("문서 제목을 수정할 수 있다", async ({ page }) => {
 test("/canvas 입력시 인라인 캔버스가 삽입된다", async ({ page }) => {
   await gotoWorkspaceDocument(page);
 
-  const editor = await focusEditorTail(page);
+  await focusEditorTail(page);
   await page.keyboard.type("/canvas");
 
   const canvasEmbed = page.getByTestId("inline-canvas-embed");
@@ -125,6 +125,45 @@ test("그래프 뷰에서도 사이드바가 유지된다", async ({ page }) => 
   await expect(page.getByTestId("workspace-sidebar")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Graph View" })).toBeVisible();
   await expect(page.getByTestId("graph-back-link")).toBeVisible();
+});
+
+test("사이드바를 숨기고 다시 열 수 있다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  const sidebar = page.getByTestId("workspace-sidebar");
+  await expect(sidebar).toBeVisible();
+
+  await page.getByRole("button", { name: "사이드바 숨기기" }).click();
+  await expect(page.getByRole("button", { name: "사이드바 열기" })).toBeVisible();
+
+  await page.getByRole("button", { name: "사이드바 열기" }).click();
+  await expect(sidebar).toBeVisible();
+});
+
+test("사이드바 너비를 조절할 수 있다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  const sidebar = page.getByTestId("workspace-sidebar");
+  const resizeHandle = page.getByRole("button", { name: "사이드바 너비 조절" });
+  const beforeBox = await sidebar.boundingBox();
+  const handleBox = await resizeHandle.boundingBox();
+
+  expect(beforeBox).not.toBeNull();
+  expect(handleBox).not.toBeNull();
+
+  await page.mouse.move(
+    handleBox!.x + handleBox!.width / 2,
+    handleBox!.y + handleBox!.height / 2
+  );
+  await page.mouse.down();
+  await page.mouse.move(handleBox!.x + 80, handleBox!.y + handleBox!.height / 2, {
+    steps: 8,
+  });
+  await page.mouse.up();
+
+  const afterBox = await sidebar.boundingBox();
+  expect(afterBox).not.toBeNull();
+  expect(afterBox!.width).toBeGreaterThan(beforeBox!.width);
 });
 
 test("블록 핸들을 드래그해 블록 순서를 바꿀 수 있다", async ({ page }) => {

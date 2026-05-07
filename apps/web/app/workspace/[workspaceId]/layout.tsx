@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo, Suspense } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -11,6 +12,8 @@ import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } 
 import { CSS } from "@dnd-kit/utilities";
 import {
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Search,
   Settings,
   Plus,
@@ -21,10 +24,11 @@ import {
   Clock,
   MoreHorizontal,
   Trash2,
-  GripVertical,
+  X,
 } from "lucide-react";
-import { UserAvatar } from "@/components/auth/UserAvatar";
 import { WorkspaceSettingsModal } from "@/components/workspace/WorkspaceSettingsModal";
+import { ImportFromUrlControl } from "@/components/workspace/ImportFromUrlControl";
+import { AntGlyph } from "@/components/icons/AntGlyph";
 import { usePageStore, PageTreeNode } from "@/store/pageStore";
 import {
   creatablePageDescriptions,
@@ -44,12 +48,46 @@ interface WorkspaceOption {
   slug: string;
   icon: string | null;
   ownerId: string;
+  ownerImage: string | null;
   role: "OWNER" | "EDITOR" | "VIEWER" | "MEMBER";
   createdAt: string;
   updatedAt: string;
 }
 
-function WorkspaceGlyph({ icon, label }: { icon: string | null; label: string }) {
+type SearchMode = "title" | "content" | "title_content";
+
+interface PageSearchResult {
+  id: string;
+  title: string;
+  type: PageType;
+  icon: string | null;
+  parentId: string | null;
+  updatedAt: string;
+  snippet: string;
+  matchedIn: SearchMode;
+}
+
+function WorkspaceGlyph({
+  icon,
+  image,
+  label,
+}: {
+  icon: string | null;
+  image?: string | null;
+  label: string;
+}) {
+  if (image) {
+    return (
+      <Image
+        src={image}
+        alt={label}
+        width={22}
+        height={22}
+        className="h-[22px] w-[22px] shrink-0 rounded-md object-cover"
+      />
+    );
+  }
+
   return (
     <span
       aria-hidden="true"
@@ -69,6 +107,17 @@ const typeIcons: Record<PageType, React.ReactNode> = {
 
 const PAGE_TREE_INDENT = 14;
 const PAGE_ORDER_STEP = 1024;
+const DEFAULT_SIDEBAR_WIDTH = 240;
+const MIN_SIDEBAR_WIDTH = 220;
+const MAX_SIDEBAR_WIDTH = 420;
+const SIDEBAR_WIDTH_STORAGE_KEY = "obnofi-workspace-sidebar-width";
+const SIDEBAR_HIDDEN_STORAGE_KEY = "obnofi-workspace-sidebar-hidden";
+
+const searchModeLabels: Record<SearchMode, string> = {
+  title: "제목",
+  content: "내용",
+  title_content: "제목 + 전체내용",
+};
 
 interface FlattenedPageNode extends Page {
   depth: number;
@@ -237,6 +286,8 @@ function SortablePageTreeItem({
       }}
     >
       <div
+        {...attributes}
+        {...listeners}
         className={`group flex items-center gap-1.5 py-1 rounded transition-colors ${
           isActive
             ? "bg-[var(--color-selected)] text-[var(--color-text-primary)]"
@@ -245,15 +296,6 @@ function SortablePageTreeItem({
         style={{ paddingLeft: `${depth * PAGE_TREE_INDENT + 8}px`, paddingRight: "8px" }}
         onClick={() => onSelect(page.id)}
       >
-        <span
-          {...attributes}
-          {...listeners}
-          onClick={(e) => e.stopPropagation()}
-          className="cursor-grab rounded p-0.5 text-[var(--color-text-placeholder)] hover:bg-[var(--color-hover)] active:cursor-grabbing"
-          title="드래그해서 순서 및 위계 변경"
-        >
-          <GripVertical className="w-3.5 h-3.5" />
-        </span>
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -261,7 +303,7 @@ function SortablePageTreeItem({
           }}
           className={`p-0.5 rounded transition-transform shrink-0 ${
             page.hasChildren ? "opacity-100" : "opacity-0"
-          } ${isExpanded ? "rotate-90" : ""}`}
+          } ${isExpanded ? "rotate-270" : ""}`}
         >
           <ChevronDown className="w-3 h-3 text-[var(--color-text-secondary)]" />
         </button>
@@ -291,6 +333,163 @@ function SortablePageTreeItem({
   );
 }
 
+function SearchDialog({
+  isOpen,
+  query,
+  mode,
+  isLoading,
+  results,
+  error,
+  onClose,
+  onQueryChange,
+  onModeChange,
+  onSelectPage,
+}: {
+  isOpen: boolean;
+  query: string;
+  mode: SearchMode;
+  isLoading: boolean;
+  results: PageSearchResult[];
+  error: string | null;
+  onClose: () => void;
+  onQueryChange: (value: string) => void;
+  onModeChange: (mode: SearchMode) => void;
+  onSelectPage: (pageId: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen || typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100000] flex items-start justify-center bg-black/30 px-4 py-16"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 border-b border-[var(--color-border)] px-4 py-3">
+          <Search className="h-4 w-4 shrink-0 text-[var(--color-text-secondary)]" />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="페이지 제목이나 본문 검색"
+            className="min-w-0 flex-1 bg-transparent text-[14px] text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-placeholder)]"
+          />
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
+            aria-label="검색 닫기"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex gap-2 border-b border-[var(--color-border)] px-4 py-3">
+          {(Object.keys(searchModeLabels) as SearchMode[]).map((searchMode) => {
+            const isActive = mode === searchMode;
+            return (
+              <button
+                key={searchMode}
+                type="button"
+                onClick={() => onModeChange(searchMode)}
+                className={`rounded-md px-3 py-1.5 text-[12px] transition-colors ${
+                  isActive
+                    ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)]"
+                    : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
+                }`}
+              >
+                {searchModeLabels[searchMode]}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="max-h-[420px] overflow-y-auto p-2">
+          {!query.trim() ? (
+            <div className="px-3 py-10 text-center text-[13px] text-[var(--color-text-secondary)]">
+              검색어를 입력하면 페이지 제목, 본문, 또는 둘 다 기준으로 찾습니다.
+            </div>
+          ) : isLoading ? (
+            <div className="px-3 py-10 text-center text-[13px] text-[var(--color-text-secondary)]">
+              검색 중...
+            </div>
+          ) : error ? (
+            <div className="px-3 py-10 text-center text-[13px] text-[var(--color-text-secondary)]">
+              {error}
+            </div>
+          ) : results.length === 0 ? (
+            <div className="px-3 py-10 text-center text-[13px] text-[var(--color-text-secondary)]">
+              검색 결과가 없습니다.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {results.map((result) => (
+                <button
+                  key={result.id}
+                  type="button"
+                  onClick={() => onSelectPage(result.id)}
+                  className="rounded-lg px-3 py-3 text-left hover:bg-[var(--color-hover)]"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[14px] text-[var(--color-text-secondary)]">
+                      {result.icon || typeIcons[result.type]}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-[var(--color-text-primary)]">
+                      {result.title}
+                    </span>
+                    <span className="rounded bg-[var(--color-surface)] px-2 py-0.5 text-[11px] text-[var(--color-text-secondary)]">
+                      {searchModeLabels[result.matchedIn]}
+                    </span>
+                  </div>
+                  {result.snippet ? (
+                    <p className="mt-1 pl-7 text-[12px] leading-5 text-[var(--color-text-secondary)]">
+                      {result.snippet}
+                    </p>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   return (
     <Suspense fallback={null}>
@@ -308,10 +507,18 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
   const [showNewPageMenu, setShowNewPageMenu] = useState(false);
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<SearchMode>("title_content");
+  const [searchResults, setSearchResults] = useState<PageSearchResult[]>([]);
+  const [isSearchLoading, setIsSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
   const [activeDragPageId, setActiveDragPageId] = useState<string | null>(null);
   const [overDragPageId, setOverDragPageId] = useState<string | null>(null);
   const [dragOffsetX, setDragOffsetX] = useState(0);
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  const [isSidebarHidden, setIsSidebarHidden] = useState(false);
   const [createMenuState, setCreateMenuState] = useState<{
     parentId: string | null;
     position: { top: number; left: number };
@@ -323,6 +530,10 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const filesCreateButtonRef = useRef<HTMLButtonElement>(null);
   const workspaceMenuRef = useRef<HTMLDivElement>(null);
+  const sidebarResizeStateRef = useRef<{
+    startX: number;
+    startWidth: number;
+  } | null>(null);
 
   const { pages, fetchPages, getPageTree, createPage, updatePage, deletePage } = usePageStore();
   const initializedWorkspaceId = usePageStore((state) => state.initializedWorkspaceId);
@@ -330,6 +541,8 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
   const currentPageId = searchParams.get("page") ?? undefined;
   const sensors = useSensors(
     useSensor(PointerSensor, {
+      // distance 기반 — 단순 클릭은 즉시 onClick으로 흘리고, 6px 이상 끌었을 때만 drag 시작.
+      // delay 기반은 hold 동안 click 이벤트가 종종 swallow돼 페이지 전환이 안 되는 문제가 있었음.
       activationConstraint: { distance: 6 },
     })
   );
@@ -337,6 +550,42 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
   const showPageTreeSkeleton = initializedWorkspaceId !== workspaceId;
   
   // Close menu when clicking outside
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const savedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
+    const savedHidden = window.localStorage.getItem(SIDEBAR_HIDDEN_STORAGE_KEY);
+
+    if (savedWidth) {
+      const parsedWidth = Number(savedWidth);
+      if (Number.isFinite(parsedWidth)) {
+        setSidebarWidth(clamp(parsedWidth, MIN_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH));
+      }
+    }
+
+    if (savedHidden === "true") {
+      setIsSidebarHidden(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth));
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(SIDEBAR_HIDDEN_STORAGE_KEY, String(isSidebarHidden));
+  }, [isSidebarHidden]);
+
   useEffect(() => {
     if (!activeMenuNodeId) return;
 
@@ -421,6 +670,53 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
     setCreateMenuState(null);
   }, []);
 
+  const handleHideSidebar = useCallback(() => {
+    setShowNewPageMenu(false);
+    setIsWorkspaceMenuOpen(false);
+    handleCloseMenu();
+    handleCloseCreateMenu();
+    setIsSidebarHidden(true);
+  }, [handleCloseCreateMenu, handleCloseMenu]);
+
+  const handleShowSidebar = useCallback(() => {
+    setIsSidebarHidden(false);
+  }, []);
+
+  const handleSidebarResizeStart = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    sidebarResizeStateRef.current = {
+      startX: event.clientX,
+      startWidth: sidebarWidth,
+    };
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    const handlePointerMove = (event: MouseEvent) => {
+      const resizeState = sidebarResizeStateRef.current;
+      if (!resizeState) {
+        return;
+      }
+
+      const nextWidth = clamp(
+        resizeState.startWidth + (event.clientX - resizeState.startX),
+        MIN_SIDEBAR_WIDTH,
+        MAX_SIDEBAR_WIDTH
+      );
+      setSidebarWidth(nextWidth);
+    };
+
+    const handlePointerUp = () => {
+      sidebarResizeStateRef.current = null;
+    };
+
+    window.addEventListener("mousemove", handlePointerMove);
+    window.addEventListener("mouseup", handlePointerUp);
+    return () => {
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("mouseup", handlePointerUp);
+    };
+  }, []);
+
   // 같은 워크스페이스가 이미 SSR로 채워져 있으면 fetch 스킵 — 첫 진입 시 중복 요청 제거.
   // store 최신값을 effect 안에서 직접 읽어, child(WorkspacePage)의 setPages 이후에 검사한다.
   useEffect(() => {
@@ -468,6 +764,72 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
       return next;
     });
   }, [currentPageId, pages]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+
+    if (!isSearchOpen) {
+      return;
+    }
+
+    if (!query) {
+      setSearchResults([]);
+      setSearchError(null);
+      setIsSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      setIsSearchLoading(true);
+      setSearchError(null);
+
+      try {
+        const response = await fetch(
+          `/api/pages/search?workspaceId=${encodeURIComponent(
+            workspaceId
+          )}&q=${encodeURIComponent(query)}&mode=${encodeURIComponent(searchMode)}`
+        );
+
+        if (!response.ok) {
+          throw new Error("검색 결과를 불러오지 못했습니다.");
+        }
+
+        const nextResults = (await response.json()) as PageSearchResult[];
+        if (!cancelled) {
+          setSearchResults(nextResults);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setSearchResults([]);
+          setSearchError(
+            error instanceof Error ? error.message : "검색 결과를 불러오지 못했습니다."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSearchLoading(false);
+        }
+      }
+    }, 180);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [isSearchOpen, searchMode, searchQuery, workspaceId]);
 
   const pageTree = useMemo(() => getPageTree(), [pages]); // eslint-disable-line react-hooks/exhaustive-deps
   const pageTreeMap = useMemo(() => {
@@ -519,8 +881,9 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
   );
   const currentWorkspace =
     workspaces.find((workspace) => workspace.id === workspaceId) ?? null;
-  const isOwnedWorkspace = currentWorkspace?.ownerId === session?.user?.id;
-
+  const currentWorkspaceOwnerImage =
+    currentWorkspace?.ownerImage ??
+    (currentWorkspace?.ownerId === session?.user?.id ? session?.user?.image ?? null : null);
   const handleToggleExpand = (pageId: string) => {
     setExpandedPages((prev) => {
       const next = new Set(prev);
@@ -536,6 +899,19 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
   const handleSelectPage = (pageId: string) => {
     router.push(`/workspace/${workspaceId}?page=${pageId}`);
   };
+
+  const handleOpenSearch = useCallback(() => {
+    setIsSearchOpen(true);
+  }, []);
+
+  const handleCloseSearch = useCallback(() => {
+    setIsSearchOpen(false);
+  }, []);
+
+  const handleSelectSearchResult = useCallback((pageId: string) => {
+    setIsSearchOpen(false);
+    router.push(`/workspace/${workspaceId}?page=${pageId}`);
+  }, [router, workspaceId]);
 
   const handleSelectWorkspace = (nextWorkspaceId: string) => {
     setIsWorkspaceMenuOpen(false);
@@ -666,187 +1042,269 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
         onClose={() => setIsSettingsOpen(false)}
         workspaceId={workspaceId}
       />
+      <SearchDialog
+        isOpen={isSearchOpen}
+        query={searchQuery}
+        mode={searchMode}
+        isLoading={isSearchLoading}
+        results={searchResults}
+        error={searchError}
+        onClose={handleCloseSearch}
+        onQueryChange={setSearchQuery}
+        onModeChange={setSearchMode}
+        onSelectPage={handleSelectSearchResult}
+      />
 
       {/* Sidebar */}
-      <aside className="w-60 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col h-full overflow-hidden">
-        {/* Workspace Switcher */}
-        <div className="relative px-2 py-2" ref={workspaceMenuRef}>
-          <button
-            type="button"
-            onClick={() => setIsWorkspaceMenuOpen((open) => !open)}
-            className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left hover:bg-[var(--color-hover)]"
-          >
-            {isOwnedWorkspace ? (
-              <UserAvatar size={22} shape="square" className="shrink-0" />
-            ) : (
-              <WorkspaceGlyph
-                icon={currentWorkspace?.icon ?? null}
-                label={currentWorkspace?.name ?? "Workspace"}
-              />
-            )}
-            <div className="min-w-0 flex-1">
-              <span className="block truncate text-[14px] font-medium text-[var(--color-text-primary)]">
-                {currentWorkspace?.name ?? "Workspace"}
-              </span>
-              <span className="block truncate text-[11px] text-[var(--color-text-secondary)]">
-                {currentWorkspace ? currentWorkspace.role.toLowerCase() : "loading"}
-              </span>
-            </div>
-            <ChevronDown
-              className={`h-4 w-4 shrink-0 text-[var(--color-text-secondary)] transition-transform ${
-                isWorkspaceMenuOpen ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-
-          {isWorkspaceMenuOpen && (
-            <div className="absolute left-2 right-2 top-full z-[99999] mt-1 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] py-1 shadow-lg">
-              {workspaces.map((workspace) => {
-                const isActiveWorkspace = workspace.id === workspaceId;
-                return (
-                  <button
-                    key={workspace.id}
-                    type="button"
-                    onClick={() => handleSelectWorkspace(workspace.id)}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] ${
-                      isActiveWorkspace
-                        ? "bg-[var(--color-hover)] text-[var(--color-text-primary)]"
-                        : "text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
-                    }`}
-                  >
-                    <WorkspaceGlyph icon={workspace.icon} label={workspace.name} />
-                    <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
-                    {isActiveWorkspace ? (
-                      <span className="text-[11px] font-medium text-[var(--color-accent)]">
-                        현재
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="px-2 flex flex-col gap-0.5">
-          <button className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px]">
-            <Search className="w-4 h-4" />Search
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px]"
-          >
-            <Settings className="w-4 h-4" />Settings
-          </button>
-          <div className="relative">
-            <button
-              onClick={() => setShowNewPageMenu(!showNewPageMenu)}
-              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px] w-full text-left"
-            >
-              <Plus className="w-4 h-4" />New page
-            </button>
-            {showNewPageMenu && (
-              <div className="absolute top-full left-0 right-0 z-[99999] mt-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] py-1 shadow-lg">
-                {creatablePageTypes.map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => handleCreatePage(type)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)] transition-colors"
-                  >
-                    {typeIcons[type]}
-                    <span>{creatablePageLabels[type]}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <Link href={`/workspace/${workspaceId}/graph`} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px]">
-            <Orbit className="w-4 h-4" />Graph View
-          </Link>
-        </div>
-
-        {/* Files - Page Tree */}
-        <div className="px-2 mt-4 flex-1 overflow-y-auto">
-          <div className="flex items-center justify-between px-2 py-1">
-            <span className="text-[11px] font-medium text-[var(--color-text-placeholder)] uppercase tracking-wide">Files</span>
-            <button
-              ref={filesCreateButtonRef}
-              onClick={(e) => handleOpenCreateMenu(null, e.currentTarget)}
-              className="p-0.5 rounded hover:bg-[var(--color-hover)]"
-              title="페이지 추가"
-            >
-              <Plus className="w-3.5 h-3.5 text-[var(--color-text-placeholder)]" />
-            </button>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            {showPageTreeSkeleton ? (
-              <PageTreeSkeleton />
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={handleDragStart}
-                onDragMove={handleDragMove}
-                onDragEnd={(event) => void handleDragEnd(event)}
-                onDragCancel={handleDragCancel}
-              >
-                <SortableContext
-                  items={visiblePageTreeItems.map((item) => item.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {visiblePageTreeItems.map((item) => (
-                    <SortablePageTreeItem
-                      key={item.id}
-                      page={item}
-                      currentPageId={currentPageId}
-                      onSelect={handleSelectPage}
-                      onToggle={handleToggleExpand}
-                      expanded={expandedPages}
-                      onOpenCreateMenu={handleOpenCreateMenu}
-                      onOpenMenu={handleOpenMenu}
-                      projectedDepth={
-                        item.id === activeDragPageId && projectedDrop
-                          ? projectedDrop.depth
-                          : undefined
-                      }
-                      isDragging={item.id === activeDragPageId}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
-            )}
-          </div>
-        </div>
-
-        {/* Recent */}
-        {showPageTreeSkeleton ? (
-          <div className="border-t border-[var(--color-border)] px-2 py-2 shrink-0">
-            <div className="px-2 py-1 text-[11px] font-medium text-[var(--color-text-placeholder)] uppercase tracking-wide">Recent</div>
-            <RecentSkeleton />
-          </div>
-        ) : recentPages.length > 0 ? (
-          <div className="border-t border-[var(--color-border)] px-2 py-2 shrink-0">
-            <div className="px-2 py-1 text-[11px] font-medium text-[var(--color-text-placeholder)] uppercase tracking-wide">Recent</div>
-            <div className="flex flex-col gap-0.5">
-              {recentPages.map((page) => (
+      <div
+        className="relative flex h-full shrink-0 overflow-visible transition-[width] duration-200 ease-out"
+        style={{ width: isSidebarHidden ? 0 : sidebarWidth }}
+      >
+        <aside
+          data-testid="workspace-sidebar"
+          className={`flex h-full overflow-hidden bg-[var(--color-surface)] transition-opacity duration-150 ${
+            isSidebarHidden ? "pointer-events-none opacity-0" : "opacity-100"
+          }`}
+          style={{
+            width: isSidebarHidden ? 0 : sidebarWidth,
+            borderRight: isSidebarHidden ? "none" : "1px solid var(--color-border)",
+          }}
+        >
+          <div className="flex min-w-0 flex-1 flex-col">
+            {/* Workspace Switcher */}
+            <div className="relative px-2 py-2" ref={workspaceMenuRef}>
+              <div className="flex items-center gap-1">
                 <button
-                  key={page.id}
-                  onClick={() => handleSelectPage(page.id)}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px]"
+                  type="button"
+                  onClick={() => setIsWorkspaceMenuOpen((open) => !open)}
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1.5 text-left hover:bg-[var(--color-hover)]"
                 >
-                  <Clock className="w-3.5 h-3.5" />
-                  {page.title || "Untitled"}
+                  <WorkspaceGlyph
+                    icon={currentWorkspace?.icon ?? null}
+                    image={currentWorkspaceOwnerImage}
+                    label={currentWorkspace?.name ?? "Workspace"}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-medium text-[var(--color-text-primary)]">
+                      {currentWorkspace?.name ?? "Workspace"}
+                    </span>
+                    <span className="block truncate text-[11px] text-[var(--color-text-secondary)]">
+                      {currentWorkspace ? currentWorkspace.role.toLowerCase() : "loading"}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 text-[var(--color-text-secondary)] transition-transform ${
+                      isWorkspaceMenuOpen ? "rotate-180" : ""
+                    }`}
+                  />
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={handleHideSidebar}
+                  className="shrink-0 rounded-md p-1.5 text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
+                  aria-label="사이드바 숨기기"
+                  title="사이드바 숨기기"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              </div>
+
+              {isWorkspaceMenuOpen && (
+                <div className="absolute left-2 right-2 top-full z-[99999] mt-1 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] py-1 shadow-lg">
+                  {workspaces.map((workspace) => {
+                    const isActiveWorkspace = workspace.id === workspaceId;
+                    return (
+                      <button
+                        key={workspace.id}
+                        type="button"
+                        onClick={() => handleSelectWorkspace(workspace.id)}
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] ${
+                          isActiveWorkspace
+                            ? "bg-[var(--color-hover)] text-[var(--color-text-primary)]"
+                            : "text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
+                        }`}
+                      >
+                        <WorkspaceGlyph
+                          icon={workspace.icon}
+                          image={workspace.ownerImage}
+                          label={workspace.name}
+                        />
+                        <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
+                        {isActiveWorkspace ? (
+                          <span className="text-[11px] font-medium text-[var(--color-accent)]">
+                            현재
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+
+            {/* Quick Actions */}
+            <div className="px-2 flex flex-col gap-0.5">
+              <button
+                type="button"
+                onClick={handleOpenSearch}
+                className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px]"
+              >
+                <Search className="w-4 h-4" />Search
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(true)}
+                className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px]"
+              >
+                <Settings className="w-4 h-4" />Settings
+              </button>
+              <ImportFromUrlControl
+                workspaceId={workspaceId}
+                onClose={() => setShowNewPageMenu(false)}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[13px] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
+                label="Crawler"
+                icon={<AntGlyph className="h-4 w-4 shrink-0 text-[var(--color-text-secondary)]" />}
+              />
+              <div className="relative">
+                <button
+                  onClick={() => setShowNewPageMenu(!showNewPageMenu)}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px] w-full text-left"
+                >
+                  <Plus className="w-4 h-4" />New page
+                </button>
+                {showNewPageMenu && (
+                  <div className="absolute top-full left-0 right-0 z-[99999] mt-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] py-1 shadow-lg">
+                    {creatablePageTypes.map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => handleCreatePage(type)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)] transition-colors"
+                      >
+                        {typeIcons[type]}
+                        <span>{creatablePageLabels[type]}</span>
+                      </button>
+                    ))}
+                    <div className="px-1 pb-1">
+                      <ImportFromUrlControl
+                        workspaceId={workspaceId}
+                        onClose={() => setShowNewPageMenu(false)}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-hover)]"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <Link
+                href={`/workspace/${workspaceId}/graph`}
+                data-testid="graph-view-link"
+                className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px]"
+              >
+                <Orbit className="w-4 h-4" />Graph View
+              </Link>
+            </div>
+
+            {/* Files - Page Tree */}
+            <div className="px-2 mt-4 flex-1 overflow-y-auto">
+              <div className="flex items-center justify-between px-2 py-1">
+                <span className="text-[11px] font-medium text-[var(--color-text-placeholder)] uppercase tracking-wide">Files</span>
+                <button
+                  ref={filesCreateButtonRef}
+                  onClick={(e) => handleOpenCreateMenu(null, e.currentTarget)}
+                  className="p-0.5 rounded hover:bg-[var(--color-hover)]"
+                  title="페이지 추가"
+                >
+                  <Plus className="w-3.5 h-3.5 text-[var(--color-text-placeholder)]" />
+                </button>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {showPageTreeSkeleton ? (
+                  <PageTreeSkeleton />
+                ) : (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragMove={handleDragMove}
+                    onDragEnd={(event) => void handleDragEnd(event)}
+                    onDragCancel={handleDragCancel}
+                  >
+                    <SortableContext
+                      items={visiblePageTreeItems.map((item) => item.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {visiblePageTreeItems.map((item) => (
+                        <SortablePageTreeItem
+                          key={item.id}
+                          page={item}
+                          currentPageId={currentPageId}
+                          onSelect={handleSelectPage}
+                          onToggle={handleToggleExpand}
+                          expanded={expandedPages}
+                          onOpenCreateMenu={handleOpenCreateMenu}
+                          onOpenMenu={handleOpenMenu}
+                          projectedDepth={
+                            item.id === activeDragPageId && projectedDrop
+                              ? projectedDrop.depth
+                              : undefined
+                          }
+                          isDragging={item.id === activeDragPageId}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                )}
+              </div>
+            </div>
+
+            {/* Recent */}
+            {showPageTreeSkeleton ? (
+              <div className="border-t border-[var(--color-border)] px-2 py-2 shrink-0">
+                <div className="px-2 py-1 text-[11px] font-medium text-[var(--color-text-placeholder)] uppercase tracking-wide">Recent</div>
+                <RecentSkeleton />
+              </div>
+            ) : recentPages.length > 0 ? (
+              <div className="border-t border-[var(--color-border)] px-2 py-2 shrink-0">
+                <div className="px-2 py-1 text-[11px] font-medium text-[var(--color-text-placeholder)] uppercase tracking-wide">Recent</div>
+                <div className="flex flex-col gap-0.5">
+                  {recentPages.map((page) => (
+                    <button
+                      key={page.id}
+                      onClick={() => handleSelectPage(page.id)}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px]"
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      {page.title || "Untitled"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
+        </aside>
+
+        {!isSidebarHidden ? (
+          <button
+            type="button"
+            aria-label="사이드바 너비 조절"
+            onMouseDown={handleSidebarResizeStart}
+            className="absolute right-[-4px] top-0 z-20 h-full w-2 cursor-col-resize bg-transparent transition-colors hover:bg-[var(--color-hover)]"
+          />
         ) : null}
-      </aside>
+      </div>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
+      <main className="relative flex flex-1 flex-col h-full overflow-hidden">
+        {isSidebarHidden ? (
+          <button
+            type="button"
+            onClick={handleShowSidebar}
+            className="absolute left-3 top-3 z-20 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-surface)] text-[var(--color-text-secondary)] shadow-sm ring-1 ring-[var(--color-border)] hover:bg-[var(--color-hover)]"
+            aria-label="사이드바 열기"
+            title="사이드바 열기"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        ) : null}
         {children}
       </main>
       
@@ -865,6 +1323,8 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
       {createMenuState && typeof document !== "undefined" && (
         <CreatePageMenuPortal
           position={createMenuState.position}
+          workspaceId={workspaceId}
+          parentId={createMenuState.parentId ?? null}
           onCreate={handleCreateFromSidebarMenu}
           onClose={handleCloseCreateMenu}
         />
@@ -982,11 +1442,19 @@ function PageTreeMenuPortal({ position, onDelete, onClose }: PageTreeMenuPortalP
 
 interface CreatePageMenuPortalProps {
   position: { top: number; left: number };
+  workspaceId: string;
+  parentId: string | null;
   onCreate: (type: PageType) => void;
   onClose: () => void;
 }
 
-function CreatePageMenuPortal({ position, onCreate, onClose }: CreatePageMenuPortalProps) {
+function CreatePageMenuPortal({
+  position,
+  workspaceId,
+  parentId,
+  onCreate,
+  onClose,
+}: CreatePageMenuPortalProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1003,7 +1471,7 @@ function CreatePageMenuPortal({ position, onCreate, onClose }: CreatePageMenuPor
   const adjustedPosition = { ...position };
   if (typeof window !== "undefined") {
     const menuWidth = 220;
-    const menuHeight = 200;
+    const menuHeight = 320;
     if (position.left + menuWidth > window.innerWidth) {
       adjustedPosition.left = window.innerWidth - menuWidth - 12;
     }
@@ -1041,6 +1509,14 @@ function CreatePageMenuPortal({ position, onCreate, onClose }: CreatePageMenuPor
           </span>
         </button>
       ))}
+      <div className="px-1 pb-1">
+        <ImportFromUrlControl
+          workspaceId={workspaceId}
+          parentId={parentId}
+          onClose={onClose}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[var(--color-hover)]"
+        />
+      </div>
     </div>
   );
 

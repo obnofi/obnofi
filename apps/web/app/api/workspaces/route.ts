@@ -24,6 +24,11 @@ export async function GET(request: NextRequest) {
             slug: true,
             icon: true,
             ownerId: true,
+            owner: {
+              select: {
+                image: true,
+              },
+            },
             createdAt: true,
             updatedAt: true,
           },
@@ -38,6 +43,7 @@ export async function GET(request: NextRequest) {
         slug: workspace.slug,
         icon: workspace.icon,
         ownerId: workspace.ownerId,
+        ownerImage: workspace.owner.image,
         role,
         createdAt: workspace.createdAt.toISOString(),
         updatedAt: workspace.updatedAt.toISOString(),
