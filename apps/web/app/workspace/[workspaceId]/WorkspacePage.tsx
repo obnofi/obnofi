@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { Editor as TiptapEditor } from "@tiptap/react";
 import {
@@ -22,9 +22,9 @@ import { TableOfContents } from "@/components/workspace/TableOfContents";
 import { CollaborationProvider } from "@/lib/collaboration/CollaborationContext";
 import { CollaborationAvatars } from "@/components/workspace/CollaborationAvatars";
 import { SaveStatusIndicator } from "@/components/workspace/SaveStatusIndicator";
+import { ImportFromUrlControl } from "@/components/workspace/ImportFromUrlControl";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import {
-  creatablePageDescriptions,
   creatablePageLabels,
   creatablePageTypes,
   createPageTitles,
@@ -61,9 +61,12 @@ const GroveSideTab = dynamic(() => import("@/components/workspace/GroveSideTab")
 
 interface WorkspacePageProps {
   workspaceId: string;
-  pageId: string;
-  initialPage?: Page;
   initialPages?: Page[];
+}
+
+interface WorkspacePageInnerProps {
+  workspaceId: string;
+  pageId: string;
 }
 
 const typeIcons: Record<PageType, React.ReactNode> = {
@@ -72,36 +75,68 @@ const typeIcons: Record<PageType, React.ReactNode> = {
   database: <Database className="w-4 h-4" />,
 };
 
-export function WorkspacePage({ 
-  workspaceId, 
-  pageId,
-  initialPage,
-  initialPages
-}: WorkspacePageProps) {
+// pageId는 URL search param에서 읽는다. server component(page.tsx)는 searchParams를
+// 받지 않으므로 페이지 클릭 시 SSR이 재실행되지 않고, 본문 fetch만 클라이언트에서 일어난다.
+export function WorkspacePage({ workspaceId, initialPages }: WorkspacePageProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlPageId = searchParams.get("page");
+  const setPages = usePageStore((state) => state.setPages);
+  const storePages = usePageStore((state) => state.pages);
+
+  // SSR로 받은 페이지 목록을 store에 한 번 주입 — 같은 워크스페이스 내에서는 layout의
+  // fetchPages가 중복 호출되지 않는다 (initializedWorkspaceId 체크).
+  useEffect(() => {
+    if (initialPages) setPages(initialPages, workspaceId);
+  }, [initialPages, workspaceId, setPages]);
+
+  // pageId가 URL에 없으면 첫 페이지로 자동 이동.
+  useEffect(() => {
+    if (urlPageId) return;
+    const fallbackId = initialPages?.[0]?.id ?? storePages[0]?.id;
+    if (fallbackId) {
+      router.replace(`/workspace/${workspaceId}?page=${fallbackId}`);
+    }
+  }, [urlPageId, initialPages, storePages, workspaceId, router]);
+
+  if (!urlPageId) {
+    const hasPages =
+      (initialPages && initialPages.length > 0) || storePages.length > 0;
+    if (hasPages) {
+      // redirect가 commit되기 전까지의 짧은 빈 프레임
+      return null;
+    }
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 bg-[var(--color-background)] text-[var(--color-text-secondary)]">
+        <span className="text-[15px]">페이지가 없습니다</span>
+        <span className="text-[13px]">사이드바에서 새 페이지를 만들어 시작하세요</span>
+      </div>
+    );
+  }
+
+  return <WorkspacePageInner workspaceId={workspaceId} pageId={urlPageId} />;
+}
+
+function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
   const router = useRouter();
   const {
     currentPage,
     pages,
     fetchPage,
-    fetchPages,
     updatePage,
     createPage,
     setCurrentPage,
-    setPages,
-    getPageTree,
     getPageTrail,
   } = usePageStore();
   const isDatabaseModalOpen = useUIStore((state) => state.databaseModal.isOpen);
   const isGroveSideTabOpen = useUIStore((state) => state.groveSideTab.isOpen);
 
-  const [title, setTitle] = useState(initialPage?.title || "");
-  const [isLoading, setIsLoading] = useState(!initialPage);
+  const [title, setTitle] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const editorInstanceRef = useRef<TiptapEditor | null>(null);
 
   // 최신 editor content를 ref에 보관 — useAutoSave가 getContent()로 접근
-  const latestContentRef = useRef<object>(
-    initialPage?.content ?? { type: "doc", content: [{ type: "paragraph" }] }
-  );
+  const latestContentRef = useRef<object>({ type: "doc", content: [{ type: "paragraph" }] });
   const handleEditorUpdate = useCallback((content: object) => {
     latestContentRef.current = content;
   }, []);
@@ -117,35 +152,19 @@ export function WorkspacePage({
     },
   });
   const [pendingChildType, setPendingChildType] = useState<PageType | null>(null);
-  const [expandedPages, setExpandedPages] = useState<Set<string>>(new Set());
+  const [, setExpandedPages] = useState<Set<string>>(new Set());
   const [groveContentElement, setGroveContentElement] = useState<HTMLDivElement | null>(null);
 
-  // Initialize store with pre-fetched data
   useEffect(() => {
-    if (initialPage) {
-      setCurrentPage(initialPage);
-    }
-    if (initialPages) {
-      // workspaceId를 함께 전달 — layout이 같은 워크스페이스에 대한 중복 fetch를 스킵하도록.
-      setPages(initialPages, workspaceId);
-    }
-  }, [initialPage, initialPages, workspaceId, setCurrentPage, setPages]);
-
-  useEffect(() => {
-    // initialPages가 없을 때만 fetch (SSR로 이미 받은 경우 중복 방지)
-    if (!initialPages) fetchPages(workspaceId);
-  }, [workspaceId, fetchPages, initialPages]);
-
-  useEffect(() => {
-    if (initialPage?.id === pageId) return;
-
-    const loadPage = async () => {
-      setIsLoading(true);
-      await fetchPage(pageId);
-      setIsLoading(false);
+    let cancelled = false;
+    setIsLoading(true);
+    fetchPage(pageId).finally(() => {
+      if (!cancelled) setIsLoading(false);
+    });
+    return () => {
+      cancelled = true;
     };
-    loadPage();
-  }, [pageId, fetchPage, initialPage]);
+  }, [pageId, fetchPage]);
 
   useEffect(() => {
     if (currentPage) {
@@ -171,18 +190,6 @@ export function WorkspacePage({
   const handleHighlightColorsChange = useCallback((highlightColors: Page["highlightColors"]) => {
     setCurrentPage((page) => (page ? { ...page, highlightColors } : page));
   }, [setCurrentPage]);
-
-  const handleToggleExpand = (pageId: string) => {
-    setExpandedPages(prev => {
-      const next = new Set(prev);
-      if (next.has(pageId)) {
-        next.delete(pageId);
-      } else {
-        next.add(pageId);
-      }
-      return next;
-    });
-  };
 
   const handleSelectPage = (selectedPageId: string) => {
     router.push(`/workspace/${workspaceId}?page=${selectedPageId}`);
@@ -239,15 +246,6 @@ export function WorkspacePage({
     }
   };
 
-  const recentPages = useMemo(
-    () =>
-      [...pages]
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-        .slice(0, 4),
-    [pages]
-  );
-
-  const pageTree = useMemo(() => getPageTree(), [pages]); // eslint-disable-line react-hooks/exhaustive-deps
   const pageTrail = useMemo(() => {
     if (!pageId) {
       return [];
@@ -260,7 +258,7 @@ export function WorkspacePage({
     }
 
     return trail;
-  }, [currentPage, getPageTrail, pageId, pages]);
+  }, [currentPage, getPageTrail, pageId]);
 
   if (isLoading) {
     return (
@@ -321,7 +319,7 @@ export function WorkspacePage({
         </div>
         <div className="flex items-center gap-2">
           <SaveStatusIndicator onRetry={() => void save()} />
-          <CollaborationAvatars />
+          {currentPage.type === "document" ? <CollaborationAvatars /> : null}
           <button className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]">
             <Sparkles className="h-4 w-4" />
           </button>
@@ -415,13 +413,17 @@ export function WorkspacePage({
                           <div className="text-sm font-semibold text-[var(--color-text-primary)]">
                             {creatablePageLabels[type]}
                           </div>
-                          <div className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                            {creatablePageDescriptions[type]}
-                          </div>
                         </div>
                       </button>
                     );
                   })}
+                </div>
+                <div className="mt-2">
+                  <ImportFromUrlControl
+                    workspaceId={workspaceId}
+                    parentId={pageId}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-hover)]"
+                  />
                 </div>
               </div>
 

@@ -1,5 +1,66 @@
 import { create } from "zustand";
-import { Page, PageType, CreatePageInput, UpdatePageInput } from "@obnofi/types";
+import {
+  Page,
+  CreatePageInput,
+  UpdatePageInput,
+  PageHighlightColor,
+} from "@obnofi/types";
+
+const PAGE_ORDER_STEP = 1024;
+const DEFAULT_HIGHLIGHT_COLORS: PageHighlightColor[] = [
+  "yellow",
+  "green",
+  "blue",
+  "pink",
+];
+
+function isOptimisticPageId(pageId: string) {
+  return pageId.startsWith("optimistic-");
+}
+
+function generateOptimisticPageId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `optimistic-${crypto.randomUUID()}`;
+  }
+  return `optimistic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function buildOptimisticPage(
+  input: CreatePageInput,
+  existingPages: Page[]
+): Page {
+  const siblingOrder = existingPages
+    .filter((p) => (p.parentId ?? null) === (input.parentId ?? null) && !p.parentDatabaseId)
+    .reduce((max, p) => Math.max(max, p.order), -PAGE_ORDER_STEP);
+  const now = new Date().toISOString();
+
+  return {
+    id: generateOptimisticPageId(),
+    title: input.title,
+    groveTitleLevel: 1,
+    bodyFontSizePt: 12,
+    headingFontSizes: { h1: 30, h2: 23, h3: 18, h4: 16, h5: 14 },
+    highlightColors: DEFAULT_HIGHLIGHT_COLORS,
+    content:
+      input.type === "document"
+        ? input.content ?? { type: "doc", content: [{ type: "paragraph" }] }
+        : null,
+    type: input.type,
+    icon: null,
+    coverImage: null,
+    parentId: input.parentId ?? null,
+    order: siblingOrder + PAGE_ORDER_STEP,
+    workspaceId: input.workspaceId,
+    createdAt: now,
+    updatedAt: now,
+    yjsUpdatedAt: null,
+    isPublic: false,
+    shareId: null,
+    sharePassword: null,
+    databaseId: input.databaseId ?? null,
+    parentDatabaseId: null,
+  };
+}
 
 interface PageState {
   pages: Page[];
@@ -90,6 +151,18 @@ export const usePageStore = create<PageState>((set, get) => ({
   fetchPage: async (pageId: string) => {
     set({ isLoading: true, error: null });
     try {
+      if (isOptimisticPageId(pageId)) {
+        const optimisticPage =
+          get().pages.find((page) => page.id === pageId) ?? null;
+
+        set({
+          currentPage: optimisticPage,
+          isLoading: false,
+          error: optimisticPage ? null : "Page not found",
+        });
+        return;
+      }
+
       const response = await fetch(`/api/pages/${pageId}`);
       if (!response.ok) throw new Error("Failed to fetch page");
       const page = await response.json();
@@ -103,7 +176,13 @@ export const usePageStore = create<PageState>((set, get) => ({
   },
 
   createPage: async (input: CreatePageInput) => {
-    set({ isLoading: true, error: null });
+    const optimisticPage = buildOptimisticPage(input, get().pages);
+
+    set((state) => ({
+      pages: [...state.pages, optimisticPage],
+      error: null,
+    }));
+
     try {
       const response = await fetch("/api/pages", {
         method: "POST",
@@ -111,17 +190,18 @@ export const usePageStore = create<PageState>((set, get) => ({
         body: JSON.stringify(input),
       });
       if (!response.ok) throw new Error("Failed to create page");
-      const newPage = await response.json();
+      const newPage: Page = await response.json();
       set((state) => ({
-        pages: [...state.pages, newPage],
-        isLoading: false,
+        pages: state.pages.map((p) =>
+          p.id === optimisticPage.id ? newPage : p
+        ),
       }));
       return newPage;
     } catch (error) {
-      set({
+      set((state) => ({
+        pages: state.pages.filter((p) => p.id !== optimisticPage.id),
         error: error instanceof Error ? error.message : "Unknown error",
-        isLoading: false,
-      });
+      }));
       return null;
     }
   },
@@ -139,6 +219,12 @@ export const usePageStore = create<PageState>((set, get) => ({
     const nextPage: Page = {
       ...optimisticPage,
       ...input,
+      headingFontSizes: input.headingFontSizes
+        ? {
+            ...optimisticPage.headingFontSizes,
+            ...input.headingFontSizes,
+          }
+        : optimisticPage.headingFontSizes,
       updatedAt: new Date().toISOString(),
     };
 
@@ -146,7 +232,17 @@ export const usePageStore = create<PageState>((set, get) => ({
       pages: state.pages.map((page) => (page.id === pageId ? nextPage : page)),
       currentPage:
         state.currentPage?.id === pageId
-          ? { ...state.currentPage, ...input, updatedAt: nextPage.updatedAt }
+          ? {
+              ...state.currentPage,
+              ...input,
+              headingFontSizes: input.headingFontSizes
+                ? {
+                    ...state.currentPage.headingFontSizes,
+                    ...input.headingFontSizes,
+                  }
+                : state.currentPage.headingFontSizes,
+              updatedAt: nextPage.updatedAt,
+            }
           : state.currentPage,
       error: null,
     }));
@@ -174,32 +270,40 @@ export const usePageStore = create<PageState>((set, get) => ({
   },
 
   deletePage: async (pageId: string) => {
+    const previousState = get();
+    const previousPages = previousState.pages;
+    const previousCurrentPage = previousState.currentPage;
+
+    const toRemove = new Set<string>();
+    const queue = [pageId];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (toRemove.has(current)) continue;
+      toRemove.add(current);
+      previousPages.forEach((p) => {
+        if (p.parentId === current && !toRemove.has(p.id)) {
+          queue.push(p.id);
+        }
+      });
+    }
+
+    set({
+      pages: previousPages.filter((p) => !toRemove.has(p.id)),
+      currentPage: toRemove.has(previousCurrentPage?.id ?? "")
+        ? null
+        : previousCurrentPage,
+      error: null,
+    });
+
     try {
       const response = await fetch(`/api/pages/${pageId}`, {
         method: "DELETE",
       });
       if (!response.ok) throw new Error("Failed to delete page");
-      set((state) => {
-        const toRemove = new Set<string>();
-        const queue = [pageId];
-        while (queue.length > 0) {
-          const current = queue.shift()!;
-          toRemove.add(current);
-          state.pages.forEach((p) => {
-            if (p.parentId === current && !toRemove.has(p.id)) {
-              queue.push(p.id);
-            }
-          });
-        }
-        return {
-          pages: state.pages.filter((p) => !toRemove.has(p.id)),
-          currentPage: toRemove.has(state.currentPage?.id ?? "")
-            ? null
-            : state.currentPage,
-        };
-      });
     } catch (error) {
       set({
+        pages: previousPages,
+        currentPage: previousCurrentPage,
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }

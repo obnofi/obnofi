@@ -11,6 +11,10 @@ interface UseAutoSaveOptions {
   intervalMs?: number;
 }
 
+function isOptimisticPageId(pageId: string) {
+  return pageId.startsWith("optimistic-");
+}
+
 export function useAutoSave({
   pageId,
   getContent,
@@ -39,6 +43,10 @@ export function useAutoSave({
       options?: { background?: boolean; updateStatus?: boolean }
     ) => {
       const { background = false, updateStatus = true } = options ?? {};
+
+      if (isOptimisticPageId(targetPageId)) {
+        return false;
+      }
 
       if (updateStatus) {
         markSaving();
