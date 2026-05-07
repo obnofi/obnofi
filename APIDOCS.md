@@ -211,6 +211,44 @@ curl -s "http://localhost:3000/api/databases/search" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+## Pages
+
+### `GET /api/pages/search`
+
+현재 사용자가 접근 가능한 워크스페이스 안에서 페이지를 검색합니다. 사이드바 `Search`에서 사용됩니다.
+
+쿼리 파라미터:
+
+| 파라미터 | 필수 | 설명 |
+|---|---|---|
+| `workspaceId` | 예 | 검색 대상 워크스페이스 ID |
+| `q` | 예 | 검색어 |
+| `mode` | 아니오 | 검색 범위. `title`, `content`, `title_content` 중 하나. 기본값 `title_content` |
+
+동작:
+- `title`: 페이지 제목만 검색
+- `content`: 페이지 본문만 검색
+- `title_content`: 제목 + 본문 모두 검색
+- 데이터베이스 row (`parentDatabaseId != null`)는 제외
+- 본문 검색 시 Yjs 저장본이 있으면 그 내용을 우선 사용
+
+성공 응답:
+
+```json
+[
+  {
+    "id": "page_id",
+    "title": "Weekly plan",
+    "type": "document",
+    "icon": "🌱",
+    "parentId": null,
+    "updatedAt": "2026-05-06T09:00:00.000Z",
+    "snippet": "이번 주 목표는 검색 모달과 페이지 본문 검색을 붙이는 것이다...",
+    "matchedIn": "title_content"
+  }
+]
+```
+
 ## Profile
 
 현재 로그인한 사용자의 프로필을 조회/수정합니다. 웹 세션이 필요합니다.
