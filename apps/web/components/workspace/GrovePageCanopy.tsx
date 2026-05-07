@@ -1,43 +1,89 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, Loader2, RefreshCw, SmilePlus, Trash2, X } from "lucide-react";
+import { ImagePlus, Loader2, RefreshCw, Search, SmilePlus, Trash2, X } from "lucide-react";
 import type { Page, UpdatePageInput } from "@obnofi/types";
 import { uploadPageCanopyAsset } from "@/lib/supabase";
 import { pageCanopyPresets } from "@/lib/pageCanopyPresets";
+import { PageGlyph } from "@/components/workspace/PageGlyph";
 
-const pageEmojiSeeds = [
-  "🌱",
-  "🌿",
-  "🍃",
-  "🌳",
-  "🪴",
-  "✨",
-  "📝",
-  "📌",
-  "📚",
-  "📅",
-  "🚀",
-  "💡",
-  "🎯",
-  "🧠",
-  "✅",
-  "🔥",
-  "💚",
-  "🔗",
-  "🛠️",
-  "🧭",
-  "🎨",
-  "🗂️",
-  "📈",
-  "🌊",
-  "☁️",
-  "🌞",
-  "🌙",
-  "⭐",
-  "🎵",
-  "🔒",
-];
+const RECENT_PAGE_GLYPHS_STORAGE_KEY = "obnofi-recent-page-glyphs";
+const MAX_RECENT_PAGE_GLYPHS = 18;
+
+const pageGlyphSections = [
+  {
+    id: "recently-picked",
+    label: "추천",
+    glyphs: [
+      { emoji: "🌱", keywords: ["seed", "new", "start", "plant"] },
+      { emoji: "📝", keywords: ["note", "doc", "write", "text"] },
+      { emoji: "📚", keywords: ["book", "wiki", "knowledge"] },
+      { emoji: "📌", keywords: ["pin", "important", "highlight"] },
+      { emoji: "💡", keywords: ["idea", "brainstorm", "insight"] },
+      { emoji: "🚀", keywords: ["launch", "project", "ship"] },
+      { emoji: "🎯", keywords: ["goal", "focus", "target"] },
+      { emoji: "✅", keywords: ["done", "task", "check"] },
+      { emoji: "🧠", keywords: ["brain", "thinking", "research"] },
+      { emoji: "🧭", keywords: ["plan", "guide", "direction"] },
+      { emoji: "🛠️", keywords: ["tool", "build", "fix"] },
+      { emoji: "🔗", keywords: ["link", "relation", "reference"] },
+    ],
+  },
+  {
+    id: "nature",
+    label: "Jungle",
+    glyphs: [
+      { emoji: "🌿", keywords: ["leaf", "nature", "green"] },
+      { emoji: "🍃", keywords: ["wind", "leaf", "fresh"] },
+      { emoji: "🌳", keywords: ["tree", "grove", "forest"] },
+      { emoji: "🪴", keywords: ["plant", "pot", "garden"] },
+      { emoji: "🌲", keywords: ["pine", "tree", "forest"] },
+      { emoji: "🌊", keywords: ["wave", "water", "ocean"] },
+      { emoji: "☁️", keywords: ["cloud", "sky", "weather"] },
+      { emoji: "🌞", keywords: ["sun", "day", "bright"] },
+      { emoji: "🌙", keywords: ["moon", "night", "dark"] },
+      { emoji: "⭐", keywords: ["star", "favorite", "important"] },
+      { emoji: "🔥", keywords: ["fire", "hot", "streak"] },
+      { emoji: "✨", keywords: ["sparkle", "magic", "highlight"] },
+    ],
+  },
+  {
+    id: "work",
+    label: "Work",
+    glyphs: [
+      { emoji: "📅", keywords: ["calendar", "schedule", "date"] },
+      { emoji: "📈", keywords: ["chart", "growth", "metrics"] },
+      { emoji: "🗂️", keywords: ["folder", "organize", "database"] },
+      { emoji: "📊", keywords: ["graph", "report", "analytics"] },
+      { emoji: "📋", keywords: ["list", "brief", "notes"] },
+      { emoji: "📎", keywords: ["attachment", "file", "clip"] },
+      { emoji: "🧾", keywords: ["document", "receipt", "record"] },
+      { emoji: "💼", keywords: ["business", "company", "work"] },
+      { emoji: "🗓️", keywords: ["plan", "agenda", "schedule"] },
+      { emoji: "📍", keywords: ["location", "focus", "pin"] },
+      { emoji: "🔒", keywords: ["private", "secure", "lock"] },
+      { emoji: "🎨", keywords: ["design", "creative", "art"] },
+    ],
+  },
+  {
+    id: "personal",
+    label: "Personal",
+    glyphs: [
+      { emoji: "🏠", keywords: ["home", "personal", "life"] },
+      { emoji: "❤️", keywords: ["love", "favorite", "heart"] },
+      { emoji: "☕", keywords: ["coffee", "routine", "break"] },
+      { emoji: "🎵", keywords: ["music", "audio", "playlist"] },
+      { emoji: "📷", keywords: ["photo", "camera", "memory"] },
+      { emoji: "🍽️", keywords: ["food", "meal", "recipe"] },
+      { emoji: "✈️", keywords: ["travel", "trip", "flight"] },
+      { emoji: "🏃", keywords: ["health", "exercise", "run"] },
+      { emoji: "🎬", keywords: ["movie", "video", "watch"] },
+      { emoji: "🎮", keywords: ["game", "play", "fun"] },
+      { emoji: "🛌", keywords: ["rest", "sleep", "recovery"] },
+      { emoji: "🧘", keywords: ["calm", "meditation", "mind"] },
+    ],
+  },
+] as const;
 
 interface GrovePageCanopyProps {
   page: Page;
@@ -54,7 +100,8 @@ export function GrovePageCanopy({
 }: GrovePageCanopyProps) {
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [isCanopyPickerOpen, setIsCanopyPickerOpen] = useState(false);
-  const [customEmoji, setCustomEmoji] = useState("");
+  const [glyphQuery, setGlyphQuery] = useState("");
+  const [recentPageGlyphs, setRecentPageGlyphs] = useState<string[]>([]);
   const [isUploadingCanopy, setIsUploadingCanopy] = useState(false);
   const [isUploadingIcon, setIsUploadingIcon] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -62,6 +109,25 @@ export function GrovePageCanopy({
   const canopyPickerRef = useRef<HTMLDivElement | null>(null);
   const canopyInputRef = useRef<HTMLInputElement | null>(null);
   const iconInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(RECENT_PAGE_GLYPHS_STORAGE_KEY);
+      if (!raw) {
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setRecentPageGlyphs(parsed.filter((value): value is string => typeof value === "string"));
+      }
+    } catch {
+      // Ignore invalid local cache.
+    }
+  }, []);
 
   useEffect(() => {
     if (!isEmojiPickerOpen && !isCanopyPickerOpen) {
@@ -82,23 +148,66 @@ export function GrovePageCanopy({
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [isCanopyPickerOpen, isEmojiPickerOpen]);
 
-  const emojiOptions = useMemo(() => {
-    if (!customEmoji.trim()) {
-      return pageEmojiSeeds;
+  const storeRecentPageGlyph = (emoji: string) => {
+    setRecentPageGlyphs((current) => {
+      const next = [emoji, ...current.filter((item) => item !== emoji)].slice(
+        0,
+        MAX_RECENT_PAGE_GLYPHS
+      );
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          RECENT_PAGE_GLYPHS_STORAGE_KEY,
+          JSON.stringify(next)
+        );
+      }
+
+      return next;
+    });
+  };
+
+  const filteredGlyphSections = useMemo(() => {
+    const normalizedQuery = glyphQuery.trim().toLowerCase();
+
+    const sections = pageGlyphSections
+      .map((section) => ({
+        ...section,
+        glyphs: section.glyphs.filter(({ emoji, keywords }) => {
+          if (!normalizedQuery) {
+            return true;
+          }
+
+          return (
+            emoji.includes(normalizedQuery) ||
+            section.label.toLowerCase().includes(normalizedQuery) ||
+            keywords.some((keyword) => keyword.includes(normalizedQuery))
+          );
+        }),
+      }))
+      .filter((section) => section.glyphs.length > 0);
+
+    if (!recentPageGlyphs.length || normalizedQuery) {
+      return sections;
     }
 
-    return [customEmoji.trim(), ...pageEmojiSeeds.filter((emoji) => emoji !== customEmoji.trim())];
-  }, [customEmoji]);
+    return [
+      {
+        id: "recent",
+        label: "최근 사용",
+        glyphs: recentPageGlyphs.map((emoji) => ({ emoji, keywords: [] })),
+      },
+      ...sections,
+    ];
+  }, [glyphQuery, recentPageGlyphs]);
 
   const handlePageIconSelect = async (emoji: string) => {
-    setCustomEmoji(emoji);
+    storeRecentPageGlyph(emoji);
     setIsEmojiPickerOpen(false);
     await onUpdate({ icon: emoji });
   };
 
   const handlePageIconRemove = async () => {
     setIsEmojiPickerOpen(false);
-    setCustomEmoji("");
     await onUpdate({ icon: null });
   };
 
@@ -145,6 +254,7 @@ export function GrovePageCanopy({
 
     try {
       const iconUrl = await uploadPageCanopyAsset(file, `icon-${page.id}`);
+      setIsEmojiPickerOpen(false);
       await onUpdate({ icon: iconUrl });
     } catch {
       setUploadError("아이콘 이미지를 올리지 못했습니다.");
@@ -287,36 +397,32 @@ export function GrovePageCanopy({
               <button
                 type="button"
                 onClick={() => setIsEmojiPickerOpen((open) => !open)}
-                className="flex h-20 w-20 items-center justify-center rounded-[22px] bg-transparent text-5xl transition hover:bg-[var(--color-hover)]"
+                className="flex h-16 w-16 items-center justify-center rounded-[18px] bg-transparent text-4xl transition hover:bg-[var(--color-hover)]"
                 aria-label="페이지 아이콘 변경"
               >
-                {page.icon.startsWith("http") || page.icon.startsWith("data:") ? (
-                  <img
-                    src={page.icon}
-                    alt="페이지 아이콘"
-                    className="h-16 w-16 rounded-xl object-cover"
-                  />
-                ) : (
-                  page.icon
-                )}
+                <PageGlyph page={page} emojiClassName="text-4xl leading-none" />
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => setIsEmojiPickerOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)] hover:text-[var(--color-text-primary)]"
+                className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
               >
                 <SmilePlus className="h-4 w-4" />
               </button>
             )}
 
             {isEmojiPickerOpen ? (
-              <div className="absolute left-0 top-full z-30 mt-3 w-[22rem] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] shadow-2xl">
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
-                  <span className="text-sm font-medium text-[var(--color-text-primary)]">
-                    아이콘 선택
-                  </span>
+              <div className="absolute left-0 top-full z-30 mt-2 w-[20rem] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] shadow-2xl">
+                <div className="flex items-center justify-between px-3 pb-2 pt-3">
+                  <div>
+                    <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                      페이지 Glyph
+                    </div>
+                    <div className="text-xs text-[var(--color-text-secondary)]">
+                      Notion처럼 빠르게 찾아서 선택합니다.
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setIsEmojiPickerOpen(false)}
@@ -327,64 +433,71 @@ export function GrovePageCanopy({
                   </button>
                 </div>
 
-                {/* Search Input - macOS style */}
-                <div className="border-b border-[var(--color-border)] px-4 py-3">
-                  <div className="relative">
+                <div className="px-3 pb-2 pt-1">
+                  <label className="relative block">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-placeholder)]" />
                     <input
                       type="text"
-                      value={customEmoji}
-                      onChange={(event) => setCustomEmoji(event.target.value)}
-                      placeholder="이모지 검색 또는 직접 입력"
-                      className="w-full rounded-lg bg-[var(--color-surface)] px-3 py-2 pl-9 text-sm text-[var(--color-text-primary)] outline-none transition placeholder:text-[var(--color-text-placeholder)]"
+                      value={glyphQuery}
+                      onChange={(event) => setGlyphQuery(event.target.value)}
+                      placeholder="아이콘 검색"
+                      className="w-full rounded-lg bg-[var(--color-surface)] px-3 py-1.5 pl-9 text-sm text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-placeholder)]"
                     />
-                    <svg
-                      className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-placeholder)]"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
+                  </label>
                 </div>
 
-                {/* Emoji Grid - No borders */}
-                <div className="max-h-[240px] overflow-y-auto p-3">
-                  <div className="grid grid-cols-8 gap-1">
-                    {emojiOptions.map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick={() => void handlePageIconSelect(emoji)}
-                        className="flex h-9 w-9 items-center justify-center rounded-md text-xl transition hover:bg-[var(--color-hover)]"
-                        aria-label={`${emoji} 선택`}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
+                <div className="max-h-[18rem] overflow-y-auto px-2 pb-2">
+                  {filteredGlyphSections.length ? (
+                    filteredGlyphSections.map((section) => {
+                      return (
+                        <section key={section.id} className="px-1.5 pb-2">
+                          <div className="px-1.5 pb-1.5 pt-1 text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
+                            {section.label}
+                          </div>
+                          <div className="grid grid-cols-8 gap-1">
+                            {section.glyphs.map(({ emoji }) => (
+                              <button
+                                key={`${section.id}-${emoji}`}
+                                type="button"
+                                onClick={() => void handlePageIconSelect(emoji)}
+                                className="flex h-8 w-8 items-center justify-center rounded-md text-lg transition hover:bg-[var(--color-hover)]"
+                                aria-label={`${emoji} 선택`}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+                      );
+                    })
+                  ) : (
+                    <div className="px-4 py-10 text-center text-sm text-[var(--color-text-secondary)]">
+                      검색 결과가 없습니다.
+                    </div>
+                  )}
                 </div>
 
-                {/* Upload custom icon */}
-                <div className="border-t border-[var(--color-border)] px-4 py-3">
+                <div className="border-t border-[var(--color-border)] px-3 py-3">
+                  <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
+                    나의 이모지 추가
+                  </div>
                   <button
                     type="button"
                     onClick={() => iconInputRef.current?.click()}
                     disabled={isUploadingIcon}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--color-border)] py-3 text-sm text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)] hover:text-[var(--color-text-primary)] disabled:cursor-wait disabled:opacity-70"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] transition hover:bg-[var(--color-hover)] disabled:cursor-wait disabled:opacity-60"
                   >
                     {isUploadingIcon ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <ImagePlus className="h-4 w-4" />
                     )}
-                    이미지 아이콘 업로드
+                    사진으로 추가
                   </button>
                 </div>
 
-                {/* Footer with remove option */}
                 {page.icon ? (
-                  <div className="border-t border-[var(--color-border)] px-4 py-2">
+                  <div className="border-t border-[var(--color-border)] px-3 py-2">
                     <button
                       type="button"
                       onClick={() => void handlePageIconRemove()}

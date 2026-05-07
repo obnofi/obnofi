@@ -21,6 +21,18 @@ export function PageGlyph({
   typeClassName,
 }: PageGlyphProps) {
   if (page?.icon) {
+    if (page.icon.startsWith("http") || page.icon.startsWith("data:")) {
+      return (
+        <span className={className}>
+          <img
+            src={page.icon}
+            alt="페이지 아이콘"
+            className={emojiClassName}
+          />
+        </span>
+      );
+    }
+
     return (
       <span className={className}>
         <span className={emojiClassName}>{page.icon}</span>
