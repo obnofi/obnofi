@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Type, Check, Zap } from "lucide-react";
 
 // Reusable Components
 function SettingSection({
@@ -219,7 +218,7 @@ export default function EditorSettingsPage() {
               { value: "30s", label: "30 seconds" },
             ]}
             value={autoSave}
-            onChange={setAutoSave}
+            onChange={(value) => setAutoSave(value)}
           />
         </SettingRow>
       </SettingSection>

@@ -1,30 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, RotateCcw, Command, Keyboard } from "lucide-react";
-
-// Reusable Components
-function SettingSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mb-10">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">{title}</h2>
-        {description && (
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{description}</p>
-        )}
-      </div>
-      <div className="space-y-1">{children}</div>
-    </section>
-  );
-}
+import { Search, RotateCcw, Keyboard } from "lucide-react";
 
 function Button({
   children,

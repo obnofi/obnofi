@@ -223,7 +223,7 @@ export default function AppearanceSettingsPage() {
             },
           ]}
           value={startPage}
-          onChange={setStartPage}
+          onChange={(value) => setStartPage(value)}
         />
       </SettingSection>
     </div>

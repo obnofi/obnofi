@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, Globe, BarChart3 } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 
 // Reusable Components
 function SettingSection({

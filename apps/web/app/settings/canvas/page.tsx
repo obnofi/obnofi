@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Grid3X3, Circle, Square, Magnet, Map, MousePointer2 } from "lucide-react";
+import { Grid3X3, Circle, Square } from "lucide-react";
 
 // Reusable Components
 function SettingSection({
@@ -166,7 +166,7 @@ export default function CanvasSettingsPage() {
               { value: "none", label: "None", icon: <Square className="h-6 w-6" /> },
             ]}
             value={background}
-            onChange={setBackground}
+            onChange={(value) => setBackground(value)}
           />
         </SettingRow>
       </SettingSection>

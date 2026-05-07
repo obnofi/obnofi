@@ -14,6 +14,83 @@ type ProfileRecord = {
   createdAt: string;
 };
 
+function SkeletonBlock({
+  className,
+}: {
+  className?: string;
+}) {
+  return <div aria-hidden="true" className={`rounded-md bg-[var(--color-hover)] ${className ?? ""}`} />;
+}
+
+function AccountSettingsPageSkeleton() {
+  return (
+    <div className="max-w-4xl animate-pulse" aria-hidden="true">
+      <div className="mb-8 space-y-3">
+        <SkeletonBlock className="h-9 w-40" />
+        <SkeletonBlock className="h-4 w-[32rem] max-w-full" />
+      </div>
+
+      <section className="mb-10">
+        <div className="mb-4 space-y-2">
+          <SkeletonBlock className="h-7 w-20" />
+          <SkeletonBlock className="h-4 w-[28rem] max-w-full" />
+        </div>
+
+        <div className="rounded-lg bg-[var(--color-surface)] p-6">
+          <div className="grid gap-8 lg:grid-cols-[120px_minmax(0,1fr)]">
+            <div className="flex flex-col items-center gap-3">
+              <SkeletonBlock className="h-24 w-24 rounded-full" />
+              <SkeletonBlock className="h-3 w-24" />
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <SkeletonBlock className="h-4 w-24" />
+                <SkeletonBlock className="h-10 w-full" />
+              </div>
+
+              <div className="space-y-2">
+                <SkeletonBlock className="h-4 w-20" />
+                <SkeletonBlock className="h-10 w-full" />
+              </div>
+
+              <div className="space-y-3">
+                <SkeletonBlock className="h-4 w-28" />
+                <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <SkeletonBlock key={index} className="h-14 w-14 rounded-full" />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <SkeletonBlock className="h-9 w-28" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mb-10">
+        <div className="mb-4 space-y-2">
+          <SkeletonBlock className="h-7 w-16" />
+          <SkeletonBlock className="h-4 w-72 max-w-full" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-lg bg-[var(--color-surface)] p-5">
+            <SkeletonBlock className="h-4 w-24" />
+            <SkeletonBlock className="mt-3 h-4 w-40" />
+          </div>
+          <div className="rounded-lg bg-[var(--color-surface)] p-5">
+            <SkeletonBlock className="h-4 w-24" />
+            <SkeletonBlock className="mt-3 h-4 w-32" />
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function SettingSection({
   title,
   description,
@@ -197,11 +274,7 @@ export default function AccountSettingsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-[320px] items-center justify-center text-sm text-[var(--color-text-secondary)]">
-        프로필을 불러오는 중...
-      </div>
-    );
+    return <AccountSettingsPageSkeleton />;
   }
 
   if (!profile) {
@@ -268,7 +341,7 @@ export default function AccountSettingsPage() {
                   Profile Image
                 </div>
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
-                  {imageOptions.map((imageUrl, index) => {
+                  {imageOptions.map((imageUrl) => {
                     const isSelected = imageUrl === selectedImage;
                     return (
                       <button
