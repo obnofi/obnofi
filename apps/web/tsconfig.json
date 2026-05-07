@@ -2,6 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "moduleResolution": "bundler",
+    "strict": false,
     "plugins": [
       {
         "name": "next"
@@ -10,7 +12,8 @@
     "paths": {
       "@/*": ["./*"],
       "@obnofi/db": ["../../packages/db/src"],
-      "@obnofi/types": ["../../packages/types/src"]
+      "@obnofi/types": ["../../packages/types/src/index.ts"],
+      "@obnofi/types/*": ["../../packages/types/src/*"]
     }
   },
   "include": [
