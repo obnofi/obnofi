@@ -31,6 +31,9 @@
   --color-sticky-sun:       #FFF1A8;
   --color-sticky-rose:      #FFD9E6;
   --color-sticky-sky:       #DDF1FF;
+  --color-page-bg:          #FFFFFF;
+  --color-highlight:        #2E7D45;
+  --color-danger:           #D9485F;
 
   /* Typography */
   --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
@@ -68,28 +71,34 @@ html.dark {
   --color-sticky-sun:       #7B6416;
   --color-sticky-rose:      #6B3347;
   --color-sticky-sky:       #274A63;
+  --color-page-bg:          #191919;
+  --color-highlight:        #3DA05A;
+  --color-danger:           #FF7369;
   color-scheme: dark;
 }
 
 html.jungle {
-  --color-accent:           #2F6B3B;
-  --color-accent-hover:     #24552E;
-  --color-accent-subtle:    #DCEBD8;
-  --color-background:       #F5F3E8;
-  --color-surface:          #ECE8D8;
-  --color-hover:            #E0DAC5;
-  --color-selected:         #D7D0B9;
-  --color-border:           #CFC6AE;
-  --color-text-primary:     #2E3324;
-  --color-text-secondary:   #66705A;
-  --color-text-placeholder: #AAA48F;
-  --color-tooltip-bg:       #24311F;
-  --color-board-surface:    #F1EDDF;
-  --color-board-grid:       rgba(46, 51, 36, 0.08);
-  --color-board-card:       #FBF8ED;
-  --color-sticky-sun:       #E7D77A;
-  --color-sticky-rose:      #E5B5C1;
-  --color-sticky-sky:       #C9DFD6;
+  --color-accent:           #2E7D45;
+  --color-accent-hover:     #1F5230;
+  --color-accent-subtle:    #DDE8CD;
+  --color-background:       #F5EDD8;
+  --color-surface:          #EDE5CC;
+  --color-hover:            #E2D8BA;
+  --color-selected:         #D7C9A6;
+  --color-border:           #CABB98;
+  --color-text-primary:     #3B3224;
+  --color-text-secondary:   #6B624D;
+  --color-text-placeholder: #9B9075;
+  --color-tooltip-bg:       #252518;
+  --color-board-surface:    #F1E7D0;
+  --color-board-grid:       rgba(59, 50, 36, 0.09);
+  --color-board-card:       #FBF2DE;
+  --color-sticky-sun:       #8FA85C;
+  --color-sticky-rose:      #F2C4D0;
+  --color-sticky-sky:       #3B6B5E;
+  --color-page-bg:          #F5EDD8;
+  --color-highlight:        #C2547A;
+  --color-danger:           #A3365C;
   color-scheme: light;
 }
 
@@ -178,7 +187,132 @@ body {
 
 .grove-text-highlight {
   border-radius: 4px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
   padding: 0 0.15em;
+}
+
+:root {
+  --highlight-yellow-bg: #FDECC8;
+  --highlight-yellow-text: #594A3C;
+  --highlight-green-bg: #DBEDDB;
+  --highlight-green-text: #2E4435;
+  --highlight-blue-bg: #D3E5EF;
+  --highlight-blue-text: #364954;
+  --highlight-purple-bg: #E8DEEE;
+  --highlight-purple-text: #443A57;
+  --highlight-pink-bg: #F4E0E9;
+  --highlight-pink-text: #533B4C;
+  --highlight-red-bg: #FFE2DD;
+  --highlight-red-text: #5C3B39;
+  --highlight-orange-bg: #FADEC9;
+  --highlight-orange-text: #594A3C;
+}
+
+html.dark {
+  --highlight-yellow-bg: #5A4C1D;
+  --highlight-yellow-text: #FFF3CC;
+  --highlight-green-bg: #244534;
+  --highlight-green-text: #E1F5E6;
+  --highlight-blue-bg: #263F54;
+  --highlight-blue-text: #E3F1FB;
+  --highlight-purple-bg: #433553;
+  --highlight-purple-text: #F1E8FF;
+  --highlight-pink-bg: #563746;
+  --highlight-pink-text: #FFE6F0;
+  --highlight-red-bg: #5A3434;
+  --highlight-red-text: #FFE1DE;
+  --highlight-orange-bg: #5C4328;
+  --highlight-orange-text: #FFE8CF;
+}
+
+html.jungle {
+  --highlight-yellow-bg: #D9C97A;
+  --highlight-yellow-text: #514419;
+  --highlight-green-bg: #A9C08A;
+  --highlight-green-text: #27412D;
+  --highlight-blue-bg: #89B4A8;
+  --highlight-blue-text: #1F3D3A;
+  --highlight-purple-bg: #C7B3D8;
+  --highlight-purple-text: #46345A;
+  --highlight-pink-bg: #E3A8B8;
+  --highlight-pink-text: #5D3141;
+  --highlight-red-bg: #D6977E;
+  --highlight-red-text: #5A3124;
+  --highlight-orange-bg: #E4B877;
+  --highlight-orange-text: #5A3D1B;
+}
+
+.grove-text-highlight[data-highlight-color="yellow"] {
+  background-color: var(--highlight-yellow-bg);
+  color: var(--highlight-yellow-text) !important;
+}
+
+.grove-text-highlight[data-highlight-color="green"] {
+  background-color: var(--highlight-green-bg);
+  color: var(--highlight-green-text) !important;
+}
+
+.grove-text-highlight[data-highlight-color="blue"] {
+  background-color: var(--highlight-blue-bg);
+  color: var(--highlight-blue-text) !important;
+}
+
+.grove-text-highlight[data-highlight-color="purple"] {
+  background-color: var(--highlight-purple-bg);
+  color: var(--highlight-purple-text) !important;
+}
+
+.grove-text-highlight[data-highlight-color="pink"] {
+  background-color: var(--highlight-pink-bg);
+  color: var(--highlight-pink-text) !important;
+}
+
+.grove-text-highlight[data-highlight-color="red"] {
+  background-color: var(--highlight-red-bg);
+  color: var(--highlight-red-text) !important;
+}
+
+.grove-text-highlight[data-highlight-color="orange"] {
+  background-color: var(--highlight-orange-bg);
+  color: var(--highlight-orange-text) !important;
+}
+
+.editor .ProseMirror .grove-text-highlight,
+.editor .ProseMirror .grove-text-highlight *,
+.editor .ProseMirror .grove-text-highlight span,
+.editor .ProseMirror .grove-text-highlight strong,
+.editor .ProseMirror .grove-text-highlight em,
+.editor .ProseMirror .grove-text-highlight a {
+  color: inherit !important;
+}
+
+[data-highlight-swatch="yellow"] {
+  background-color: var(--highlight-yellow-bg);
+}
+
+[data-highlight-swatch="green"] {
+  background-color: var(--highlight-green-bg);
+}
+
+[data-highlight-swatch="blue"] {
+  background-color: var(--highlight-blue-bg);
+}
+
+[data-highlight-swatch="purple"] {
+  background-color: var(--highlight-purple-bg);
+}
+
+[data-highlight-swatch="pink"] {
+  background-color: var(--highlight-pink-bg);
+}
+
+[data-highlight-swatch="red"] {
+  background-color: var(--highlight-red-bg);
+}
+
+[data-highlight-swatch="orange"] {
+  background-color: var(--highlight-orange-bg);
 }
 
 .grove-block-drop-line {

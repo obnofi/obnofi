@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { Eraser, Highlighter } from "lucide-react";
 import type { PageHighlightColor } from "@obnofi/types";
-import { PAGE_HIGHLIGHT_BG_COLORS } from "@/lib/highlightColors";
 
 interface TextHighlightToolbarProps {
   editor: Editor;
@@ -95,12 +94,16 @@ export function TextHighlightToolbar({
             aria-label={`${color} highlight`}
             onMouseDown={(event) => {
               event.preventDefault();
+              if (isActive) {
+                editor.chain().focus().unsetTextHighlight().run();
+                return;
+              }
               editor.chain().focus().setTextHighlight({ color }).run();
             }}
             className={`h-6 w-6 rounded-full transition ${
               isActive ? "ring-2 ring-[var(--color-accent)] ring-offset-2 ring-offset-[var(--color-surface)]" : ""
             }`}
-            style={{ backgroundColor: PAGE_HIGHLIGHT_BG_COLORS[color] }}
+            data-highlight-swatch={color}
           />
         );
       })}
