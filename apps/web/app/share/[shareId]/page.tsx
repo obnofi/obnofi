@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth/next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { SharePageClient } from "./SharePageClient";
-import { authOptions } from "@/lib/auth";
+import { PublicPageView } from "@/components/share/PublicPageView";
 
 interface SharePageProps {
   params: Promise<{ shareId: string }>;
@@ -36,7 +35,6 @@ async function getPublicPage(shareId: string) {
 }
 
 export default async function SharePage({ params }: SharePageProps) {
-  const session = await getServerSession(authOptions);
   const { shareId } = await params;
   const page = await getPublicPage(shareId);
 
@@ -44,20 +42,17 @@ export default async function SharePage({ params }: SharePageProps) {
     notFound();
   }
 
-  const workspacePath = `/workspace/${page.workspaceId}?page=${page.id}`;
-
   if (!page.isPasswordProtected) {
-    if (!session?.user) {
-      redirect(`/auth/signin?callbackUrl=${encodeURIComponent(workspacePath)}`);
-    }
-    redirect(workspacePath);
+    return (
+      <PublicPageView
+        title={page.title}
+        icon={page.icon}
+        coverImage={page.coverImage}
+        content={page.content}
+        updatedAt={page.updatedAt}
+      />
+    );
   }
 
-  return (
-    <SharePageClient
-      shareId={shareId}
-      redirectPath={workspacePath}
-      requiresSignIn={!session?.user}
-    />
-  );
+  return <SharePageClient shareId={shareId} />;
 }

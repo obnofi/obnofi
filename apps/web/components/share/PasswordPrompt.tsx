@@ -5,7 +5,16 @@ import { Lock, Eye, EyeOff } from "lucide-react";
 
 interface PasswordPromptProps {
   shareId: string;
-  onSuccess: () => void;
+  onSuccess: (page: {
+    id: string;
+    workspaceId: string;
+    title: string;
+    icon: string | null;
+    coverImage: string | null;
+    content: object | null;
+    updatedAt: string;
+    isPasswordProtected: boolean;
+  }) => void;
 }
 
 export function PasswordPrompt({ shareId, onSuccess }: PasswordPromptProps) {
@@ -27,7 +36,7 @@ export function PasswordPrompt({ shareId, onSuccess }: PasswordPromptProps) {
       });
 
       if (response.ok) {
-        onSuccess();
+        onSuccess(await response.json());
       } else {
         setError("Incorrect password. Please try again.");
       }
