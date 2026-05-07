@@ -16,7 +16,7 @@ import {
   FileText,
   FileCode,
 } from "lucide-react";
-import { useCollaboration } from "@/lib/collaboration/CollaborationContext";
+import { useCollaborators } from "@/lib/collaboration/CollaborationContext";
 import { copyToClipboard } from "@/lib/copyToClipboard";
 import type {
   HeadingLevel,
@@ -24,7 +24,6 @@ import type {
   PageHighlightColor,
   PageType,
 } from "@obnofi/types";
-import { PAGE_HIGHLIGHT_BG_COLORS } from "@/lib/highlightColors";
 
 export type PageExportFormat = "pdf" | "html";
 
@@ -78,8 +77,9 @@ export function PageSettingsMenu({
   const [editingHeadingLevel, setEditingHeadingLevel] = useState<HeadingLevel | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
+  const highlightRequestIdRef = useRef(0);
 
-  const { collaborators } = useCollaboration();
+  const collaborators = useCollaborators();
 
   const publishUrl = shareId
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/share/${shareId}`
@@ -187,6 +187,7 @@ export function PageSettingsMenu({
   };
 
   const handleHighlightColorsToggle = async (color: PageHighlightColor) => {
+    const previousHighlightColors = highlightColors;
     const nextHighlightColors = highlightColors.includes(color)
       ? highlightColors.filter((item) => item !== color)
       : [...highlightColors, color];
@@ -195,6 +196,7 @@ export function PageSettingsMenu({
       return;
     }
 
+    const requestId = ++highlightRequestIdRef.current;
     onHighlightColorsChange(nextHighlightColors);
 
     try {
@@ -209,9 +211,13 @@ export function PageSettingsMenu({
       }
 
       const updatedPage = await response.json();
-      onHighlightColorsChange(updatedPage.highlightColors);
+      if (requestId === highlightRequestIdRef.current) {
+        onHighlightColorsChange(updatedPage.highlightColors);
+      }
     } catch {
-      onHighlightColorsChange(highlightColors);
+      if (requestId === highlightRequestIdRef.current) {
+        onHighlightColorsChange(previousHighlightColors);
+      }
     }
   };
 
@@ -388,12 +394,12 @@ export function PageSettingsMenu({
                         <div
                           key={headingLevel}
                           className="rounded-md px-2 py-2 hover:bg-[var(--color-hover)]"
+                          onDoubleClick={() => setEditingHeadingLevel(headingLevel)}
+                          title="더블클릭해서 수정"
                         >
                           {editingHeadingLevel === headingLevel ? (
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="text-[13px] font-medium text-[var(--color-text-primary)]">
-                                H{headingLevel}:
-                              </span>
+                            <label className="flex items-center gap-1 text-[12px] text-[var(--color-text-secondary)]">
+                              <span>H{headingLevel}:</span>
                               <input
                                 type="number"
                                 min={8}
@@ -417,22 +423,14 @@ export function PageSettingsMenu({
                                     setEditingHeadingLevel(null);
                                   }
                                 }}
-                                className="w-20 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-right text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)]"
+                                className="w-10 border-none bg-transparent p-0 text-[12px] text-[var(--color-text-primary)] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                               />
-                              <span className="text-[11px] text-[var(--color-text-secondary)]">
-                                px
-                              </span>
-                            </div>
+                              <span>px</span>
+                            </label>
                           ) : (
-                            <button
-                              type="button"
-                              onDoubleClick={() => setEditingHeadingLevel(headingLevel)}
-                              className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[12px] text-[var(--color-text-secondary)] transition hover:bg-[var(--color-background)] hover:text-[var(--color-text-primary)]"
-                              title="더블클릭해서 수정"
-                            >
-                              <span>H{headingLevel}:</span>
-                              <span>{draftHeadingFontSizes[headingKey]}px</span>
-                            </button>
+                            <div className="text-[12px] text-[var(--color-text-secondary)]">
+                              H{headingLevel}: {draftHeadingFontSizes[headingKey]}px
+                            </div>
                           )}
                         </div>
                       );
@@ -483,7 +481,7 @@ export function PageSettingsMenu({
                         >
                           <span
                             className="h-3 w-3 rounded-full"
-                            style={{ backgroundColor: PAGE_HIGHLIGHT_BG_COLORS[color] }}
+                            data-highlight-swatch={color}
                           />
                           <span>{color}</span>
                           {isSelected ? <Check className="h-3 w-3" /> : null}
@@ -560,36 +558,6 @@ export function PageSettingsMenu({
             </button>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-function DisabledMenuItem({
-  label,
-  hint,
-  trailing,
-}: {
-  label: string;
-  hint?: string;
-  trailing?: React.ReactNode;
-}) {
-  return (
-    <div className="flex cursor-not-allowed items-center justify-between rounded-md px-2 py-2 opacity-40">
-      <div className="flex items-center gap-2.5">
-        <div>
-          <p className="text-[13px] font-medium text-[var(--color-text-primary)]">
-            {label}
-          </p>
-          {hint && (
-            <p className="text-[11px] text-[var(--color-text-placeholder)]">
-              {hint}
-            </p>
-          )}
-        </div>
-      </div>
-      {trailing && (
-        <span className="text-[var(--color-text-placeholder)]">{trailing}</span>
       )}
     </div>
   );
