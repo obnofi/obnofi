@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { Check, CheckCircle2, Terminal } from "lucide-react";
 
 interface Props {
   callbackUrl: string;
@@ -38,10 +39,14 @@ export function CliAuthClient({ callbackUrl, state, name, user }: Props) {
 
   if (status === "done") {
     return (
-      <div className="flex min-h-full flex-col items-center justify-center bg-[var(--color-background)] px-4">
+      <div className="flex min-h-screen flex-1 flex-col items-center justify-center bg-[var(--color-background)] px-4">
         <div className="w-full max-w-sm">
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center">
-            <div className="mb-4 text-4xl">✅</div>
+          <div className="rounded-lg bg-[var(--color-surface)] p-8 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-accent-subtle)]">
+                <CheckCircle2 className="h-6 w-6 text-[var(--color-accent)]" aria-hidden="true" />
+              </div>
+            </div>
             <h1 className="mb-2 text-xl font-semibold text-[var(--color-text-primary)]">
               인증 완료
             </h1>
@@ -58,12 +63,16 @@ export function CliAuthClient({ callbackUrl, state, name, user }: Props) {
   }
 
   return (
-    <div className="flex min-h-full flex-col items-center justify-center bg-[var(--color-background)] px-4">
+    <div className="flex min-h-screen flex-1 flex-col items-center justify-center bg-[var(--color-background)] px-4 py-12">
       <div className="w-full max-w-sm">
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-8">
+        <div className="rounded-lg bg-[var(--color-surface)] p-8">
           {/* 헤더 */}
           <div className="mb-6 text-center">
-            <div className="mb-3 text-3xl">🔑</div>
+            <div className="mb-3 flex justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-accent-subtle)]">
+                <Terminal className="h-6 w-6 text-[var(--color-accent)]" aria-hidden="true" />
+              </div>
+            </div>
             <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">
               CLI 연결 허용
             </h1>
@@ -73,7 +82,7 @@ export function CliAuthClient({ callbackUrl, state, name, user }: Props) {
           </div>
 
           {/* 로그인 계정 */}
-          <div className="mb-6 flex items-center gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2.5">
+          <div className="mb-6 flex items-center gap-3 rounded-md bg-[var(--color-background)] px-3 py-2.5">
             {user.image ? (
               <Image
                 src={user.image}
@@ -107,7 +116,7 @@ export function CliAuthClient({ callbackUrl, state, name, user }: Props) {
               "데이터베이스 검색",
             ].map((item) => (
               <li key={item} className="flex items-center gap-2">
-                <span className="text-[var(--color-accent)]">✓</span>
+                <Check className="h-4 w-4 flex-shrink-0 text-[var(--color-accent)]" aria-hidden="true" />
                 {item}
               </li>
             ))}
@@ -115,7 +124,7 @@ export function CliAuthClient({ callbackUrl, state, name, user }: Props) {
 
           {/* 오류 메시지 */}
           {status === "error" && errorMsg && (
-            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+            <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
               {errorMsg}
             </div>
           )}

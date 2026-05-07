@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
+import { AlertTriangle } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { isLocalCallbackUrl } from "@/lib/cli-auth";
 import { CliAuthClient } from "./CliAuthClient";
@@ -48,10 +49,14 @@ export default async function CliAuthPage({ searchParams }: Props) {
 
 function CliAuthError({ message }: { message: string }) {
   return (
-    <div className="flex min-h-full flex-col items-center justify-center bg-[var(--color-background)] px-4">
+    <div className="flex min-h-screen flex-1 flex-col items-center justify-center bg-[var(--color-background)] px-4 py-12">
       <div className="w-full max-w-sm">
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center">
-          <div className="mb-4 text-3xl">⚠️</div>
+        <div className="rounded-lg bg-[var(--color-surface)] p-8 text-center">
+          <div className="mb-4 flex justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-accent-subtle)]">
+              <AlertTriangle className="h-6 w-6 text-[var(--color-accent)]" aria-hidden="true" />
+            </div>
+          </div>
           <h1 className="mb-2 text-lg font-semibold text-[var(--color-text-primary)]">
             잘못된 요청
           </h1>
