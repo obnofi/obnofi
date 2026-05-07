@@ -19,6 +19,28 @@ export type SlashCommandCategory = {
   label: string;
 };
 
+export const SUPPORTED_BASIC_MARKDOWN_COMMAND_IDS = new Set([
+  "text",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "bulletList",
+  "orderedList",
+  "blockquote",
+  "divider",
+]);
+
+export function isVisibleSlashCommandItem(item: SlashCommandItem): boolean {
+  if (item.category !== "basic") {
+    return true;
+  }
+
+  return SUPPORTED_BASIC_MARKDOWN_COMMAND_IDS.has(item.id);
+}
+
 export const CATEGORIES: SlashCommandCategory[] = [
   { id: "basic", label: "기본 블록" },
   { id: "media", label: "미디어" },
@@ -231,6 +253,7 @@ export const slashCommands: SlashCommandItem[] = [
     description: "언어 선택 + 실행 분할뷰",
     icon: "Code2",
     category: "code",
+    shortcut: "```",
     keywords: ["code", "코드", "snippet", "언어"],
   },
   {
@@ -549,8 +572,11 @@ export const slashCommands: SlashCommandItem[] = [
 
 export function getSlashCommandItems(query: string): SlashCommandItem[] {
   const q = query.toLowerCase().trim();
-  if (!q) return slashCommands;
-  return slashCommands.filter(
+  const visibleItems = slashCommands.filter(isVisibleSlashCommandItem);
+
+  if (!q) return visibleItems;
+
+  return visibleItems.filter(
     (item) =>
       item.title.toLowerCase().includes(q) ||
       item.keywords?.some((kw) => kw.includes(q))

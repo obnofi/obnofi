@@ -27,6 +27,7 @@ export function createSlashSuggestion(
             command: props.command,
             editor: props.editor,
             range: props.range,
+            query: props.query,
             workspaceId,
             pageId,
             onLinkDatabase,
@@ -49,6 +50,7 @@ export function createSlashSuggestion(
           trigger: "manual",
           placement: "bottom-start",
           offset: [0, 8],
+          maxWidth: "none",
           popperOptions: {
             modifiers: [
               {
@@ -67,6 +69,7 @@ export function createSlashSuggestion(
           command: props.command,
           editor: props.editor,
           range: props.range,
+          query: props.query,
           workspaceId,
           pageId,
           onLinkDatabase,

@@ -58,9 +58,13 @@ import {
 } from "lucide-react";
 import type { SlashCommandItem } from "@/components/editor/extensions/SlashCommandExtension";
 import { CATEGORIES } from "@/components/editor/extensions/SlashCommandExtension";
+import { isVisibleSlashCommandItem } from "@/components/editor/extensions/SlashCommandExtension";
 import { usePageStore } from "@/store/pageStore";
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+const iconMap: Record<
+  string,
+  React.ComponentType<{ className?: string; style?: React.CSSProperties }>
+> = {
   Type,
   Heading1,
   Heading2,
@@ -114,6 +118,97 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   ClipboardList,
 };
 
+type GroupConfig = {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  icon: string;
+  childIds: string[];
+};
+
+const SUBMENU_GROUPS: GroupConfig[] = [
+  {
+    id: "g-headings",
+    category: "basic",
+    title: "제목",
+    description: "1~6 단계 제목",
+    icon: "Heading1",
+    childIds: ["h1", "h2", "h3", "h4", "h5", "h6"],
+  },
+  {
+    id: "g-lists",
+    category: "basic",
+    title: "목록",
+    description: "글머리, 번호, 체크박스",
+    icon: "List",
+    childIds: ["bulletList", "orderedList", "taskList", "toggleList"],
+  },
+  {
+    id: "g-db-views",
+    category: "database",
+    title: "데이터베이스 보기",
+    description: "표, 보드, 갤러리, 캘린더 등",
+    icon: "Table2",
+    childIds: [
+      "dbTable",
+      "dbBoard",
+      "dbGallery",
+      "dbList",
+      "dbCalendar",
+      "dbTimeline",
+    ],
+  },
+  {
+    id: "g-toggle-headings",
+    category: "advanced",
+    title: "토글 제목",
+    description: "접을 수 있는 제목",
+    icon: "ChevronDown",
+    childIds: ["toggleH1", "toggleH2", "toggleH3"],
+  },
+  {
+    id: "g-columns",
+    category: "advanced",
+    title: "열 레이아웃",
+    description: "2열 또는 3열 나란히",
+    icon: "Columns2",
+    childIds: ["columns2", "columns3"],
+  },
+  {
+    id: "g-templates",
+    category: "advanced",
+    title: "템플릿",
+    description: "회의록, 프로젝트, 주간 양식",
+    icon: "LayoutTemplate",
+    childIds: ["template-meeting", "template-project", "template-weekly"],
+  },
+  {
+    id: "g-github",
+    category: "developer",
+    title: "GitHub",
+    description: "Gist, 이슈, PR",
+    icon: "GitGraph",
+    childIds: ["githubGist", "githubIssue"],
+  },
+];
+
+const HIDDEN_ITEM_IDS = new Set(["template"]);
+
+type LeafNode = { kind: "leaf"; item: SlashCommandItem };
+type GroupNode = {
+  kind: "group";
+  group: GroupConfig;
+  children: SlashCommandItem[];
+};
+type TreeNode = LeafNode | GroupNode;
+
+type CategorySection = {
+  id: string;
+  label: string;
+  nodes: TreeNode[];
+};
+
 function showToast(message: string) {
   const existing = document.getElementById("slash-cmd-toast");
   if (existing) existing.remove();
@@ -151,11 +246,66 @@ function showToast(message: string) {
   }, 2200);
 }
 
+function buildTree(items: SlashCommandItem[]): CategorySection[] {
+  const result: CategorySection[] = [];
+  for (const cat of CATEGORIES) {
+    const catItems = items.filter(
+      (it) => it.category === cat.id && !HIDDEN_ITEM_IDS.has(it.id) && isVisibleSlashCommandItem(it)
+    );
+    if (catItems.length === 0) continue;
+
+    const catGroups = SUBMENU_GROUPS.filter((g) => g.category === cat.id);
+    const childToGroup = new Map<string, GroupConfig>();
+    for (const g of catGroups) {
+      for (const cid of g.childIds) childToGroup.set(cid, g);
+    }
+
+    const emitted = new Set<string>();
+    const nodes: TreeNode[] = [];
+    for (const item of catItems) {
+      const group = childToGroup.get(item.id);
+      if (group) {
+        if (!emitted.has(group.id)) {
+          const children = group.childIds
+            .map((cid) => catItems.find((it) => it.id === cid))
+            .filter((x): x is SlashCommandItem => Boolean(x));
+          nodes.push({ kind: "group", group, children });
+          emitted.add(group.id);
+        }
+        continue;
+      }
+      nodes.push({ kind: "leaf", item });
+    }
+
+    if (nodes.length > 0) {
+      result.push({ id: cat.id, label: cat.label, nodes });
+    }
+  }
+  return result;
+}
+
+function buildFlat(items: SlashCommandItem[]): CategorySection[] {
+  const result: CategorySection[] = [];
+  for (const cat of CATEGORIES) {
+    const catItems = items.filter(
+      (it) => it.category === cat.id && !HIDDEN_ITEM_IDS.has(it.id)
+    );
+    if (catItems.length === 0) continue;
+    result.push({
+      id: cat.id,
+      label: cat.label,
+      nodes: catItems.map((item) => ({ kind: "leaf" as const, item })),
+    });
+  }
+  return result;
+}
+
 interface SlashCommandListProps {
   items: SlashCommandItem[];
   command: (item: SlashCommandItem) => void;
   editor: Editor;
   range: { from: number; to: number };
+  query?: string;
   workspaceId?: string;
   pageId?: string;
   onLinkDatabase?: () => void;
@@ -163,17 +313,11 @@ interface SlashCommandListProps {
   onInsertPageLink?: () => void;
 }
 
-type ItemWithIndex = SlashCommandItem & { globalIndex: number };
-type GroupWithIndex = {
-  id: string;
-  label: string;
-  items: ItemWithIndex[];
-};
-
 export function SlashCommandList({
   items,
   editor,
   range,
+  query = "",
   workspaceId,
   pageId,
   onLinkDatabase,
@@ -181,28 +325,37 @@ export function SlashCommandList({
   onInsertPageLink,
 }: SlashCommandListProps) {
   const router = useRouter();
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const { createPage } = usePageStore();
+  const isFiltering = query.trim().length > 0;
 
-  // Build groups with stable global indices in category display order
-  const { groups, flatItems } = useMemo<{
-    groups: GroupWithIndex[];
-    flatItems: ItemWithIndex[];
-  }>(() => {
-    let idx = 0;
-    const builtGroups: GroupWithIndex[] = CATEGORIES.map((cat) => ({
-      ...cat,
-      items: items
-        .filter((item) => item.category === cat.id)
-        .map((item) => ({ ...item, globalIndex: idx++ })),
-    })).filter((g) => g.items.length > 0);
+  const sections = useMemo(
+    () => (isFiltering ? buildFlat(items) : buildTree(items)),
+    [items, isFiltering]
+  );
 
-    return {
-      groups: builtGroups,
-      flatItems: builtGroups.flatMap((g) => g.items),
-    };
+  const rootNodes = useMemo(() => sections.flatMap((s) => s.nodes), [sections]);
+
+  const [rootIndex, setRootIndex] = useState(0);
+  const [panel, setPanel] = useState<"root" | "sub">("root");
+  const [subIndex, setSubIndex] = useState(0);
+
+  const rootRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const subRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const activeRoot = rootNodes[rootIndex];
+  const activeGroup = activeRoot?.kind === "group" ? activeRoot : null;
+
+  // Reset selection when items list changes
+  useEffect(() => {
+    setRootIndex(0);
+    setPanel("root");
+    setSubIndex(0);
   }, [items]);
+
+  // Reset subIndex when active group changes
+  useEffect(() => {
+    setSubIndex(0);
+  }, [activeGroup?.group.id]);
 
   const handleSelect = useCallback(
     (item: SlashCommandItem) => {
@@ -328,129 +481,262 @@ export function SlashCommandList({
           chain.run();
       }
     },
-    [editor, range, workspaceId, pageId, createPage, router]
+    [editor, range, workspaceId, pageId, createPage, router, onLinkDatabase, onInsertButton, onInsertPageLink]
   );
-
-  // Reset selected index when item list changes
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [items]);
 
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedIndex((prev) =>
-          prev <= 0 ? flatItems.length - 1 : prev - 1
-        );
+        if (panel === "sub" && activeGroup) {
+          setSubIndex((prev) =>
+            prev <= 0 ? activeGroup.children.length - 1 : prev - 1
+          );
+        } else {
+          setRootIndex((prev) =>
+            prev <= 0 ? rootNodes.length - 1 : prev - 1
+          );
+        }
         return;
       }
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIndex((prev) =>
-          prev >= flatItems.length - 1 ? 0 : prev + 1
-        );
+        if (panel === "sub" && activeGroup) {
+          setSubIndex((prev) =>
+            prev >= activeGroup.children.length - 1 ? 0 : prev + 1
+          );
+        } else {
+          setRootIndex((prev) =>
+            prev >= rootNodes.length - 1 ? 0 : prev + 1
+          );
+        }
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        if (panel === "root" && activeGroup) {
+          e.preventDefault();
+          setPanel("sub");
+          setSubIndex(0);
+        }
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        if (panel === "sub") {
+          e.preventDefault();
+          setPanel("root");
+        }
         return;
       }
       if (e.key === "Enter") {
         e.preventDefault();
-        const item = flatItems[selectedIndex];
-        if (item) handleSelect(item);
+        if (panel === "sub" && activeGroup) {
+          const child = activeGroup.children[subIndex];
+          if (child) handleSelect(child);
+        } else if (activeRoot?.kind === "leaf") {
+          handleSelect(activeRoot.item);
+        } else if (activeGroup) {
+          setPanel("sub");
+          setSubIndex(0);
+        }
         return;
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [flatItems, selectedIndex, handleSelect]);
+  }, [rootNodes.length, activeGroup, activeRoot, panel, subIndex, handleSelect]);
 
-  // Scroll selected item into view
+  // Scroll selection into view
   useEffect(() => {
-    itemRefs.current[selectedIndex]?.scrollIntoView({ block: "nearest" });
-  }, [selectedIndex]);
+    rootRefs.current[rootIndex]?.scrollIntoView({ block: "nearest" });
+  }, [rootIndex]);
 
-  if (flatItems.length === 0) return null;
+  useEffect(() => {
+    if (panel === "sub") {
+      subRefs.current[subIndex]?.scrollIntoView({ block: "nearest" });
+    }
+  }, [subIndex, panel]);
+
+  if (rootNodes.length === 0) return null;
+
+  const renderRow = (
+    key: string,
+    title: string,
+    iconName: string,
+    isSelected: boolean,
+    isDisabled: boolean,
+    rightAdornment: React.ReactNode,
+    onMouseEnter: () => void,
+    onClick: () => void,
+    refCallback: (el: HTMLButtonElement | null) => void
+  ) => {
+    const Icon = iconMap[iconName];
+    return (
+      <div key={key} className="px-1">
+        <button
+          type="button"
+          ref={refCallback}
+          onMouseEnter={onMouseEnter}
+          onClick={onClick}
+          data-selected={isSelected ? "true" : undefined}
+          style={{
+            background: isSelected ? "var(--color-selected)" : undefined,
+            color: "var(--color-text-primary)",
+          }}
+          className={[
+            "slash-cmd-row w-full flex items-center gap-2 px-2 py-1 rounded-[6px] text-left",
+            isDisabled ? "opacity-50" : "",
+          ].join(" ")}
+        >
+          {Icon ? (
+            <Icon
+              className="flex-shrink-0 w-3.5 h-3.5"
+              style={{ color: "var(--color-text-secondary)" }}
+            />
+          ) : null}
+          <span className="flex-1 truncate text-[13px] leading-5">
+            {title}
+          </span>
+          {isDisabled && (
+            <span
+              className="flex-shrink-0 text-[9px] uppercase tracking-wide"
+              style={{ color: "var(--color-text-placeholder)" }}
+            >
+              준비중
+            </span>
+          )}
+          {rightAdornment}
+        </button>
+      </div>
+    );
+  };
+
+  const shortcutBadge = (text: string) => (
+    <kbd
+      className="flex-shrink-0 text-[10px] font-mono leading-none"
+      style={{ color: "var(--color-text-secondary)" }}
+    >
+      {text}
+    </kbd>
+  );
+
+  const panelStyle: React.CSSProperties = {
+    background: "var(--color-background)",
+    borderColor: "var(--color-border)",
+  };
+
+  const sectionLabelStyle: React.CSSProperties = {
+    color: "var(--color-text-secondary)",
+  };
 
   return (
-    <div className="scrollbar-hidden z-[100000] max-h-[22rem] w-80 overflow-y-auto rounded-xl border border-zinc-200 bg-white py-1 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
-      {groups.map((group) => (
-        <div key={group.id}>
-          {/* Category header */}
-          <div className="sticky top-0 px-3 pt-2.5 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 bg-white dark:bg-zinc-950 select-none">
-            {group.label}
-          </div>
-
-          {/* Items */}
-          {group.items.map((item) => {
-            const isSelected = item.globalIndex === selectedIndex;
-            const Icon = iconMap[item.icon];
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                ref={(el) => {
-                  itemRefs.current[item.globalIndex] = el;
-                }}
-                onClick={() => handleSelect(item)}
-                className={[
-                  "w-full flex items-center gap-3 px-3 py-1.5 text-left transition-colors",
-                  isSelected
-                    ? "bg-zinc-100 dark:bg-zinc-800"
-                    : "hover:bg-zinc-50 dark:hover:bg-zinc-800/60",
-                  item.isDisabled ? "opacity-50" : "",
-                ].join(" ")}
+    <>
+      <style>{`
+        .slash-cmd-row:hover:not([data-selected="true"]) {
+          background: var(--color-hover);
+        }
+      `}</style>
+      <div className="flex items-start gap-1 z-[100000]">
+        {/* Main panel */}
+        <div
+          className="scrollbar-hidden max-h-[20rem] w-60 overflow-y-auto rounded-md border py-1"
+          style={panelStyle}
+        >
+          {sections.map((section) => (
+            <div key={section.id}>
+              <div
+                className="px-3 pt-2 pb-0.5 text-[10px] font-medium uppercase tracking-wide select-none"
+                style={sectionLabelStyle}
               >
-                {/* Icon */}
-                <div
-                  className={[
-                    "flex-shrink-0 w-8 h-8 rounded-lg border flex items-center justify-center",
-                    item.isObnofi
-                      ? "bg-[#EAF3DE] border-[#c5dfa8] dark:bg-[#1a2e12] dark:border-[#3a5c24]"
-                      : "bg-zinc-100 border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700",
-                  ].join(" ")}
-                >
-                  {Icon ? (
-                    <Icon
-                      className={[
-                        "w-4 h-4",
-                        item.isObnofi
-                          ? "text-[#3a6e28] dark:text-[#7cbf5e]"
-                          : "text-zinc-600 dark:text-zinc-400",
-                      ].join(" ")}
-                    />
-                  ) : null}
-                </div>
+                {section.label}
+              </div>
+              {section.nodes.map((node) => {
+                const idx = rootNodes.indexOf(node);
+                const isSelected = idx === rootIndex;
 
-                {/* Text */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-snug">
-                      {item.title}
-                    </span>
-                    {item.isDisabled && (
-                      <span className="text-[9px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800 rounded px-1 py-px leading-none">
-                        준비중
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate leading-snug">
-                    {item.description}
-                  </div>
-                </div>
+                if (node.kind === "group") {
+                  return renderRow(
+                    node.group.id,
+                    node.group.title,
+                    node.group.icon,
+                    isSelected,
+                    false,
+                    <ChevronRight
+                      className="flex-shrink-0 w-3 h-3"
+                      style={{ color: "var(--color-text-secondary)" }}
+                    />,
+                    () => {
+                      setRootIndex(idx);
+                      setPanel("root");
+                    },
+                    () => {
+                      setRootIndex(idx);
+                      setPanel("sub");
+                      setSubIndex(0);
+                    },
+                    (el) => {
+                      rootRefs.current[idx] = el;
+                    }
+                  );
+                }
 
-                {/* Shortcut badge */}
-                {item.shortcut && (
-                  <kbd className="flex-shrink-0 text-[10px] text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md px-1.5 py-0.5 font-mono leading-none">
-                    {item.shortcut}
-                  </kbd>
-                )}
-              </button>
-            );
-          })}
+                const item = node.item;
+                return renderRow(
+                  item.id,
+                  item.title,
+                  item.icon,
+                  isSelected,
+                  Boolean(item.isDisabled),
+                  item.shortcut ? shortcutBadge(item.shortcut) : null,
+                  () => {
+                    setRootIndex(idx);
+                    setPanel("root");
+                  },
+                  () => handleSelect(item),
+                  (el) => {
+                    rootRefs.current[idx] = el;
+                  }
+                );
+              })}
+            </div>
+          ))}
         </div>
-      ))}
-    </div>
+
+        {/* Submenu panel */}
+        {activeGroup && (
+          <div
+            className="scrollbar-hidden max-h-[20rem] w-56 overflow-y-auto rounded-md border py-1"
+            style={panelStyle}
+          >
+            <div
+              className="px-3 pt-2 pb-0.5 text-[10px] font-medium uppercase tracking-wide select-none"
+              style={sectionLabelStyle}
+            >
+              {activeGroup.group.title}
+            </div>
+            {activeGroup.children.map((child, sIdx) => {
+              const isSelected = panel === "sub" && sIdx === subIndex;
+              return renderRow(
+                child.id,
+                child.title,
+                child.icon,
+                isSelected,
+                Boolean(child.isDisabled),
+                child.shortcut ? shortcutBadge(child.shortcut) : null,
+                () => {
+                  setPanel("sub");
+                  setSubIndex(sIdx);
+                },
+                () => handleSelect(child),
+                (el) => {
+                  subRefs.current[sIdx] = el;
+                }
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </>
   );
 }

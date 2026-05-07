@@ -231,6 +231,19 @@ export function Editor({
     return () => onEditorReady?.(null);
   }, [editor, onEditorReady]);
 
+  useEffect(() => {
+    return () => {
+      const shell = editorShellRef.current;
+      if (!shell) {
+        return;
+      }
+
+      shell
+        .querySelectorAll(".collaboration-cursor__caret")
+        .forEach((node) => node.remove());
+    };
+  }, []);
+
   if (!editor) return null;
 
   return (
