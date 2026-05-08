@@ -7,6 +7,28 @@ type TiptapNode = {
   text?: string;
 };
 
+const MAX_MARKDOWN_SOURCE_CHARS = 160_000;
+const MAX_MARKDOWN_SOURCE_LINES = 4_000;
+
+function clampMarkdownSource(markdown: string) {
+  const normalized = markdown.replace(/\r\n?/g, "\n").trim();
+  if (!normalized) {
+    return normalized;
+  }
+
+  const truncatedByChars =
+    normalized.length > MAX_MARKDOWN_SOURCE_CHARS
+      ? normalized.slice(0, MAX_MARKDOWN_SOURCE_CHARS)
+      : normalized;
+
+  const lines = truncatedByChars.split("\n");
+  if (lines.length <= MAX_MARKDOWN_SOURCE_LINES) {
+    return truncatedByChars;
+  }
+
+  return lines.slice(0, MAX_MARKDOWN_SOURCE_LINES).join("\n");
+}
+
 function createTextNode(text: string): TiptapNode {
   return { type: "text", text };
 }
@@ -149,7 +171,7 @@ function consumeCodeBlock(lines: string[], startIndex: number) {
 }
 
 export function markdownToTiptap(markdown: string): object {
-  const normalized = markdown.replace(/\r\n?/g, "\n").trim();
+  const normalized = clampMarkdownSource(markdown);
   if (!normalized) {
     return { type: "doc", content: [{ type: "paragraph" }] };
   }

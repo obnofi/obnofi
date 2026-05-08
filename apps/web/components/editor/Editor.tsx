@@ -60,6 +60,10 @@ interface EditorProps {
   onEditorReady?: (editor: TiptapEditor | null) => void;
 }
 
+function tiptapDocumentsMatch(a: object | null, b: object | null) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 export function Editor({
   content,
   bodyFontSizePt = 12,
@@ -108,7 +112,13 @@ export function Editor({
     const editor = editorRef.current;
     if (!editor || !content) return;
 
-    const docContent = editor.getJSON().content ?? [];
+    const editorJson = editor.getJSON();
+    if (tiptapDocumentsMatch(editorJson as object, content)) {
+      initialContentApplied.current = true;
+      return;
+    }
+
+    const docContent = editorJson.content ?? [];
     const isEmpty =
       docContent.length === 0 ||
       (docContent.length === 1 &&

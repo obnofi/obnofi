@@ -14,6 +14,9 @@ const DEFAULT_HIGHLIGHT_COLORS: PageHighlightColor[] = [
   "pink",
 ];
 
+let activePageFetchController: AbortController | null = null;
+let activePageFetchSequence = 0;
+
 function isOptimisticPageId(pageId: string) {
   return pageId.startsWith("optimistic-");
 }
@@ -149,7 +152,14 @@ export const usePageStore = create<PageState>((set, get) => ({
   },
 
   fetchPage: async (pageId: string) => {
-    set({ isLoading: true, error: null });
+    const cachedPage = get().pages.find((page) => page.id === pageId) ?? null;
+
+    set({
+      isLoading: true,
+      error: null,
+      currentPage: cachedPage ?? get().currentPage,
+    });
+
     try {
       if (isOptimisticPageId(pageId)) {
         const optimisticPage =
@@ -163,11 +173,31 @@ export const usePageStore = create<PageState>((set, get) => ({
         return;
       }
 
-      const response = await fetch(`/api/pages/${pageId}`);
+      activePageFetchController?.abort();
+      const controller = new AbortController();
+      activePageFetchController = controller;
+      const fetchSequence = ++activePageFetchSequence;
+
+      const response = await fetch(`/api/pages/${pageId}`, {
+        signal: controller.signal,
+      });
       if (!response.ok) throw new Error("Failed to fetch page");
       const page = await response.json();
+
+      if (fetchSequence !== activePageFetchSequence) {
+        return;
+      }
+
+      if (activePageFetchController === controller) {
+        activePageFetchController = null;
+      }
+
       set({ currentPage: page, isLoading: false });
     } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+
       set({
         error: error instanceof Error ? error.message : "Unknown error",
         isLoading: false,

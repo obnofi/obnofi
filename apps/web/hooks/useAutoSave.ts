@@ -78,7 +78,10 @@ export function useAutoSave({
   );
 
   const flushPendingSave = useCallback(
-    (targetPageId = pageIdRef.current) => {
+    (
+      targetPageId = pageIdRef.current,
+      options?: { background?: boolean }
+    ) => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
@@ -87,8 +90,9 @@ export function useAutoSave({
         return;
       }
       const content = getContentRef.current();
+      const { background = false } = options ?? {};
       void persistContent(targetPageId, content, {
-        background: true,
+        background,
         updateStatus: false,
       });
     },
@@ -99,7 +103,9 @@ export function useAutoSave({
   useEffect(() => {
     reset();
     return () => {
-      flushPendingSave(pageId);
+      // SPA 페이지 전환에서는 일반 fetch로 마무리 저장한다.
+      // keepalive는 언로드 전송 전용이라 큰 payload에서 pending으로 매달릴 수 있다.
+      flushPendingSave(pageId, { background: false });
     };
   // reset은 store 액션이라 안정적 — pageId 변경 시에만 실행
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -132,7 +138,7 @@ export function useAutoSave({
   // 페이지 이탈 직전 저장 (keepalive로 언로드 중에도 완료)
   useEffect(() => {
     const handleBeforeUnload = () => {
-      flushPendingSave();
+      flushPendingSave(undefined, { background: true });
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
@@ -141,7 +147,7 @@ export function useAutoSave({
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
-        flushPendingSave();
+        flushPendingSave(undefined, { background: true });
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);

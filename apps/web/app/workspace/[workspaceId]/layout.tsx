@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, useMemo, Suspense } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo, Suspense, startTransition } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
@@ -517,6 +517,7 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
   const [activeDragPageId, setActiveDragPageId] = useState<string | null>(null);
   const [overDragPageId, setOverDragPageId] = useState<string | null>(null);
   const [dragOffsetX, setDragOffsetX] = useState(0);
+  const [pendingPageId, setPendingPageId] = useState<string | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [isSidebarHidden, setIsSidebarHidden] = useState(false);
   const [createMenuState, setCreateMenuState] = useState<{
@@ -539,6 +540,7 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
   const initializedWorkspaceId = usePageStore((state) => state.initializedWorkspaceId);
   const searchParams = useSearchParams();
   const currentPageId = searchParams.get("page") ?? undefined;
+  const effectiveCurrentPageId = pendingPageId ?? currentPageId;
   const sensors = useSensors(
     useSensor(PointerSensor, {
       // distance 기반 — 단순 클릭은 즉시 onClick으로 흘리고, 6px 이상 끌었을 때만 drag 시작.
@@ -766,6 +768,16 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
   }, [currentPageId, pages]);
 
   useEffect(() => {
+    if (!pendingPageId) {
+      return;
+    }
+
+    if (currentPageId === pendingPageId) {
+      setPendingPageId(null);
+    }
+  }, [currentPageId, pendingPageId]);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -897,7 +909,14 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
   };
 
   const handleSelectPage = (pageId: string) => {
-    router.push(`/workspace/${workspaceId}?page=${pageId}`);
+    if (pageId === currentPageId || pageId === pendingPageId) {
+      return;
+    }
+
+    setPendingPageId(pageId);
+    startTransition(() => {
+      router.push(`/workspace/${workspaceId}?page=${pageId}`);
+    });
   };
 
   const handleOpenSearch = useCallback(() => {
@@ -910,8 +929,15 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
 
   const handleSelectSearchResult = useCallback((pageId: string) => {
     setIsSearchOpen(false);
-    router.push(`/workspace/${workspaceId}?page=${pageId}`);
-  }, [router, workspaceId]);
+    if (pageId === currentPageId || pageId === pendingPageId) {
+      return;
+    }
+
+    setPendingPageId(pageId);
+    startTransition(() => {
+      router.push(`/workspace/${workspaceId}?page=${pageId}`);
+    });
+  }, [currentPageId, pendingPageId, router, workspaceId]);
 
   const handleSelectWorkspace = (nextWorkspaceId: string) => {
     setIsWorkspaceMenuOpen(false);
@@ -1236,7 +1262,7 @@ function WorkspaceLayoutInner({ children }: WorkspaceLayoutProps) {
                         <SortablePageTreeItem
                           key={item.id}
                           page={item}
-                          currentPageId={currentPageId}
+                          currentPageId={effectiveCurrentPageId}
                           onSelect={handleSelectPage}
                           onToggle={handleToggleExpand}
                           expanded={expandedPages}

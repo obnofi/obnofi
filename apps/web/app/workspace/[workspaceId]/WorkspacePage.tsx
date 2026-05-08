@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, startTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { Editor as TiptapEditor } from "@tiptap/react";
@@ -152,6 +152,7 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
     },
   });
   const [pendingChildType, setPendingChildType] = useState<PageType | null>(null);
+  const pendingNavigationRef = useRef<string | null>(null);
   const [, setExpandedPages] = useState<Set<string>>(new Set());
   const [groveContentElement, setGroveContentElement] = useState<HTMLDivElement | null>(null);
 
@@ -165,6 +166,10 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
       cancelled = true;
     };
   }, [pageId, fetchPage]);
+
+  useEffect(() => {
+    pendingNavigationRef.current = pageId;
+  }, [pageId]);
 
   useEffect(() => {
     if (currentPage) {
@@ -192,7 +197,14 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
   }, [setCurrentPage]);
 
   const handleSelectPage = (selectedPageId: string) => {
-    router.push(`/workspace/${workspaceId}?page=${selectedPageId}`);
+    if (selectedPageId === pageId || selectedPageId === pendingNavigationRef.current) {
+      return;
+    }
+
+    pendingNavigationRef.current = selectedPageId;
+    startTransition(() => {
+      router.push(`/workspace/${workspaceId}?page=${selectedPageId}`);
+    });
   };
 
   const handleExportPage = useCallback(
