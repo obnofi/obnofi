@@ -15,6 +15,7 @@ import {
   type PrismaPageRow,
 } from "@/lib/prisma-transforms";
 import { normalizeTiptapDocument } from "@/lib/normalizeTiptapDocument";
+import { jsonWithPrivateReadCache } from "@/lib/httpCache";
 
 const PAGE_ORDER_STEP = 1024;
 
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
       orderBy: [{ order: "asc" }, { updatedAt: "desc" }],
     });
 
-    return NextResponse.json(prismaPages.map(toPage));
+    return jsonWithPrivateReadCache(prismaPages.map(toPage));
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch pages" },

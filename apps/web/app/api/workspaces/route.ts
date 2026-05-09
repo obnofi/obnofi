@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
 import { getAuthenticatedUserId } from "@/lib/workspace-resolution";
+import { jsonWithPrivateReadCache } from "@/lib/httpCache";
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(
+    return jsonWithPrivateReadCache(
       memberships.map(({ role, workspace }) => ({
         id: workspace.id,
         name: workspace.name,

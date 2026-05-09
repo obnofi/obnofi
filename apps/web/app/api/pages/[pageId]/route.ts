@@ -12,6 +12,7 @@ import {
   toDatabase,
 } from "@/lib/prisma-transforms";
 import { normalizeTiptapDocument } from "@/lib/normalizeTiptapDocument";
+import { jsonWithPrivateReadCache } from "@/lib/httpCache";
 
 export async function GET(
   request: NextRequest,
@@ -49,7 +50,7 @@ export async function GET(
         );
       }
 
-      return NextResponse.json({
+      return jsonWithPrivateReadCache({
         ...toPage(page),
         database: toDatabase(database),
       });
@@ -64,7 +65,7 @@ export async function GET(
       return NextResponse.json({ error: "Page not found" }, { status: 404 });
     }
 
-    return NextResponse.json(toPage(page));
+    return jsonWithPrivateReadCache(toPage(page));
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch page" },

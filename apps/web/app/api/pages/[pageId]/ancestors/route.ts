@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
+import { jsonWithPrivateReadCache } from "@/lib/httpCache";
 
 export async function GET(
   _request: NextRequest,
@@ -38,7 +39,7 @@ export async function GET(
       ORDER BY depth DESC
     `;
 
-    return NextResponse.json(ancestors);
+    return jsonWithPrivateReadCache(ancestors);
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch page ancestors" },
