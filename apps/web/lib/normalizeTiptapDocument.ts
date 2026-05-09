@@ -1,4 +1,11 @@
-type JsonRecord = Record<string, unknown>;
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+type UnknownRecord = Record<string, unknown>;
 
 const MAX_TOP_LEVEL_BLOCKS = 300;
 const MAX_CHILDREN_PER_NODE = 200;
@@ -11,7 +18,7 @@ type NormalizeState = {
   wasTruncated: boolean;
 };
 
-function isRecord(value: unknown): value is JsonRecord {
+function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -31,7 +38,11 @@ function clampText(text: string, state: NormalizeState) {
   return nextText;
 }
 
-function normalizeNode(node: unknown, state: NormalizeState, depth: number): JsonRecord | null {
+function normalizeNode(
+  node: unknown,
+  state: NormalizeState,
+  depth: number
+): Record<string, JsonValue> | null {
   if (!isRecord(node)) {
     state.wasTruncated = true;
     return null;
@@ -58,29 +69,29 @@ function normalizeNode(node: unknown, state: NormalizeState, depth: number): Jso
       return null;
     }
 
-    const normalizedTextNode: JsonRecord = {
+    const normalizedTextNode: Record<string, JsonValue> = {
       type: "text",
       text: nextText,
     };
 
     if (isRecord(node.marks)) {
-      normalizedTextNode.marks = node.marks;
+      normalizedTextNode.marks = node.marks as JsonValue;
     } else if (Array.isArray(node.marks)) {
-      normalizedTextNode.marks = node.marks;
+      normalizedTextNode.marks = node.marks as JsonValue;
     }
 
     return normalizedTextNode;
   }
 
-  const normalizedNode: JsonRecord = { type };
+  const normalizedNode: Record<string, JsonValue> = { type };
 
   if (isRecord(node.attrs)) {
-    normalizedNode.attrs = node.attrs;
+    normalizedNode.attrs = node.attrs as JsonValue;
   }
 
   const rawContent = Array.isArray(node.content) ? node.content : null;
   if (rawContent) {
-    const normalizedContent: JsonRecord[] = [];
+    const normalizedContent: JsonValue[] = [];
     for (const child of rawContent.slice(0, MAX_CHILDREN_PER_NODE)) {
       const normalizedChild = normalizeNode(child, state, depth + 1);
       if (normalizedChild) {
@@ -110,7 +121,7 @@ function normalizeNode(node: unknown, state: NormalizeState, depth: number): Jso
   return normalizedNode;
 }
 
-function createFallbackDocument(message?: string) {
+function createFallbackDocument(message?: string): Record<string, JsonValue> {
   return {
     type: "doc",
     content: [
@@ -124,7 +135,7 @@ function createFallbackDocument(message?: string) {
   };
 }
 
-export function normalizeTiptapDocument(content: unknown) {
+export function normalizeTiptapDocument(content: unknown): Record<string, JsonValue> {
   if (!isRecord(content) || content.type !== "doc" || !Array.isArray(content.content)) {
     return createFallbackDocument();
   }
@@ -135,7 +146,7 @@ export function normalizeTiptapDocument(content: unknown) {
     wasTruncated: false,
   };
 
-  const normalizedContent: JsonRecord[] = [];
+  const normalizedContent: JsonValue[] = [];
   for (const node of content.content) {
     const normalizedNode = normalizeNode(node, state, 0);
     if (normalizedNode) {
