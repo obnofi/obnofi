@@ -67,6 +67,27 @@ type LocalClearingSnapshot = {
 
 type ClearingSaveStatus = "saved" | "saving" | "unsaved" | "error";
 
+type ClearingElementBroadcast =
+  | {
+      kind: "upsert";
+      originId: string;
+      element: Element;
+    }
+  | {
+      kind: "delete";
+      originId: string;
+      elementId: string;
+    };
+
+const PRESENCE_COLOR_MAP: Record<string, string> = {
+  ink: "#37352F",
+  fern: "#2E7D45",
+  mist: "#C7C6C4",
+  sun: "#CB912F",
+  rose: "#D44C47",
+  sky: "#337EA9",
+};
+
 function clampZoom(zoom: number) {
   return Math.min(2.4, Math.max(0.35, zoom));
 }
@@ -365,6 +386,14 @@ function getLocalClearingStorageKey(roomSlug: string) {
   return `obnofi-clearing-room:${roomSlug}`;
 }
 
+function resolvePresenceColorValue(color: string | undefined) {
+  if (!color) {
+    return "var(--color-accent)";
+  }
+
+  return PRESENCE_COLOR_MAP[color] ?? color;
+}
+
 function loadLocalClearingSnapshot(roomSlug: string): LocalClearingSnapshot | null {
   if (typeof window === "undefined") {
     return null;
@@ -410,9 +439,13 @@ export function ClearingBoard({
   const drawStateRef = useRef<DrawState>(null);
   const lassoStateRef = useRef<LassoState>(null);
   const presenceChannelRef = useRef<RealtimeChannel | null>(null);
+  const presenceChannelReadyRef = useRef(false);
   const currentRoomRef = useRef<Room | null>(null);
   const currentUserRef = useRef<User | null>(null);
+  const clearingOriginIdRef = useRef(crypto.randomUUID());
   const lastCursorSyncRef = useRef(0);
+  const skipRemoteUpsertsRef = useRef<Map<string, string>>(new Map());
+  const skipRemoteDeletesRef = useRef<Set<string>>(new Set());
   const [room, setRoom] = useState<Room | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
@@ -518,6 +551,69 @@ export function ClearingBoard({
   useEffect(() => {
     latestCommentsRef.current = comments;
   }, [comments]);
+
+  const applyRemoteElementUpsert = useCallback(
+    (element: Element) => {
+      const existingElement = elements.find(
+        (candidate) => candidate.id === element.id
+      );
+      const serializedElement = JSON.stringify(element);
+
+      if (existingElement && JSON.stringify(existingElement) === serializedElement) {
+        return;
+      }
+
+      skipRemoteUpsertsRef.current.set(element.id, serializedElement);
+      upsertElement(element);
+    },
+    [elements, upsertElement]
+  );
+
+  const applyRemoteElementDelete = useCallback(
+    (elementId: string) => {
+      skipRemoteDeletesRef.current.add(elementId);
+      removeElement(elementId);
+    },
+    [removeElement]
+  );
+
+  const broadcastElementMutation = useCallback(
+    async (payload: ClearingElementBroadcast) => {
+      const channel = presenceChannelRef.current;
+      if (!channel || !isSupabaseLive || !presenceChannelReadyRef.current) {
+        return;
+      }
+
+      await channel.send({
+        type: "broadcast",
+        event: "element-mutation",
+        payload,
+      });
+    },
+    [isSupabaseLive]
+  );
+
+  const syncCursorPresence = useCallback(
+    (cursor?: { x: number; y: number }) => {
+      if (
+        !presenceChannelRef.current ||
+        !presenceChannelReadyRef.current ||
+        !currentUserRef.current
+      ) {
+        return;
+      }
+
+      const nextUser = {
+        ...currentUserRef.current,
+        cursor,
+        lastSeenAt: new Date().toISOString(),
+      };
+      currentUserRef.current = nextUser;
+      setCurrentUser(nextUser);
+      void presenceChannelRef.current.track(nextUser);
+    },
+    [setCurrentUser]
+  );
 
   useEffect(() => {
     if (!currentUser) {
@@ -694,10 +790,29 @@ export function ClearingBoard({
         const channel = supabase
           .channel(`clearing-room:${activeRoom.id}`, {
             config: {
+              broadcast: {
+                self: false,
+                ack: true,
+              },
               presence: {
                 key: currentUser.id,
+                enabled: true,
               },
             },
+          })
+          .on("broadcast", { event: "element-mutation" }, ({ payload }) => {
+            const mutation = payload as ClearingElementBroadcast;
+
+            if (!mutation || mutation.originId === clearingOriginIdRef.current) {
+              return;
+            }
+
+            if (mutation.kind === "delete") {
+              applyRemoteElementDelete(mutation.elementId);
+              return;
+            }
+
+            applyRemoteElementUpsert(mutation.element);
           })
           .on("broadcast", { event: "emoji-stamp" }, ({ payload }) => {
             setFloatingStamps((current) => [...current, payload as FloatingEmojiStamp]);
@@ -722,11 +837,7 @@ export function ClearingBoard({
             },
             (payload) => {
               if (payload.eventType === "DELETE") {
-                suppressPersistenceRef.current = true;
-                removeElement(payload.old.id as string);
-                queueMicrotask(() => {
-                  suppressPersistenceRef.current = false;
-                });
+                applyRemoteElementDelete(payload.old.id as string);
                 return;
               }
 
@@ -735,11 +846,7 @@ export function ClearingBoard({
                 return;
               }
 
-              suppressPersistenceRef.current = true;
-              upsertElement(toElement(nextRecord));
-              queueMicrotask(() => {
-                suppressPersistenceRef.current = false;
-              });
+              applyRemoteElementUpsert(toElement(nextRecord));
             }
           )
           .on(
@@ -775,8 +882,12 @@ export function ClearingBoard({
         presenceChannelRef.current = channel;
         channel.subscribe(async (status) => {
           if (status === "SUBSCRIBED") {
+            presenceChannelReadyRef.current = true;
             await channel.track(currentUser);
+            return;
           }
+
+          presenceChannelReadyRef.current = false;
         });
       } catch (error) {
         if (!isMounted) {
@@ -801,11 +912,23 @@ export function ClearingBoard({
 
     return () => {
       isMounted = false;
+      presenceChannelReadyRef.current = false;
       if (presenceChannelRef.current) {
+        syncCursorPresence(undefined);
         void presenceChannelRef.current.unsubscribe();
       }
     };
-  }, [currentUser, roomSlug, removeElement, setComments, setCurrentUser, setElements, setPresenceUsers, upsertElement]);
+  }, [
+    applyRemoteElementDelete,
+    applyRemoteElementUpsert,
+    currentUser,
+    roomSlug,
+    setComments,
+    setCurrentUser,
+    setElements,
+    setPresenceUsers,
+    syncCursorPresence,
+  ]);
 
   const persistElement = useCallback(async (element: Element) => {
     if (!isSupabaseLive) {
@@ -915,20 +1038,50 @@ export function ClearingBoard({
       previousElementsRef.current.map((element) => [element.id, element])
     );
     const nextById = new Map(elements.map((element) => [element.id, element]));
+    const localUpserts: Element[] = [];
+    const localDeletes: string[] = [];
 
     for (const element of elements) {
       const previous = previousById.get(element.id);
       if (!previous || JSON.stringify(previous) !== JSON.stringify(element)) {
+        const serializedElement = JSON.stringify(element);
+        if (skipRemoteUpsertsRef.current.get(element.id) === serializedElement) {
+          skipRemoteUpsertsRef.current.delete(element.id);
+          continue;
+        }
         pendingUpsertsRef.current.set(element.id, element);
         pendingDeletesRef.current.delete(element.id);
+        localUpserts.push(element);
       }
     }
 
     for (const previous of previousElementsRef.current) {
       if (!nextById.has(previous.id)) {
+        if (skipRemoteDeletesRef.current.delete(previous.id)) {
+          continue;
+        }
         pendingUpsertsRef.current.delete(previous.id);
         pendingDeletesRef.current.add(previous.id);
+        localDeletes.push(previous.id);
       }
+    }
+
+    if (isSupabaseLive) {
+      localUpserts.forEach((element) => {
+        void broadcastElementMutation({
+          kind: "upsert",
+          originId: clearingOriginIdRef.current,
+          element,
+        });
+      });
+
+      localDeletes.forEach((elementId) => {
+        void broadcastElementMutation({
+          kind: "delete",
+          originId: clearingOriginIdRef.current,
+          elementId,
+        });
+      });
     }
 
     if (
@@ -939,7 +1092,13 @@ export function ClearingBoard({
     }
 
     previousElementsRef.current = elements;
-  }, [elements, isBootstrapping, isSupabaseLive, scheduleCanvasPersistence]);
+  }, [
+    broadcastElementMutation,
+    elements,
+    isBootstrapping,
+    isSupabaseLive,
+    scheduleCanvasPersistence,
+  ]);
 
   useEffect(() => {
     if (isBootstrapping || isSupabaseLive || !room) {
@@ -1618,24 +1777,7 @@ export function ClearingBoard({
         return;
       }
       lastCursorSyncRef.current = now;
-
-      const rect = boardRef.current.getBoundingClientRect();
-      const scenePoint = getScenePoint(
-        event.clientX,
-        event.clientY,
-        rect,
-        viewport.x,
-        viewport.y,
-        viewport.zoom
-      );
-      const nextUser = {
-        ...currentUserRef.current,
-        cursor: scenePoint,
-        lastSeenAt: new Date().toISOString(),
-      };
-      currentUserRef.current = nextUser;
-      setCurrentUser(nextUser);
-      void presenceChannelRef.current.track(nextUser);
+      syncCursorPresence(scenePoint);
     }
   };
 
@@ -1944,7 +2086,10 @@ export function ClearingBoard({
             onPointerDown={handleBoardPointerDown}
             onPointerMove={handleBoardPointerMove}
             onPointerUp={handleBoardPointerUp}
-            onPointerLeave={handleBoardPointerUp}
+            onPointerLeave={() => {
+              void handleBoardPointerUp();
+              syncCursorPresence();
+            }}
             onWheel={handleWheel}
           >
             <div
@@ -2052,10 +2197,13 @@ export function ClearingBoard({
                   >
                     <div
                       className="h-4 w-4 rotate-[-18deg] rounded-[4px]"
-                      style={{ backgroundColor: "var(--color-accent)" }}
+                      style={{ backgroundColor: resolvePresenceColorValue(user.color) }}
                     />
                     <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)]/95 px-2 py-1 shadow-sm ring-1 ring-[var(--color-border)] backdrop-blur">
-                      <span className="inline-flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-[var(--color-accent-subtle)] text-[10px] font-semibold text-[var(--color-accent)]">
+                      <span
+                        className="inline-flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold text-white"
+                        style={{ backgroundColor: resolvePresenceColorValue(user.color) }}
+                      >
                         {user.avatarUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
