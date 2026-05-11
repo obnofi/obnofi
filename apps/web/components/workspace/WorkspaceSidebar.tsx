@@ -31,7 +31,6 @@ import { ImportFromUrlControl } from "@/components/workspace/ImportFromUrlContro
 import { AntGlyph } from "@/components/icons/AntGlyph";
 import { usePageStore, PageTreeNode } from "@/store/pageStore";
 import {
-  creatablePageDescriptions,
   creatablePageLabels,
   creatablePageTypes,
   createPageTitles,
@@ -1518,9 +1517,6 @@ function CreatePageMenuPortal({
           <span className="min-w-0">
             <span className="block text-[13px] font-medium text-[var(--color-text-primary)]">
               {creatablePageLabels[type]}
-            </span>
-            <span className="block text-[12px] text-[var(--color-text-secondary)]">
-              {creatablePageDescriptions[type]}
             </span>
           </span>
         </button>
