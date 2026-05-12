@@ -76,7 +76,6 @@ export function DatabaseSurface({
     queryState,
     activeFilterValue,
     setGlobalFilter,
-    setGrouping,
     setSorting,
     setActiveFilterColumn,
     setActiveFilterValue,
@@ -96,17 +95,6 @@ export function DatabaseSurface({
   useEffect(() => {
     onViewTypeChange?.(viewType);
   }, [onViewTypeChange, viewType]);
-
-  useEffect(() => {
-    if (viewType === "board" && queryState.grouping.length === 0) {
-      const candidate = properties.find(
-        (property) => property.type === "select" || property.type === "status"
-      );
-      if (candidate) {
-        setGrouping(candidate.id);
-      }
-    }
-  }, [properties, queryState.grouping.length, setGrouping, viewType]);
 
   useEffect(() => {
     onSurfaceStateChange?.({

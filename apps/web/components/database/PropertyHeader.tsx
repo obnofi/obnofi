@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import {
   MoreHorizontal,
   Edit2,
@@ -12,6 +12,7 @@ import {
 import { Property, PropertyType, SelectOption } from "@obnofi/types";
 import { PropertyTypeSelector } from "./PropertyTypeSelector";
 import { PropertyOptionsEditor } from "./PropertyOptionsEditor";
+import { DropdownPortal } from "./DropdownPortal";
 import {
   getPropertyTypeLabel,
   requiresOptions,
@@ -42,18 +43,7 @@ export function PropertyHeader({
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingOptions, setIsEditingOptions] = useState(false);
   const [nameValue, setNameValue] = useState(property.name);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
   const handleNameSubmit = () => {
     const trimmed = nameValue.trim();
@@ -97,16 +87,22 @@ export function PropertyHeader({
           </span>
         </div>
 
-        <div className="relative shrink-0" ref={menuRef}>
+        <div className="relative shrink-0">
           <button
+            ref={menuTriggerRef}
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="rounded p-1 opacity-0 transition hover:bg-[var(--color-hover)] group-hover:opacity-100"
           >
             <MoreHorizontal className="h-4 w-4 text-[var(--color-text-secondary)]" />
           </button>
 
-          {isMenuOpen && (
-            <div className="absolute right-0 top-full z-[99999] mt-1 w-56 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-lg">
+          <DropdownPortal
+            triggerRef={menuTriggerRef}
+            isOpen={isMenuOpen}
+            onClose={() => setIsMenuOpen(false)}
+            align="right"
+          >
+            <div className="w-56 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-lg">
               <div className="border-b border-[var(--color-border)] px-3 py-2">
                 <span className="text-xs font-medium text-[var(--color-text-secondary)]">
                   Property type
@@ -186,7 +182,7 @@ export function PropertyHeader({
                 Delete property
               </button>
             </div>
-          )}
+          </DropdownPortal>
         </div>
       </div>
 
