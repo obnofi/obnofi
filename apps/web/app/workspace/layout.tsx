@@ -8,7 +8,7 @@ interface WorkspaceLayoutProps {
 export default async function WorkspaceLayout({
   children,
 }: WorkspaceLayoutProps) {
-  await requireSessionUser();
+  await requireSessionUser("/workspace");
 
   return children;
 }

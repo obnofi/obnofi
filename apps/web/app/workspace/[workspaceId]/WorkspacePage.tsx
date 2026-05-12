@@ -59,6 +59,9 @@ const GroveSideTab = dynamic(() => import("@/components/workspace/GroveSideTab")
   ssr: false
 });
 
+const COLLABORATION_ENABLED =
+  process.env.NEXT_PUBLIC_ENABLE_COLLABORATION === "true";
+
 interface WorkspacePageProps {
   workspaceId: string;
   initialPages?: Page[];
@@ -127,13 +130,17 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
     createPage,
     setCurrentPage,
     getPageTrail,
+    error,
   } = usePageStore();
   const isDatabaseModalOpen = useUIStore((state) => state.databaseModal.isOpen);
   const isGroveSideTabOpen = useUIStore((state) => state.groveSideTab.isOpen);
+  const closeDatabaseModal = useUIStore((state) => state.closeDatabaseModal);
+  const closeGroveSideTab = useUIStore((state) => state.closeGroveSideTab);
 
   const [title, setTitle] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const editorInstanceRef = useRef<TiptapEditor | null>(null);
+  const titleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 최신 editor content를 ref에 보관 — useAutoSave가 getContent()로 접근
   const latestContentRef = useRef<object>({ type: "doc", content: [{ type: "paragraph" }] });
@@ -152,9 +159,20 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
     },
   });
   const [pendingChildType, setPendingChildType] = useState<PageType | null>(null);
-  const pendingNavigationRef = useRef<string | null>(null);
-  const [, setExpandedPages] = useState<Set<string>>(new Set());
   const [groveContentElement, setGroveContentElement] = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    closeDatabaseModal();
+    closeGroveSideTab();
+  }, [closeDatabaseModal, closeGroveSideTab, pageId]);
+
+  useEffect(() => {
+    return () => {
+      if (titleSaveTimerRef.current) {
+        clearTimeout(titleSaveTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -167,21 +185,28 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
     };
   }, [pageId, fetchPage]);
 
-  useEffect(() => {
-    pendingNavigationRef.current = pageId;
-  }, [pageId]);
+  const activePage = currentPage?.id === pageId ? currentPage : null;
 
   useEffect(() => {
-    if (currentPage) {
-      setTitle(currentPage.title);
+    if (activePage) {
+      setTitle(activePage.title);
       latestContentRef.current =
-        currentPage.content ?? { type: "doc", content: [{ type: "paragraph" }] };
+        activePage.content ?? { type: "doc", content: [{ type: "paragraph" }] };
     }
-  }, [currentPage]);
+  }, [activePage]);
 
-  const handleTitleChange = async (newTitle: string) => {
+  const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle);
-    await updatePage(pageId, { title: newTitle });
+    setCurrentPage((page) => (page ? { ...page, title: newTitle } : page));
+
+    if (titleSaveTimerRef.current) {
+      clearTimeout(titleSaveTimerRef.current);
+    }
+
+    titleSaveTimerRef.current = setTimeout(() => {
+      void updatePage(pageId, { title: newTitle });
+      titleSaveTimerRef.current = null;
+    }, 1200);
   };
 
   const handlePageChromeUpdate = async (input: Partial<Pick<Page, "icon" | "coverImage">>) => {
@@ -197,11 +222,10 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
   }, [setCurrentPage]);
 
   const handleSelectPage = (selectedPageId: string) => {
-    if (selectedPageId === pageId || selectedPageId === pendingNavigationRef.current) {
+    if (selectedPageId === pageId) {
       return;
     }
 
-    pendingNavigationRef.current = selectedPageId;
     startTransition(() => {
       router.push(`/workspace/${workspaceId}?page=${selectedPageId}`);
     });
@@ -225,21 +249,6 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
     },
     [currentPage, groveContentElement]
   );
-
-  useEffect(() => {
-    setExpandedPages((prev) => {
-      const next = new Set(prev);
-      next.add(pageId);
-
-      let page = pages.find((item) => item.id === pageId);
-      while (page?.parentId) {
-        next.add(page.parentId);
-        page = pages.find((item) => item.id === page?.parentId);
-      }
-
-      return next;
-    });
-  }, [pageId, pages]);
 
   const handleCreateChildPage = async (type: PageType) => {
     setPendingChildType(type);
@@ -265,12 +274,12 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
 
     const trail = getPageTrail(pageId);
 
-    if (currentPage) {
-      return trail.map((page) => (page.id === currentPage.id ? currentPage : page));
+    if (activePage) {
+      return trail.map((page) => (page.id === activePage.id ? activePage : page));
     }
 
     return trail;
-  }, [currentPage, getPageTrail, pageId]);
+  }, [activePage, getPageTrail, pageId]);
 
   if (isLoading) {
     return (
@@ -280,10 +289,10 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
     );
   }
 
-  if (!currentPage) {
+  if (!activePage) {
     return (
       <div className="flex h-full items-center justify-center text-[var(--color-text-secondary)] bg-[var(--color-background)]">
-        Page not found
+        {error ?? "Page not found"}
       </div>
     );
   }
@@ -292,13 +301,13 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
     <CollaborationProvider
       key={pageId}
       pageId={pageId}
-      active={currentPage.type === "document"}
+      active={COLLABORATION_ENABLED && activePage.type === "document"}
     >
       {/* Top Bar */}
       <header className="h-12 border-b border-[var(--color-border)] flex items-center justify-between px-4 shrink-0 bg-[var(--color-background)]">
         <div className="flex min-w-0 items-center gap-1 text-[14px]">
           {pageTrail.map((page, index) => {
-            const isCurrent = page.id === currentPage.id;
+            const isCurrent = page.id === activePage.id;
 
             return (
               <span key={page.id} className="flex min-w-0 items-center gap-1">
@@ -331,18 +340,20 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
         </div>
         <div className="flex items-center gap-2">
           <SaveStatusIndicator onRetry={() => void save()} />
-          {currentPage.type === "document" ? <CollaborationAvatars /> : null}
+          {COLLABORATION_ENABLED && activePage.type === "document" ? (
+            <CollaborationAvatars />
+          ) : null}
           <button className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]">
             <Sparkles className="h-4 w-4" />
           </button>
           <PageSettingsMenu
             pageId={pageId}
             workspaceId={workspaceId}
-            pageType={currentPage.type}
-            headingFontSizes={currentPage.headingFontSizes}
-            highlightColors={currentPage.highlightColors}
-            isPublic={currentPage.isPublic}
-            shareId={currentPage.shareId}
+            pageType={activePage.type}
+            headingFontSizes={activePage.headingFontSizes}
+            highlightColors={activePage.highlightColors}
+            isPublic={activePage.isPublic}
+            shareId={activePage.shareId}
             onShareUpdate={(isPublic, shareId) => {
               setCurrentPage((page) =>
                 page ? { ...page, isPublic, shareId } : page
@@ -351,7 +362,7 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
             onHeadingFontSizesChange={handleHeadingFontSizesChange}
             onHighlightColorsChange={handleHighlightColorsChange}
             onExport={
-              currentPage.type === "document" ? handleExportPage : undefined
+              activePage.type === "document" ? handleExportPage : undefined
             }
           />
         </div>
@@ -359,12 +370,12 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden bg-[var(--color-background)]">
-        {currentPage.type === "document" && (
+        {activePage.type === "document" && (
           <div className="h-full overflow-y-auto">
-            {currentPage.coverImage ? (
+            {activePage.coverImage ? (
               <div className="w-full px-0 pt-0">
                 <GrovePageCanopy
-                  page={currentPage}
+                  page={activePage}
                   onUpdate={handlePageChromeUpdate}
                   hideControls={true}
                 />
@@ -372,14 +383,14 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
             ) : null}
 
             <div className="max-w-4xl mx-auto px-12 py-8">
-              {!currentPage.coverImage ? (
+              {!activePage.coverImage ? (
                 <GrovePageCanopy
-                  page={currentPage}
+                  page={activePage}
                   onUpdate={handlePageChromeUpdate}
                 />
               ) : (
                 <GrovePageCanopy
-                  page={currentPage}
+                  page={activePage}
                   onUpdate={handlePageChromeUpdate}
                   hideCover={true}
                 />
@@ -442,12 +453,12 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
               {/* Editor */}
               <Editor
                 key={pageId}
-                content={currentPage.content}
-                bodyFontSizePt={currentPage.bodyFontSizePt}
-                headingFontSizes={currentPage.headingFontSizes}
-                highlightColors={currentPage.highlightColors}
-                pageUpdatedAt={currentPage.updatedAt}
-                yjsUpdatedAt={currentPage.yjsUpdatedAt}
+                content={activePage.content}
+                bodyFontSizePt={activePage.bodyFontSizePt}
+                headingFontSizes={activePage.headingFontSizes}
+                highlightColors={activePage.highlightColors}
+                pageUpdatedAt={activePage.updatedAt}
+                yjsUpdatedAt={activePage.yjsUpdatedAt}
                 editable={true}
                 onUpdate={handleEditorUpdate}
                 onEdit={scheduleSave}
@@ -464,17 +475,17 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
           </div>
         )}
 
-        {currentPage.type === "canvas" && (
+        {activePage.type === "canvas" && (
           <div className="h-full">
             <ClearingBoard
               embedded={true}
-              roomSlug={currentPage.id}
-              title={currentPage.title || "Jungle Clearing"}
+              roomSlug={activePage.id}
+              title={activePage.title || "Jungle Clearing"}
             />
           </div>
         )}
 
-        {currentPage.type === "database" && (
+        {activePage.type === "database" && (
           <DatabaseWorkspace pageId={pageId} workspaceId={workspaceId} />
         )}
       </div>

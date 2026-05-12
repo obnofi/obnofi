@@ -9,7 +9,7 @@ interface SettingsLayoutProps {
 export default async function SettingsLayout({
   children,
 }: SettingsLayoutProps) {
-  await requireSessionUser();
+  await requireSessionUser("/settings");
 
   return <SettingsShell>{children}</SettingsShell>;
 }

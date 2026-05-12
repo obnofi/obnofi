@@ -534,6 +534,15 @@ function WorkspaceSidebarInner({ workspaceId }: WorkspaceSidebarProps) {
   const searchParams = useSearchParams();
   const currentPageId = searchParams.get("page") ?? undefined;
   const effectiveCurrentPageId = pendingPageId ?? currentPageId;
+
+  useEffect(() => {
+    setIsSearchOpen(false);
+    setShowNewPageMenu(false);
+    setIsWorkspaceMenuOpen(false);
+    setActiveMenuNodeId(null);
+    setCreateMenuState(null);
+  }, [workspaceId, currentPageId]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       // distance 기반 — 단순 클릭은 즉시 onClick으로 흘리고, 6px 이상 끌었을 때만 drag 시작.
@@ -750,13 +759,21 @@ function WorkspaceSidebarInner({ workspaceId }: WorkspaceSidebarProps) {
   useEffect(() => {
     if (!currentPageId) return;
     setExpandedPages((prev) => {
-      const next = new Set(prev);
+      let next: Set<string> | null = null;
+      const visited = new Set<string>([currentPageId]);
       let page = pages.find((p) => p.id === currentPageId);
       while (page?.parentId) {
-        next.add(page.parentId);
+        if (visited.has(page.parentId)) break; // 순환 참조 방어
+        visited.add(page.parentId);
+        if (!prev.has(page.parentId)) {
+          if (!next) {
+            next = new Set(prev);
+          }
+          next.add(page.parentId);
+        }
         page = pages.find((p) => p.id === page?.parentId);
       }
-      return next;
+      return next ?? prev;
     });
   }, [currentPageId, pages]);
 
@@ -767,7 +784,16 @@ function WorkspaceSidebarInner({ workspaceId }: WorkspaceSidebarProps) {
 
     if (currentPageId === pendingPageId) {
       setPendingPageId(null);
+      return;
     }
+
+    const timeoutId = window.setTimeout(() => {
+      setPendingPageId((currentPendingPageId) =>
+        currentPendingPageId === pendingPageId ? null : currentPendingPageId
+      );
+    }, 2000);
+
+    return () => window.clearTimeout(timeoutId);
   }, [currentPageId, pendingPageId]);
 
   useEffect(() => {
@@ -902,7 +928,7 @@ function WorkspaceSidebarInner({ workspaceId }: WorkspaceSidebarProps) {
   };
 
   const handleSelectPage = (pageId: string) => {
-    if (pageId === currentPageId || pageId === pendingPageId) {
+    if (pageId === currentPageId) {
       return;
     }
 
@@ -922,7 +948,7 @@ function WorkspaceSidebarInner({ workspaceId }: WorkspaceSidebarProps) {
 
   const handleSelectSearchResult = useCallback((pageId: string) => {
     setIsSearchOpen(false);
-    if (pageId === currentPageId || pageId === pendingPageId) {
+    if (pageId === currentPageId) {
       return;
     }
 
@@ -930,7 +956,7 @@ function WorkspaceSidebarInner({ workspaceId }: WorkspaceSidebarProps) {
     startTransition(() => {
       router.push(`/workspace/${workspaceId}?page=${pageId}`);
     });
-  }, [currentPageId, pendingPageId, router, workspaceId]);
+  }, [currentPageId, router, workspaceId]);
 
   const handleSelectWorkspace = (nextWorkspaceId: string) => {
     setIsWorkspaceMenuOpen(false);
@@ -1019,6 +1045,15 @@ function WorkspaceSidebarInner({ workspaceId }: WorkspaceSidebarProps) {
       return;
     }
 
+    // 자기 자신의 하위 페이지로 이동하면 순환 참조가 생기므로 차단
+    if (projection.parentId) {
+      const activeNode = pageTreeMap.get(activeId);
+      const descendantIds = new Set(activeNode ? collectDescendantIds(activeNode) : []);
+      if (descendantIds.has(projection.parentId)) {
+        return;
+      }
+    }
+
     const nextSiblingIds = getReorderedSiblingIds(
       visiblePageTreeItems,
       activeId,
@@ -1046,7 +1081,7 @@ function WorkspaceSidebarInner({ workspaceId }: WorkspaceSidebarProps) {
     if (projection.parentId) {
       setExpandedPages((prev) => new Set(prev).add(projection.parentId as string));
     }
-  }, [dragOffsetX, updatePage, visiblePageTreeItems]);
+  }, [dragOffsetX, pageTreeMap, updatePage, visiblePageTreeItems]);
 
   const handleDragCancel = useCallback(() => {
     setActiveDragPageId(null);
@@ -1214,7 +1249,7 @@ function WorkspaceSidebarInner({ workspaceId }: WorkspaceSidebarProps) {
                 )}
               </div>
               <Link
-                href={`/workspace/${workspaceId}/graph`}
+                href={`/workspace/${workspaceId}/graph${currentPageId ? `?page=${currentPageId}` : ""}`}
                 data-testid="graph-view-link"
                 className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px]"
               >

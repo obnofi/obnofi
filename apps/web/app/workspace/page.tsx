@@ -6,7 +6,7 @@ import { isPrismaDatabaseUnavailable } from "@/lib/prisma-errors";
 import { DatabaseUnavailableState } from "@/components/workspace/DatabaseUnavailableState";
 
 export default async function WorkspaceRootPage() {
-  const sessionUser = await requireSessionUser();
+  const sessionUser = await requireSessionUser("/workspace");
 
   const userId = sessionUser.id;
 
