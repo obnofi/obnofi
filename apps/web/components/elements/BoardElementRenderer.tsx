@@ -1,6 +1,7 @@
 "use client";
 
 import { catmullRomToBezierPath } from "@/lib/pathUtils";
+import { ConnectorHandles, type ConnectorHandlePosition } from "@/components/elements/ConnectorHandles";
 import { EmbedElement } from "@/components/elements/EmbedElement";
 import { ImageElement } from "@/components/elements/ImageElement";
 import { SectionTool } from "@/components/elements/SectionTool";
@@ -68,6 +69,7 @@ export function BoardElementRenderer({
   linkedElements,
   commentCount,
   onPointerDown,
+  onConnectorStart,
   onVote,
   scale,
   containingSectionId,
@@ -78,6 +80,7 @@ export function BoardElementRenderer({
   linkedElements: Record<string, Element>;
   commentCount: number;
   onPointerDown: (event: React.PointerEvent<HTMLDivElement>, elementId: string) => void;
+  onConnectorStart?: (event: React.PointerEvent<HTMLButtonElement>, elementId: string, position: ConnectorHandlePosition) => void;
   onVote: (elementId: string) => void;
   scale: number;
   containingSectionId?: string | null;
@@ -294,6 +297,13 @@ export function BoardElementRenderer({
         <div className="absolute -right-3 -top-3 flex h-8 min-w-8 items-center justify-center rounded-full bg-[var(--color-text-primary)] px-2 text-xs font-semibold text-[var(--color-background)] shadow-sm">
           {commentCount}
         </div>
+      ) : null}
+
+      {element.type !== "section" && element.type !== "path" && onConnectorStart ? (
+        <ConnectorHandles
+          alwaysVisible={false}
+          onPointerDown={(event, position) => onConnectorStart(event, element.id, position)}
+        />
       ) : null}
     </div>
   );

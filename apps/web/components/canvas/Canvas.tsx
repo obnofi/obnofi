@@ -6,6 +6,7 @@ import {
   Trash2,
   Undo2,
 } from "lucide-react";
+import { catmullRomToBezierPath } from "@/lib/pathUtils";
 
 interface CanvasProps {
   content: object | null;
@@ -94,19 +95,6 @@ function getPointFromEvent(
   };
 }
 
-function strokeToPath(points: Point[]) {
-  if (points.length === 0) {
-    return "";
-  }
-
-  if (points.length === 1) {
-    const point = points[0];
-    return `M ${point.x} ${point.y} L ${point.x + 0.01} ${point.y + 0.01}`;
-  }
-
-  const [first, ...rest] = points;
-  return `M ${first.x} ${first.y} ${rest.map((point) => `L ${point.x} ${point.y}`).join(" ")}`;
-}
 
 function normalizeLegacyContent(content: object | null): CanvasDocument {
   if (!content) {
@@ -269,6 +257,9 @@ export function Canvas({ content, onUpdate, compact = false }: CanvasProps) {
     if (tool === "select") {
       return;
     }
+
+    // pointer capture: 경계 밖으로 나가도 이벤트 계속 수신
+    event.currentTarget.setPointerCapture(event.pointerId);
 
     if (tool === "eraser") {
       pushHistory();
@@ -465,7 +456,7 @@ export function Canvas({ content, onUpdate, compact = false }: CanvasProps) {
             layer.kind === "stroke" ? (
               <path
                 key={layer.id}
-                d={strokeToPath(layer.points)}
+                d={catmullRomToBezierPath(layer.points)}
                 fill="none"
                 stroke={layer.color}
                 strokeWidth={layer.size}

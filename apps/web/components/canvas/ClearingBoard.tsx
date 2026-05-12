@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { Waypoints } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { DraftConnectorLayer, type DraftConnectorApi } from "@/components/canvas/DraftConnectorLayer";
+import { type ConnectorHandlePosition } from "@/components/elements/ConnectorHandles";
 import { PenTool } from "@/components/canvas/PenTool";
 import { BoardElementRenderer } from "@/components/elements/BoardElementRenderer";
 import { CommentThread } from "@/components/elements/CommentThread";
@@ -50,6 +52,10 @@ type DrawState = {
   elementId: string;
   startX: number;
   startY: number;
+  isDraftConnector?: boolean;
+  connectorHasArrow?: boolean;
+  connectorLineStyle?: string;
+  fromElementId?: string;
 } | null;
 
 type LassoState = {
@@ -444,6 +450,9 @@ export function ClearingBoard({
   const currentUserRef = useRef<User | null>(null);
   const clearingOriginIdRef = useRef(crypto.randomUUID());
   const lastCursorSyncRef = useRef(0);
+  const draftConnectorApiRef = useRef<DraftConnectorApi | null>(null);
+  const viewportRef = useRef(useCanvasStore.getState().viewport);
+  const lastScenePointRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const skipRemoteUpsertsRef = useRef<Map<string, string>>(new Map());
   const skipRemoteDeletesRef = useRef<Set<string>>(new Set());
   const [room, setRoom] = useState<Room | null>(null);
@@ -551,6 +560,10 @@ export function ClearingBoard({
   useEffect(() => {
     latestCommentsRef.current = comments;
   }, [comments]);
+
+  useEffect(() => {
+    viewportRef.current = viewport;
+  }, [viewport]);
 
   const applyRemoteElementUpsert = useCallback(
     (element: Element) => {
@@ -674,6 +687,10 @@ export function ClearingBoard({
           .select("*")
           .eq("slug", roomSlug)
           .maybeSingle();
+
+        if (roomResult.error) {
+          throw roomResult.error;
+        }
 
         if (roomResult.data) {
           activeRoom = {
@@ -896,11 +913,15 @@ export function ClearingBoard({
         logClearingPersistenceError("bootstrap failed, switching to local mode", error);
         currentRoomRef.current = fallbackRoom;
         setRoom(fallbackRoom);
+        suppressPersistenceRef.current = true;
         setElements(fallbackElements);
         setComments(fallbackComments);
         setPresenceUsers([currentUser]);
         setIsSupabaseLive(false);
         setSaveStatus("saved");
+        queueMicrotask(() => {
+          suppressPersistenceRef.current = false;
+        });
       } finally {
         if (isMounted) {
           setIsBootstrapping(false);
@@ -1008,8 +1029,18 @@ export function ClearingBoard({
       pendingDeletesRef.current.clear();
       setSaveStatus("saved");
     } catch (error) {
-      logClearingPersistenceError("flushCanvasPersistence failed", error);
-      setSaveStatus("error");
+      logClearingPersistenceError("flushCanvasPersistence failed, falling back to localStorage", error);
+      if (room) {
+        saveLocalClearingSnapshot(roomSlug, {
+          room,
+          elements,
+          comments: latestCommentsRef.current,
+        });
+      }
+      pendingUpsertsRef.current.clear();
+      pendingDeletesRef.current.clear();
+      setIsSupabaseLive(false);
+      setSaveStatus("saved");
     }
   }, [elements, isBootstrapping, isSupabaseLive, room, roomSlug, persistElement, removePersistedElement]);
 
@@ -1414,6 +1445,45 @@ export function ClearingBoard({
     };
   };
 
+  const handleConnectorHandleStart = (
+    event: React.PointerEvent<HTMLButtonElement>,
+    elementId: string,
+    position: ConnectorHandlePosition,
+  ) => {
+    const element = elementLookup[elementId];
+    if (!element) return;
+
+    let handleX: number;
+    let handleY: number;
+    switch (position) {
+      case "top":    handleX = element.x + element.width / 2; handleY = element.y; break;
+      case "right":  handleX = element.x + element.width;     handleY = element.y + element.height / 2; break;
+      case "bottom": handleX = element.x + element.width / 2; handleY = element.y + element.height; break;
+      default:       handleX = element.x;                     handleY = element.y + element.height / 2;
+    }
+
+    const hasArrow = lineStyle === "arrow";
+    const effectiveLineStyle = (lineStyle === "arrow" ? "solid" : lineStyle) as "solid" | "dashed" | "dotted";
+
+    drawStateRef.current = {
+      elementId: crypto.randomUUID(),
+      startX: handleX,
+      startY: handleY,
+      isDraftConnector: true,
+      connectorHasArrow: hasArrow,
+      connectorLineStyle: effectiveLineStyle,
+      fromElementId: elementId,
+    };
+    lastScenePointRef.current = { x: handleX, y: handleY };
+
+    boardRef.current?.setPointerCapture(event.pointerId);
+
+    const vp = viewportRef.current;
+    const bx = vp.x + handleX * vp.zoom;
+    const by = vp.y + handleY * vp.zoom;
+    draftConnectorApiRef.current?.update(bx, by, bx, by, "#2E7D45", 2 * vp.zoom, hasArrow, effectiveLineStyle);
+  };
+
   const handleBoardPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!boardRef.current) {
       return;
@@ -1445,44 +1515,29 @@ export function ClearingBoard({
     const activeUser = currentUserRef.current;
 
     if (tool === "connector" && activeRoom && activeUser) {
-      pushHistory();
       const hasArrow = lineStyle === "arrow";
-      const nextElement: Element = {
-        id: crypto.randomUUID(),
-        roomId: activeRoom.id,
-        type: "connector",
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-        rotation: 0,
-        zIndex: elements.length + 1,
-        createdBy: activeUser.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        style: {
-          color: "#2E7D45",
-          strokeWidth: 2,
-          opacity: 1,
-        },
-        content: {
-          kind: "connector",
-          start: scenePoint,
-          end: scenePoint,
-          arrowStart: false,
-          arrowEnd: hasArrow,
-          lineStyle: lineStyle === "arrow" ? "solid" : lineStyle,
-        },
-      };
+      const effectiveLineStyle = lineStyle === "arrow" ? "solid" : lineStyle;
 
-      addElement(nextElement);
-      selectSingle(nextElement.id);
-      setSelectedElement(nextElement.id);
       drawStateRef.current = {
-        elementId: nextElement.id,
+        elementId: crypto.randomUUID(),
         startX: scenePoint.x,
         startY: scenePoint.y,
+        isDraftConnector: true,
+        connectorHasArrow: hasArrow,
+        connectorLineStyle: effectiveLineStyle,
       };
+      lastScenePointRef.current = scenePoint;
+
+      const vp = viewportRef.current;
+      const bx = vp.x + scenePoint.x * vp.zoom;
+      const by = vp.y + scenePoint.y * vp.zoom;
+      draftConnectorApiRef.current?.update(
+        bx, by, bx, by,
+        "#2E7D45",
+        2 * vp.zoom,
+        hasArrow,
+        effectiveLineStyle as "solid" | "dashed" | "dotted"
+      );
       return;
     }
 
@@ -1712,39 +1767,57 @@ export function ClearingBoard({
       }
     }
 
+    lastScenePointRef.current = scenePoint;
+
     if (drawStateRef.current) {
-      const draftElement = elementLookup[drawStateRef.current.elementId];
-      if (draftElement?.type === "connector") {
-        const start = {
-          x: drawStateRef.current.startX,
-          y: drawStateRef.current.startY,
-        };
+      if (drawStateRef.current.isDraftConnector) {
+        // React 상태 없이 SVG를 직접 DOM 업데이트 — 전체 보드 리렌더링 없음
+        const vp = viewportRef.current;
+        const x1 = vp.x + drawStateRef.current.startX * vp.zoom;
+        const y1 = vp.y + drawStateRef.current.startY * vp.zoom;
+        const x2 = vp.x + scenePoint.x * vp.zoom;
+        const y2 = vp.y + scenePoint.y * vp.zoom;
+        draftConnectorApiRef.current?.update(
+          x1, y1, x2, y2,
+          "#2E7D45",
+          2 * vp.zoom,
+          drawStateRef.current.connectorHasArrow ?? false,
+          (drawStateRef.current.connectorLineStyle ?? "solid") as "solid" | "dashed" | "dotted"
+        );
+      } else {
+        const draftElement = elementLookup[drawStateRef.current.elementId];
+        if (draftElement?.type === "connector") {
+          const start = {
+            x: drawStateRef.current.startX,
+            y: drawStateRef.current.startY,
+          };
 
-        updateElement(draftElement.id, {
-          x: 0,
-          y: 0,
-          width: 0,
-          height: 0,
-          content: {
-            ...draftElement.content,
-            start,
-            end: scenePoint,
-          },
-          updatedAt: new Date().toISOString(),
-        });
-      } else if (draftElement?.type === "shape" || draftElement?.type === "section") {
-        const nextX = Math.min(drawStateRef.current.startX, scenePoint.x);
-        const nextY = Math.min(drawStateRef.current.startY, scenePoint.y);
-        const nextWidth = Math.max(12, Math.abs(scenePoint.x - drawStateRef.current.startX));
-        const nextHeight = Math.max(12, Math.abs(scenePoint.y - drawStateRef.current.startY));
+          updateElement(draftElement.id, {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            content: {
+              ...draftElement.content,
+              start,
+              end: scenePoint,
+            },
+            updatedAt: new Date().toISOString(),
+          });
+        } else if (draftElement?.type === "shape" || draftElement?.type === "section") {
+          const nextX = Math.min(drawStateRef.current.startX, scenePoint.x);
+          const nextY = Math.min(drawStateRef.current.startY, scenePoint.y);
+          const nextWidth = Math.max(12, Math.abs(scenePoint.x - drawStateRef.current.startX));
+          const nextHeight = Math.max(12, Math.abs(scenePoint.y - drawStateRef.current.startY));
 
-        updateElement(draftElement.id, {
-          x: nextX,
-          y: nextY,
-          width: nextWidth,
-          height: nextHeight,
-          updatedAt: new Date().toISOString(),
-        });
+          updateElement(draftElement.id, {
+            x: nextX,
+            y: nextY,
+            width: nextWidth,
+            height: nextHeight,
+            updatedAt: new Date().toISOString(),
+          });
+        }
       }
     }
 
@@ -1801,13 +1874,85 @@ export function ClearingBoard({
     }
 
     if (drawStateRef.current) {
-      const drawnElement = elementLookup[drawStateRef.current.elementId];
-      if (drawnElement) {
-        await persistElement(drawnElement);
+      if (drawStateRef.current.isDraftConnector) {
+        const ds = drawStateRef.current;
+        const endPoint = lastScenePointRef.current;
+        draftConnectorApiRef.current?.hide();
+
+        const dist = Math.hypot(endPoint.x - ds.startX, endPoint.y - ds.startY);
+        if (dist > 5 && currentRoomRef.current && currentUserRef.current) {
+          const activeRoom = currentRoomRef.current;
+          const activeUser = currentUserRef.current;
+
+          // Snap endpoint to nearest element within 40 scene pixels
+          let toElementId: string | undefined;
+          let snappedEnd = endPoint;
+          let bestSnapDist = 40;
+          for (const el of elements) {
+            if (el.type === "connector" || el.type === "path" || el.id === ds.fromElementId) continue;
+            const padding = 20;
+            if (
+              endPoint.x >= el.x - padding &&
+              endPoint.x <= el.x + el.width + padding &&
+              endPoint.y >= el.y - padding &&
+              endPoint.y <= el.y + el.height + padding
+            ) {
+              const centerDist = Math.hypot(endPoint.x - (el.x + el.width / 2), endPoint.y - (el.y + el.height / 2));
+              if (centerDist < bestSnapDist) {
+                bestSnapDist = centerDist;
+                toElementId = el.id;
+                snappedEnd = { x: el.x + el.width / 2, y: el.y + el.height / 2 };
+              }
+            }
+          }
+
+          pushHistory();
+          const nextElement: Element = {
+            id: ds.elementId,
+            roomId: activeRoom.id,
+            type: "connector",
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            rotation: 0,
+            zIndex: elements.length + 1,
+            createdBy: activeUser.id,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            style: {
+              color: "#2E7D45",
+              strokeWidth: 2,
+              opacity: 1,
+            },
+            content: {
+              kind: "connector",
+              start: { x: ds.startX, y: ds.startY },
+              end: snappedEnd,
+              arrowStart: false,
+              arrowEnd: ds.connectorHasArrow ?? false,
+              lineStyle: (ds.connectorLineStyle ?? "solid") as "solid" | "dashed" | "dotted",
+              fromElementId: ds.fromElementId,
+              toElementId,
+            },
+          };
+          addElement(nextElement);
+          selectSingle(nextElement.id);
+          setSelectedElement(nextElement.id);
+          await persistElement(nextElement);
+        }
+
+        drawStateRef.current = null;
+        setTool("connector");
+      } else {
+        const drawnElement = elementLookup[drawStateRef.current.elementId];
+        if (drawnElement) {
+          await persistElement(drawnElement);
+        }
+        const wasConnectorDraw = drawnElement?.type === "connector";
+        drawStateRef.current = null;
+        setTool(wasConnectorDraw ? "connector" : "select");
       }
-      const wasConnectorDraw = drawnElement?.type === "connector";
-      drawStateRef.current = null;
-      setTool(wasConnectorDraw ? "connector" : "select");
     }
 
     if (lassoStateRef.current && selectionBounds) {
@@ -2120,6 +2265,9 @@ export function ClearingBoard({
               </div>
             )}
 
+            {/* Draft connector overlay - React state 없이 직접 SVG DOM 업데이트 */}
+            <DraftConnectorLayer ref={draftConnectorApiRef} />
+
             <div
               className="pointer-events-none relative"
               style={{
@@ -2150,6 +2298,7 @@ export function ClearingBoard({
                     isSelected={selectedIds.includes(element.id)}
                     linkedElements={elementLookup}
                     onPointerDown={handleElementPointerDown}
+                    onConnectorStart={handleConnectorHandleStart}
                     onVote={handleVote}
                     scale={viewport.scale}
                   />
