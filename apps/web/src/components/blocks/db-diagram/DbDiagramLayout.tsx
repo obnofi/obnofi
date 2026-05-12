@@ -1,13 +1,15 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import type { Connection } from '@xyflow/react'
 import type { DbSchema } from '@obnofi/types/db-diagram'
 import { useDbDiagramSync } from '@/src/hooks/useDbDiagramSync'
+import { extractPositions } from './utils/astToFlow'
 import SqlEditorPanel from './SqlEditorPanel'
 import ErdCanvas, { type ErdCanvasHandle } from './ErdCanvas'
 
 interface DbDiagramLayoutProps {
   initialSql?: string
+  initialLayout?: Record<string, { x: number; y: number }>
   onSqlChange?: (sql: string) => void
   onLayoutChange?: (layout: Record<string, { x: number; y: number }>) => void
   isFullscreen?: boolean
@@ -35,7 +37,9 @@ CREATE TABLE IF NOT EXISTS roles (
 
 export default function DbDiagramLayout({
   initialSql = DEFAULT_SQL,
+  initialLayout,
   onSqlChange,
+  onLayoutChange,
   isFullscreen = false,
   onToggleFullscreen,
   pageName,
@@ -54,12 +58,24 @@ export default function DbDiagramLayout({
     updateSchemaFromErd,
     parseError,
     tableCount
-  } = useDbDiagramSync(initialSql)
+  } = useDbDiagramSync(initialSql, initialLayout)
+
+  useEffect(() => {
+    onSqlChange?.(sql)
+  }, [onSqlChange, sql])
+
+  useEffect(() => {
+    if (!onLayoutChange) {
+      return
+    }
+
+    const positions = Object.fromEntries(extractPositions(nodes))
+    onLayoutChange(positions)
+  }, [nodes, onLayoutChange])
 
   const handleSqlChange = useCallback((newSql: string) => {
     setSql(newSql)
-    onSqlChange?.(newSql)
-  }, [setSql, onSqlChange])
+  }, [setSql])
 
   const handleResize = useCallback((delta: number) => {
     setPanelWidth(prev => {

@@ -19,7 +19,18 @@ export interface UseDbDiagramSyncReturn {
   tableCount: number
 }
 
-export function useDbDiagramSync(initialSql: string = ''): UseDbDiagramSyncReturn {
+function buildPositionMap(
+  layout?: Record<string, { x: number; y: number }>
+) {
+  return new Map<string, { x: number; y: number }>(
+    Object.entries(layout ?? {})
+  )
+}
+
+export function useDbDiagramSync(
+  initialSql: string = '',
+  initialLayout?: Record<string, { x: number; y: number }>
+): UseDbDiagramSyncReturn {
   const [sql, setSqlInternal] = useState(initialSql)
   const [schema, setSchema] = useState<DbSchema>({ tables: [] })
   const [nodes, setNodes] = useState<Node[]>([])
@@ -32,6 +43,7 @@ export function useDbDiagramSync(initialSql: string = ''): UseDbDiagramSyncRetur
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const nodesRef = useRef<Node[]>([])
   const edgesRef = useRef<Edge[]>([])
+  const initialLayoutRef = useRef(buildPositionMap(initialLayout))
 
   // Keep refs in sync
   useEffect(() => {
@@ -57,7 +69,9 @@ export function useDbDiagramSync(initialSql: string = ''): UseDbDiagramSyncRetur
     const preservedPositions = new Map<string, { x: number; y: number }>()
     
     for (const table of newSchema.tables) {
-      const pos = currentPositions.get(table.name)
+      const pos =
+        currentPositions.get(table.name) ??
+        initialLayoutRef.current.get(table.name)
       if (pos) {
         preservedPositions.set(table.name, pos)
       }
@@ -201,6 +215,8 @@ export function useDbDiagramSync(initialSql: string = ''): UseDbDiagramSyncRetur
   useEffect(() => {
     if (initialSql) {
       syncSqlToErd(initialSql)
+    } else if (initialLayoutRef.current.size > 0) {
+      positionsRef.current = new Map(initialLayoutRef.current)
     }
     
     return () => {
@@ -208,7 +224,7 @@ export function useDbDiagramSync(initialSql: string = ''): UseDbDiagramSyncRetur
         clearTimeout(debounceTimerRef.current)
       }
     }
-  }, [])
+  }, [initialSql, syncSqlToErd])
 
   return {
     sql,

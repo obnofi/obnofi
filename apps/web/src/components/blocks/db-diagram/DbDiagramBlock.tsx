@@ -19,7 +19,7 @@ interface DbDiagramBlockProps {
 }
 
 export default function DbDiagramBlock({ node, updateAttributes }: DbDiagramBlockProps) {
-  const { sql = '', pageId = null } = node.attrs
+  const { sql = '', layout = {}, pageId = null } = node.attrs
   const { pages } = usePageStore()
   const parentPage = pageId ? pages.find(p => p.id === pageId) : null
   const pageName = parentPage?.title || null
@@ -48,6 +48,7 @@ export default function DbDiagramBlock({ node, updateAttributes }: DbDiagramBloc
         <ReactFlowProvider>
           <DbDiagramLayout
             initialSql={sql}
+            initialLayout={layout}
             onSqlChange={handleSqlChange}
             onLayoutChange={handleLayoutChange}
             isFullscreen={isFullscreen}
