@@ -463,6 +463,7 @@ curl -s "http://localhost:3000/api/databases/search" \
 | 이름 | 타입 | 필수 | 설명 |
 |---|---|---|---|
 | `workspaceId` | `string` | 아니오 | 조회할 워크스페이스 ID. 없으면 로그인 유저의 기본 워크스페이스를 사용 |
+| `includeContent` | `"true"` | 아니오 | `true`일 때 그래프/백링크용으로 TipTap `content`까지 포함 |
 
 동작:
 
@@ -472,6 +473,8 @@ curl -s "http://localhost:3000/api/databases/search" \
   - 우선순위: 가장 먼저 생성된 OWNER 워크스페이스
   - fallback: 가장 먼저 가입한 멤버 워크스페이스
 - `parentDatabaseId: null` 조건으로 조회하므로 데이터베이스 row 페이지는 제외됩니다.
+- 기본 응답은 목록 최적화를 위해 `content`를 제외합니다.
+- `includeContent=true`일 때만 문서 본문이 포함됩니다.
 - `updatedAt desc` 정렬입니다.
 
 성공 응답:
