@@ -1,11 +1,45 @@
 import { test, expect } from "@playwright/test";
 
-const workspacePagePath = "/workspace/ws-1?page=page-1";
 const editorText = `playwright-note-${Date.now()}`;
 const nextTitle = `Playwright Title ${Date.now()}`;
 
+async function signInAsDeveloper(page: import("@playwright/test").Page) {
+  const request = page.context().request;
+  const csrfResponse = await request.get("/api/auth/csrf");
+  const { csrfToken } = (await csrfResponse.json()) as { csrfToken: string };
+
+  await request.post("/api/auth/callback/credentials", {
+    form: {
+      csrfToken,
+      callbackUrl: "/workspace",
+      json: "true",
+    },
+  });
+}
+
 async function gotoWorkspaceDocument(page: import("@playwright/test").Page) {
-  await page.goto(workspacePagePath);
+  await signInAsDeveloper(page);
+  await page.goto("/workspace");
+  await expect(page).toHaveURL(/\/workspace\/[^/?]+/);
+
+  const workspaceId =
+    page.url().match(/\/workspace\/([^/?]+)/)?.[1];
+
+  expect(workspaceId).toBeTruthy();
+
+  const createPageResponse = await page.context().request.post("/api/pages", {
+    data: {
+      title: `Playwright Page ${Date.now()}`,
+      type: "document",
+      workspaceId,
+      content: { type: "doc", content: [{ type: "paragraph" }] },
+    },
+  });
+
+  expect(createPageResponse.ok()).toBeTruthy();
+
+  const createdPage = (await createPageResponse.json()) as { id: string };
+  await page.goto(`/workspace/${workspaceId}?page=${createdPage.id}`);
   await expect(page.getByTestId("workspace-editor")).toBeVisible();
 }
 
@@ -23,10 +57,25 @@ async function focusEditorTail(page: import("@playwright/test").Page) {
 test("Tiptap 블록 에디터 기본 동작", async ({ page }) => {
   await gotoWorkspaceDocument(page);
 
-  await focusEditorTail(page);
+  const editor = await focusEditorTail(page);
   await page.keyboard.type(editorText);
 
   await expect(editor).toContainText(editorText);
+});
+
+test("[ ] 입력시 체크박스 할일 블록이 삽입된다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  const editor = await focusEditorTail(page);
+  await page.keyboard.type("[ ] 할 일");
+  await page.keyboard.press("Space");
+
+  const taskItem = editor.locator('li[data-type="taskItem"]').last();
+  const checkbox = taskItem.locator('input[type="checkbox"]').first();
+
+  await expect(taskItem).toBeVisible();
+  await expect(taskItem).toContainText("할 일");
+  await expect(checkbox).not.toBeChecked();
 });
 
 test("워크스페이스 진입 후 에디터가 표시된다", async ({ page }) => {
