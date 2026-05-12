@@ -26,6 +26,8 @@ export function useAutoSave({
     useEditorSaveStore();
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isSavingRef = useRef(false);
+  const queuedSaveRef = useRef(false);
   const isDirtyRef = useRef(isDirty);
   const getContentRef = useRef(getContent);
   const pageIdRef = useRef(pageId);
@@ -89,6 +91,10 @@ export function useAutoSave({
       if (!isDirtyRef.current) {
         return;
       }
+      if (isSavingRef.current) {
+        queuedSaveRef.current = true;
+        return;
+      }
       const content = getContentRef.current();
       const { background = false } = options ?? {};
       void persistContent(targetPageId, content, {
@@ -113,9 +119,26 @@ export function useAutoSave({
 
   const save = useCallback(async () => {
     if (!isDirtyRef.current) return;
+    if (isSavingRef.current) {
+      queuedSaveRef.current = true;
+      return;
+    }
+
     const content = getContentRef.current();
     debounceTimerRef.current = null;
-    await persistContent(pageIdRef.current, content);
+    isSavingRef.current = true;
+
+    try {
+      await persistContent(pageIdRef.current, content);
+    } finally {
+      isSavingRef.current = false;
+      if (queuedSaveRef.current && isDirtyRef.current) {
+        queuedSaveRef.current = false;
+        void save();
+      } else {
+        queuedSaveRef.current = false;
+      }
+    }
   }, [persistContent]);
 
   // 변경 감지 시 호출 — debounce 1.5초

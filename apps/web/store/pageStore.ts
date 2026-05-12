@@ -28,6 +28,25 @@ function generateOptimisticPageId() {
   return `optimistic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function mergePagePreservingDocumentContent(
+  previousPage: Page,
+  nextPage: Page,
+  input: UpdatePageInput
+): Page {
+  if ("content" in input) {
+    return nextPage;
+  }
+
+  if (previousPage.type !== "document") {
+    return nextPage;
+  }
+
+  return {
+    ...nextPage,
+    content: previousPage.content,
+  };
+}
+
 function buildOptimisticPage(
   input: CreatePageInput,
   existingPages: Page[]
@@ -153,11 +172,20 @@ export const usePageStore = create<PageState>((set, get) => ({
 
   fetchPage: async (pageId: string) => {
     const cachedPage = get().pages.find((page) => page.id === pageId) ?? null;
+    const canUseCachedPage =
+      cachedPage !== null &&
+      (cachedPage.type !== "document" || cachedPage.content !== null);
+    let controller: AbortController | null = null;
+    let fetchSequence = 0;
 
     set({
       isLoading: true,
       error: null,
-      currentPage: cachedPage ?? get().currentPage,
+      currentPage: canUseCachedPage
+        ? cachedPage
+        : get().currentPage?.id === pageId
+          ? get().currentPage
+          : null,
     });
 
     try {
@@ -174,9 +202,9 @@ export const usePageStore = create<PageState>((set, get) => ({
       }
 
       activePageFetchController?.abort();
-      const controller = new AbortController();
+      controller = new AbortController();
       activePageFetchController = controller;
-      const fetchSequence = ++activePageFetchSequence;
+      fetchSequence = ++activePageFetchSequence;
 
       const response = await fetch(`/api/pages/${pageId}`, {
         signal: controller.signal,
@@ -188,20 +216,29 @@ export const usePageStore = create<PageState>((set, get) => ({
         return;
       }
 
-      if (activePageFetchController === controller) {
+      if (controller && activePageFetchController === controller) {
         activePageFetchController = null;
       }
 
       set({ currentPage: page, isLoading: false });
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
+        if (fetchSequence === activePageFetchSequence) {
+          set({ isLoading: false });
+        }
         return;
       }
 
       set({
         error: error instanceof Error ? error.message : "Unknown error",
         isLoading: false,
+        currentPage:
+          get().currentPage?.id === pageId ? get().currentPage : null,
       });
+    } finally {
+      if (controller && activePageFetchController === controller) {
+        activePageFetchController = null;
+      }
     }
   },
 
@@ -286,9 +323,19 @@ export const usePageStore = create<PageState>((set, get) => ({
       if (!response.ok) throw new Error("Failed to update page");
       const updatedPage = await response.json();
       set((state) => ({
-        pages: state.pages.map((p) => (p.id === pageId ? updatedPage : p)),
+        pages: state.pages.map((p) =>
+          p.id === pageId
+            ? mergePagePreservingDocumentContent(p, updatedPage, input)
+            : p
+        ),
         currentPage:
-          state.currentPage?.id === pageId ? updatedPage : state.currentPage,
+          state.currentPage?.id === pageId
+            ? mergePagePreservingDocumentContent(
+                state.currentPage,
+                updatedPage,
+                input
+              )
+            : state.currentPage,
       }));
     } catch (error) {
       set({

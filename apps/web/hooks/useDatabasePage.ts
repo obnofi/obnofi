@@ -106,14 +106,20 @@ export function useDatabasePage(pageId: string | null | undefined) {
   );
 
   const createRow = useCallback(async () => {
-    if (!databasePage) {
+    if (!databasePage || !pageId) {
       return undefined;
     }
 
-    const plantedSeed = await plantGroveSeed(databasePage.database.id, "Untitled");
-    await loadDatabasePage();
-    return plantedSeed.id;
-  }, [databasePage, loadDatabasePage]);
+    const newRow = await plantGroveSeed(databasePage.database.id, "Untitled");
+    setGrovePage(pageId, {
+      ...databasePage,
+      database: {
+        ...databasePage.database,
+        rows: [...databasePage.database.rows, newRow],
+      },
+    });
+    return newRow.id;
+  }, [databasePage, pageId, setGrovePage]);
 
   const createProperty = useCallback(
     async (input: CreatePropertyInput) => {
