@@ -7,6 +7,7 @@ import {
 } from "@/lib/workspace-resolution";
 import {
   PAGE_INCLUDE,
+  PAGE_GRAPH_SELECT,
   PAGE_SELECT,
   toPage,
   toPrismaPageType,
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const requestedWorkspaceId = searchParams.get("workspaceId");
+    const includeContent = searchParams.get("includeContent") === "true";
 
     const workspace = await resolveWorkspaceForUser(userId, requestedWorkspaceId);
     if (!workspace) {
@@ -50,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     const prismaPages = await prisma.page.findMany({
       where: { workspaceId: workspace.id, parentDatabaseId: null },
-      select: PAGE_SELECT, // content 제외 — 사이드바에 불필요
+      select: includeContent ? PAGE_GRAPH_SELECT : PAGE_SELECT,
       orderBy: [{ order: "asc" }, { updatedAt: "desc" }],
     });
 

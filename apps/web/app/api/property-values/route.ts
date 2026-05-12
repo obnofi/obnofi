@@ -15,25 +15,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const page = await prisma.page.findUnique({
-      where: { id: pageId },
-      select: { id: true },
-    });
-
-    if (!page) {
-      return NextResponse.json({ error: "Page not found" }, { status: 404 });
-    }
-
-    const property = await prisma.property.findUnique({
-      where: { id: columnId },
-      select: { id: true },
-    });
-
-    if (!property) {
-      return NextResponse.json({ error: "Column not found" }, { status: 404 });
-    }
-
-    // Use upsert to handle both create and update
     const propertyValue = await prisma.propertyValue.upsert({
       where: { pageId_propertyId: { pageId, propertyId: columnId } },
       update: { value: value as object },
@@ -41,7 +22,11 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(toPropertyValue(propertyValue), { status: 201 });
-  } catch {
+  } catch (e) {
+    const code = (e as { code?: string })?.code;
+    if (code === "P2003") {
+      return NextResponse.json({ error: "Page or property not found" }, { status: 404 });
+    }
     return NextResponse.json(
       { error: "Failed to create property value" },
       { status: 500 }

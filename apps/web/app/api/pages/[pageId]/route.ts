@@ -6,7 +6,9 @@ import type {
   PageHighlightColor,
 } from "@obnofi/types";
 import {
+  PAGE_DETAIL_SELECT,
   PAGE_INCLUDE,
+  PAGE_SELECT,
   PAGE_SELECT_WITH_PROPERTY_VALUES,
   toPage,
   toDatabase,
@@ -58,7 +60,7 @@ export async function GET(
 
     const page = await prisma.page.findUnique({
       where: { id: pageId },
-      include: PAGE_INCLUDE,
+      select: PAGE_DETAIL_SELECT,
     });
 
     if (!page) {
@@ -179,11 +181,12 @@ export async function PATCH(
     if ("parentId" in body) updateData.parentId = body.parentId;
     if ("order" in body) updateData.order = body.order;
     if ("isPublic" in body) updateData.isPublic = body.isPublic;
+    const shouldReturnDetailedPage = "content" in body;
 
     const updatedPage = await prisma.page.update({
       where: { id: pageId },
       data: updateData,
-      include: PAGE_INCLUDE,
+      select: shouldReturnDetailedPage ? PAGE_DETAIL_SELECT : PAGE_SELECT,
     });
 
     return NextResponse.json(toPage(updatedPage));
@@ -207,20 +210,15 @@ export async function DELETE(
   try {
     const { pageId } = await params;
 
-    const existing = await prisma.page.findUnique({
-      where: { id: pageId },
-      select: { id: true },
-    });
-
-    if (!existing) {
-      return NextResponse.json({ error: "Page not found" }, { status: 404 });
-    }
-
     // Cascades handle children / database / propertyValues
     await prisma.page.delete({ where: { id: pageId } });
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (e) {
+    const code = (e as { code?: string })?.code;
+    if (code === "P2025") {
+      return NextResponse.json({ error: "Page not found" }, { status: 404 });
+    }
     return NextResponse.json(
       { error: "Failed to delete page" },
       { status: 500 }

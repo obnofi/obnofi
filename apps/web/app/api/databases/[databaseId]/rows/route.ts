@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@obnofi/db";
 import { prisma } from "@obnofi/db";
 import { createDefaultPropertyValue } from "@/lib/database-utils";
-import { toPage, toProperty, toPropertyValue } from "@/lib/prisma-transforms";
+import {
+  PAGE_SELECT_WITH_PROPERTY_VALUES,
+  toPage,
+  toProperty,
+  toPropertyValue,
+} from "@/lib/prisma-transforms";
+
+const ROW_CREATE_SELECT = PAGE_SELECT_WITH_PROPERTY_VALUES satisfies Prisma.PageSelect;
 
 export async function POST(
   request: NextRequest,
@@ -24,6 +32,12 @@ export async function POST(
       return NextResponse.json({ error: "Database not found" }, { status: 404 });
     }
 
+    const properties = database.properties.map(toProperty);
+    const pvData = properties.map((property) => ({
+      propertyId: property.id,
+      value: createDefaultPropertyValue(property) as object,
+    }));
+
     const row = await prisma.page.create({
       data: {
         title,
@@ -33,33 +47,15 @@ export async function POST(
         parentDatabaseId: databaseId,
         content: { type: "doc", content: [{ type: "paragraph" }] },
         isPublic: false,
+        ...(pvData.length > 0
+          ? { propertyValues: { createMany: { data: pvData, skipDuplicates: true } } }
+          : {}),
       },
+      select: ROW_CREATE_SELECT,
     });
 
-    // Create default property values for all properties in the database
-    const properties = database.properties.map(toProperty);
-
-    if (properties.length > 0) {
-      await prisma.propertyValue.createMany({
-        data: properties.map((property) => ({
-          pageId: row.id,
-          propertyId: property.id,
-          value: createDefaultPropertyValue(property) as object,
-        })),
-        skipDuplicates: true,
-      });
-    }
-
-    // Fetch the row with its property values to return
-    const rowWithValues = await prisma.page.findUnique({
-      where: { id: row.id },
-      include: { propertyValues: true, database: { select: { id: true } } },
-    });
-
-    const mappedPage = toPage(rowWithValues!);
-    const mappedPropertyValues = (rowWithValues?.propertyValues ?? []).map(
-      toPropertyValue
-    );
+    const mappedPage = toPage(row);
+    const mappedPropertyValues = row.propertyValues.map(toPropertyValue);
 
     return NextResponse.json(
       { ...mappedPage, propertyValues: mappedPropertyValues },

@@ -8,19 +8,19 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const SEARCHABLE_PAGE_SELECT = {
+const TITLE_ONLY_SELECT = {
   id: true,
   title: true,
   type: true,
   icon: true,
   parentId: true,
   updatedAt: true,
+} as const;
+
+const CONTENT_SELECT = {
+  ...TITLE_ONLY_SELECT,
   content: true,
-  yjsDocument: {
-    select: {
-      state: true,
-    },
-  },
+  yjsDocument: { select: { state: true } },
 } as const;
 
 const VALID_SEARCH_MODES: PageSearchMode[] = ["title", "content", "title_content"];
@@ -49,17 +49,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([]);
     }
 
+    // title 모드: DB 레벨에서 필터링, content/yjsDocument 로드 불필요
+    if (mode === "title") {
+      const pages = await prisma.page.findMany({
+        where: {
+          workspaceId: workspace.id,
+          parentDatabaseId: null,
+          title: { contains: query, mode: "insensitive" },
+        },
+        select: TITLE_ONLY_SELECT,
+        orderBy: [{ updatedAt: "desc" }],
+        take: 30,
+      });
+
+      return NextResponse.json(
+        pages.map((page) => ({
+          id: page.id,
+          title: page.title,
+          type: page.type.toLowerCase(),
+          icon: page.icon ?? null,
+          parentId: page.parentId,
+          updatedAt: page.updatedAt.toISOString(),
+          snippet: "",
+          matchedIn: "title",
+        }))
+      );
+    }
+
+    // content / title_content 모드: 본문 포함 로드 후 앱 레벨 필터링
     const candidatePages = await prisma.page.findMany({
-      where: {
-        workspaceId: workspace.id,
-        parentDatabaseId: null,
-        ...(mode === "title"
-          ? { title: { contains: query, mode: "insensitive" } }
-          : {}),
-      },
-      select: SEARCHABLE_PAGE_SELECT,
+      where: { workspaceId: workspace.id, parentDatabaseId: null },
+      select: CONTENT_SELECT,
       orderBy: [{ updatedAt: "desc" }],
-      take: mode === "title" ? 50 : 250,
+      take: 250,
     });
 
     const results = candidatePages
@@ -69,23 +91,12 @@ export async function GET(request: NextRequest) {
           yjsState: page.yjsDocument?.state,
         });
 
-        if (
-          !matchesSearch({
-            query,
-            title: page.title,
-            content: contentText,
-            mode,
-          })
-        ) {
+        if (!matchesSearch({ query, title: page.title, content: contentText, mode })) {
           return null;
         }
 
         const titleMatches = page.title.toLowerCase().includes(query.toLowerCase());
         const contentMatches = contentText.toLowerCase().includes(query.toLowerCase());
-        const snippet =
-          mode === "title" && !contentMatches
-            ? ""
-            : getSearchSnippet(contentText, query);
 
         return {
           id: page.id,
@@ -94,29 +105,23 @@ export async function GET(request: NextRequest) {
           icon: page.icon ?? null,
           parentId: page.parentId,
           updatedAt: page.updatedAt.toISOString(),
-          snippet,
-          matchedIn:
-            titleMatches && contentMatches
-              ? "title_content"
-              : titleMatches
-                ? "title"
-                : "content",
+          snippet: getSearchSnippet(contentText, query),
+          matchedIn: (
+            titleMatches && contentMatches ? "title_content"
+            : titleMatches ? "title"
+            : "content"
+          ) as "title_content" | "title" | "content",
           score: (titleMatches ? 10 : 0) + (contentMatches ? 3 : 0),
         };
       })
-      .filter((page): page is NonNullable<typeof page> => page !== null)
-      .sort((a, b) => b.score - a.score || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .filter((p): p is NonNullable<typeof p> => p !== null)
+      .sort(
+        (a, b) =>
+          b.score - a.score ||
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      )
       .slice(0, 30)
-      .map((page) => ({
-        id: page.id,
-        title: page.title,
-        type: page.type,
-        icon: page.icon,
-        parentId: page.parentId,
-        updatedAt: page.updatedAt,
-        snippet: page.snippet,
-        matchedIn: page.matchedIn,
-      }));
+      .map(({ score: _score, ...rest }) => rest);
 
     return NextResponse.json(results);
   } catch (error) {
