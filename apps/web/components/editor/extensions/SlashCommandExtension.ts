@@ -29,6 +29,7 @@ export const SUPPORTED_BASIC_MARKDOWN_COMMAND_IDS = new Set([
   "h6",
   "bulletList",
   "orderedList",
+  "taskList",
   "blockquote",
   "divider",
 ]);
@@ -140,7 +141,7 @@ export const slashCommands: SlashCommandItem[] = [
     description: "체크박스 할일 목록",
     icon: "CheckSquare",
     category: "basic",
-    isDisabled: true,
+    shortcut: "- [ ]",
     keywords: ["task", "todo", "check", "할일", "체크"],
   },
   {

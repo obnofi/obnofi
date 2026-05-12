@@ -394,6 +394,11 @@ export function SlashCommandList({
         case "orderedList":
           chain.toggleOrderedList().run();
           break;
+        case "taskList":
+          (chain as typeof chain & { toggleTaskList: () => typeof chain })
+            .toggleTaskList()
+            .run();
+          break;
         case "blockquote":
           chain.toggleBlockquote().run();
           break;

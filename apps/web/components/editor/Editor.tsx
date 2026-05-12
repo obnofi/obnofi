@@ -38,6 +38,7 @@ import { SpeechRecognitionButton } from "@/components/editor/SpeechRecognitionBu
 import { SpeechInputIndicator } from "@/components/editor/SpeechInputIndicator";
 import { TextHighlightToolbar } from "@/components/editor/TextHighlightToolbar";
 import { TextHighlightMark } from "@/components/editor/extensions/TextHighlightMark";
+import { TaskItem, TaskList } from "@/components/editor/extensions/TaskList";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import type { PageHeadingFontSizes, PageHighlightColor } from "@obnofi/types";
 
@@ -105,6 +106,41 @@ export function Editor({
   useEffect(() => { onUpdateRef.current = onUpdate; }, [onUpdate]);
   useEffect(() => { onEditRef.current = onEdit; }, [onEdit]);
   useEffect(() => { onEditorReady?.(editorRef.current); }, [onEditorReady]);
+
+  // 협업 문서가 비어 있거나 ws-server가 persisted Yjs를 복원하지 못한 경우,
+  // page content를 먼저 Yjs 문서에 심어 문서가 빈 화면으로 열리지 않게 한다.
+  useEffect(() => {
+    if (!ydoc || initialContentApplied.current) return;
+    const editor = editorRef.current;
+    if (!editor || !content) return;
+
+    const pageUpdatedAtMs = pageUpdatedAt ? new Date(pageUpdatedAt).getTime() : 0;
+    const yjsUpdatedAtMs = yjsUpdatedAt ? new Date(yjsUpdatedAt).getTime() : 0;
+    const shouldSeedFromPage =
+      !yjsUpdatedAt || pageUpdatedAtMs > yjsUpdatedAtMs;
+
+    if (!shouldSeedFromPage) {
+      return;
+    }
+
+    const editorJson = editor.getJSON() as { content?: Array<{ type?: string; content?: unknown[] }> };
+    const docContent = editorJson.content ?? [];
+    const isEmpty =
+      docContent.length === 0 ||
+      (docContent.length === 1 &&
+        docContent[0]?.type === "paragraph" &&
+        !docContent[0]?.content?.length);
+
+    const dbContent = content as { content?: unknown[] };
+    if (!isEmpty || !dbContent.content?.length) {
+      return;
+    }
+
+    initialContentApplied.current = true;
+    isApplyingInitialContent.current = true;
+    editor.commands.setContent(content);
+    setTimeout(() => { isApplyingInitialContent.current = false; }, 0);
+  }, [content, pageUpdatedAt, ydoc, yjsUpdatedAt]);
 
   // 협업 모드: sync 완료 후 Yjs 문서가 비어있으면 DB content로 초기화
   useEffect(() => {
@@ -179,6 +215,8 @@ export function Editor({
       StarterKit.configure(ydoc ? { undoRedo: false } : {}),
       Placeholder.configure({ placeholder }),
       TextHighlightMark,
+      TaskList,
+      TaskItem,
       ...(ydoc && provider
         ? [
             Collaboration.configure({ document: ydoc }),
