@@ -2,6 +2,7 @@
 
 import type {
   DatabasePage,
+  Page,
   Property,
   PropertyType,
   PropertyValue,
@@ -44,7 +45,9 @@ async function groveRequest<T>(path: string, init?: RequestInit) {
 }
 
 export async function fetchGroveCatalogPage(pageId: string) {
-  return groveRequest<DatabasePage>(`/api/pages/${pageId}?view=full`);
+  return groveRequest<DatabasePage>(`/api/pages/${pageId}?view=full`, {
+    cache: "no-store",
+  });
 }
 
 export async function patchGroveTitle(pageId: string, title: string) {
@@ -56,11 +59,14 @@ export async function patchGroveTitle(pageId: string, title: string) {
 }
 
 export async function plantGroveSeed(databaseId: string, title: string) {
-  return groveRequest<{ id: string }>(`/api/databases/${databaseId}/rows`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title }),
-  });
+  return groveRequest<Page & { propertyValues: PropertyValue[] }>(
+    `/api/databases/${databaseId}/rows`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    }
+  );
 }
 
 export async function sproutGroveProperty(
