@@ -15,11 +15,15 @@ import {
   Download,
   FileText,
   FileCode,
+  UserPlus,
+  X,
+  AlignLeft,
 } from "lucide-react";
 import { useCollaborators } from "@/lib/collaboration/CollaborationContext";
 import { copyToClipboard } from "@/lib/copyToClipboard";
 import type {
   HeadingLevel,
+  PageCollaborator,
   PageHeadingFontSizes,
   PageHighlightColor,
   PageType,
@@ -46,9 +50,13 @@ interface PageSettingsMenuProps {
   highlightColors: PageHighlightColor[];
   isPublic: boolean;
   shareId: string | null;
+  collaborationEnabled: boolean;
+  lineIndicatorEnabled: boolean;
   onShareUpdate: (isPublic: boolean, shareId: string | null) => void;
   onHeadingFontSizesChange: (sizes: PageHeadingFontSizes) => void;
   onHighlightColorsChange: (colors: PageHighlightColor[]) => void;
+  onCollaborationEnabledChange: (enabled: boolean) => void;
+  onLineIndicatorEnabledChange: (enabled: boolean) => void;
   onExport?: (format: PageExportFormat) => void;
 }
 
@@ -60,9 +68,13 @@ export function PageSettingsMenu({
   highlightColors,
   isPublic,
   shareId,
+  collaborationEnabled,
+  lineIndicatorEnabled,
   onShareUpdate,
   onHeadingFontSizesChange,
   onHighlightColorsChange,
+  onCollaborationEnabledChange,
+  onLineIndicatorEnabledChange,
   onExport,
 }: PageSettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -72,6 +84,10 @@ export function PageSettingsMenu({
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isHeadingFontSizeOpen, setIsHeadingFontSizeOpen] = useState(false);
   const [isHighlightColorsOpen, setIsHighlightColorsOpen] = useState(false);
+  const [isCollabOpen, setIsCollabOpen] = useState(false);
+  const [collabInviteEmail, setCollabInviteEmail] = useState("");
+  const [collabInviteLoading, setCollabInviteLoading] = useState(false);
+  const [collaborators, setCollaborators] = useState<PageCollaborator[]>([]);
   const [draftHeadingFontSizes, setDraftHeadingFontSizes] =
     useState<PageHeadingFontSizes>(headingFontSizes);
   const [editingHeadingLevel, setEditingHeadingLevel] = useState<HeadingLevel | null>(null);
@@ -79,7 +95,7 @@ export function PageSettingsMenu({
   const exportRef = useRef<HTMLDivElement>(null);
   const highlightRequestIdRef = useRef(0);
 
-  const collaborators = useCollaborators();
+  const activeCollaborators = useCollaborators();
 
   const publishUrl = shareId
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/share/${shareId}`
@@ -108,9 +124,47 @@ export function PageSettingsMenu({
       setIsExportOpen(false);
       setIsHeadingFontSizeOpen(false);
       setIsHighlightColorsOpen(false);
+      setIsCollabOpen(false);
       setEditingHeadingLevel(null);
+      setCollabInviteEmail("");
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isCollabOpen || !collaborationEnabled) return;
+    fetch(`/api/pages/${pageId}/collaborators`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: PageCollaborator[]) => setCollaborators(data))
+      .catch(() => {});
+  }, [isCollabOpen, collaborationEnabled, pageId]);
+
+  const handleInviteCollaborator = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!collabInviteEmail.trim()) return;
+    setCollabInviteLoading(true);
+    try {
+      const res = await fetch(`/api/pages/${pageId}/collaborators`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: collabInviteEmail.trim(), role: "editor" }),
+      });
+      if (res.ok) {
+        const newCollaborator = await res.json() as PageCollaborator;
+        setCollaborators((prev) => {
+          const filtered = prev.filter((c) => c.userId !== newCollaborator.userId);
+          return [...filtered, newCollaborator];
+        });
+        setCollabInviteEmail("");
+      }
+    } finally {
+      setCollabInviteLoading(false);
+    }
+  };
+
+  const handleRemoveCollaborator = async (userId: string) => {
+    await fetch(`/api/pages/${pageId}/collaborators/${userId}`, { method: "DELETE" });
+    setCollaborators((prev) => prev.filter((c) => c.userId !== userId));
+  };
 
   useEffect(() => {
     setDraftHeadingFontSizes(headingFontSizes);
@@ -325,41 +379,187 @@ export function PageSettingsMenu({
 
           <div className="h-px bg-[var(--color-border)]" />
 
+          {/* ── 공동 편집 섹션 ── */}
+          <div className="px-1 py-1.5">
+            <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-placeholder)]">
+              공동 편집
+            </p>
+
+            {/* 공동 편집 켜기/끄기 */}
+            <div className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-[var(--color-hover)]">
+              <div className="flex items-center gap-2.5">
+                <div className="relative shrink-0">
+                  <Users className="h-4 w-4 text-[var(--color-text-secondary)]" />
+                  {activeCollaborators.length > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--color-accent)] ring-1 ring-[var(--color-surface)]" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-[13px] font-medium text-[var(--color-text-primary)]">
+                    공동 편집
+                  </p>
+                  <p className="text-[11px] text-[var(--color-text-placeholder)]">
+                    {collaborationEnabled
+                      ? activeCollaborators.length > 0
+                        ? `${activeCollaborators.length}명 편집 중`
+                        : "초대받은 사용자만 편집 가능"
+                      : "비활성화됨"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => onCollaborationEnabledChange(!collaborationEnabled)}
+                className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+                  collaborationEnabled
+                    ? "bg-[var(--color-accent)]"
+                    : "bg-zinc-300 dark:bg-zinc-600"
+                }`}
+                aria-label={collaborationEnabled ? "공동 편집 끄기" : "공동 편집 켜기"}
+              >
+                <span
+                  className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                    collaborationEnabled ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* 공동 편집 활성 시 추가 옵션 */}
+            {collaborationEnabled && (
+              <>
+                {/* 줄 기반 뷰 (문서 타입만) */}
+                {pageType === "document" && (
+                  <div className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-[var(--color-hover)]">
+                    <div className="flex items-center gap-2.5">
+                      <AlignLeft className="h-4 w-4 text-[var(--color-text-secondary)]" />
+                      <div>
+                        <p className="text-[13px] font-medium text-[var(--color-text-primary)]">
+                          줄 점유 표시
+                        </p>
+                        <p className="text-[11px] text-[var(--color-text-placeholder)]">
+                          블록 왼쪽에 협업자 색상 바 표시
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => onLineIndicatorEnabledChange(!lineIndicatorEnabled)}
+                      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+                        lineIndicatorEnabled
+                          ? "bg-[var(--color-accent)]"
+                          : "bg-zinc-300 dark:bg-zinc-600"
+                      }`}
+                      aria-label={lineIndicatorEnabled ? "줄 점유 표시 끄기" : "줄 점유 표시 켜기"}
+                    >
+                      <span
+                        className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                          lineIndicatorEnabled ? "translate-x-4" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                )}
+
+                {/* 링크 복사 */}
+                <button
+                  onClick={handleCopyCollabLink}
+                  className="flex w-full items-center justify-between rounded-md px-2 py-2 hover:bg-[var(--color-hover)]"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Copy className="h-4 w-4 text-[var(--color-text-secondary)]" />
+                    <span className="text-[13px] font-medium text-[var(--color-text-primary)]">
+                      링크 복사
+                    </span>
+                  </div>
+                  {collabCopied ? (
+                    <Check className="h-3.5 w-3.5 shrink-0 text-[var(--color-accent)]" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-secondary)]" />
+                  )}
+                </button>
+
+                {/* 협업자 관리 */}
+                <button
+                  type="button"
+                  onClick={() => setIsCollabOpen((v) => !v)}
+                  className="flex w-full items-center justify-between rounded-md px-2 py-2 hover:bg-[var(--color-hover)]"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <UserPlus className="h-4 w-4 text-[var(--color-text-secondary)]" />
+                    <div className="text-left">
+                      <p className="text-[13px] font-medium text-[var(--color-text-primary)]">
+                        협업자 초대
+                      </p>
+                      <p className="text-[11px] text-[var(--color-text-placeholder)]">
+                        {collaborators.length > 0
+                          ? `${collaborators.length}명 초대됨`
+                          : "초대된 협업자 없음"}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight
+                    className={`h-3.5 w-3.5 text-[var(--color-text-placeholder)] transition-transform ${
+                      isCollabOpen ? "rotate-90" : ""
+                    }`}
+                  />
+                </button>
+
+                {isCollabOpen && (
+                  <div className="ml-2 mt-0.5 flex flex-col gap-1 border-l border-[var(--color-border)] pl-2">
+                    <form onSubmit={(e) => void handleInviteCollaborator(e)} className="flex gap-1.5 px-1 py-1">
+                      <input
+                        type="email"
+                        value={collabInviteEmail}
+                        onChange={(e) => setCollabInviteEmail(e.target.value)}
+                        placeholder="이메일 주소"
+                        className="flex-1 rounded border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)]"
+                      />
+                      <button
+                        type="submit"
+                        disabled={collabInviteLoading || !collabInviteEmail.trim()}
+                        className="rounded bg-[var(--color-accent)] px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50"
+                      >
+                        초대
+                      </button>
+                    </form>
+                    {collaborators.map((c) => (
+                      <div
+                        key={c.id}
+                        className="flex items-center justify-between rounded-md px-2 py-1 hover:bg-[var(--color-hover)]"
+                      >
+                        <div className="flex min-w-0 items-center gap-2">
+                          {c.user.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={c.user.image} alt="" className="h-5 w-5 rounded-full" />
+                          ) : (
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-accent-subtle)] text-[10px] text-[var(--color-accent)]">
+                              {(c.user.name ?? c.user.email)[0].toUpperCase()}
+                            </span>
+                          )}
+                          <span className="truncate text-[12px] text-[var(--color-text-primary)]">
+                            {c.user.name ?? c.user.email}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleRemoveCollaborator(c.userId)}
+                          className="ml-1 shrink-0 rounded p-0.5 transition hover:bg-[var(--color-hover)]"
+                          aria-label="협업자 제거"
+                        >
+                          <X className="h-3 w-3 text-[var(--color-text-secondary)]" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
           {/* ── 편집 섹션 ── */}
           <div className="px-1 py-1.5">
             <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-placeholder)]">
               편집
             </p>
-
-            {/* 공동 편집 링크 — 활성 */}
-            <button
-              onClick={handleCopyCollabLink}
-              className="flex w-full items-center justify-between rounded-md px-2 py-2 hover:bg-[var(--color-hover)]"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="relative shrink-0">
-                  <Users className="h-4 w-4 text-[var(--color-text-secondary)]" />
-                  {collaborators.length > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--color-accent)] ring-1 ring-[var(--color-surface)]" />
-                  )}
-                </div>
-                <div className="text-left">
-                  <p className="text-[13px] font-medium text-[var(--color-text-primary)]">
-                    공동 편집 링크 복사
-                  </p>
-                  <p className="text-[11px] text-[var(--color-text-placeholder)]">
-                    {collaborators.length > 0
-                      ? `${collaborators.length}명 편집 중`
-                      : "워크스페이스 멤버와 공유"}
-                  </p>
-                </div>
-              </div>
-              {collabCopied ? (
-                <Check className="h-3.5 w-3.5 shrink-0 text-[var(--color-accent)]" />
-              ) : (
-                <Copy className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-secondary)]" />
-              )}
-            </button>
 
             {pageType === "document" ? (
               <div>

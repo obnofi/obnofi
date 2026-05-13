@@ -23,7 +23,10 @@ import { CollaborationProvider } from "@/lib/collaboration/CollaborationContext"
 import { CollaborationAvatars } from "@/components/workspace/CollaborationAvatars";
 import { SaveStatusIndicator } from "@/components/workspace/SaveStatusIndicator";
 import { ImportFromUrlControl } from "@/components/workspace/ImportFromUrlControl";
+import { GroveInsertionToolbar } from "@/components/toolbar/GroveInsertionToolbar";
 import { useAutoSave } from "@/hooks/useAutoSave";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import type { MossNoteDockHandle } from "@/components/workspace/MossNoteDock";
 import {
   creatablePageLabels,
   creatablePageTypes,
@@ -59,8 +62,9 @@ const GroveSideTab = dynamic(() => import("@/components/workspace/GroveSideTab")
   ssr: false
 });
 
-const COLLABORATION_ENABLED =
-  process.env.NEXT_PUBLIC_ENABLE_COLLABORATION === "true";
+// env var는 개발 환경에서 전역 비활성화용으로만 사용 — 프로덕션에서는 페이지별 collaborationEnabled 필드로 제어
+const COLLABORATION_GLOBALLY_DISABLED =
+  process.env.NEXT_PUBLIC_ENABLE_COLLABORATION === "false";
 
 interface WorkspacePageProps {
   workspaceId: string;
@@ -138,7 +142,10 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
 
   const [title, setTitle] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [toolbarEditor, setToolbarEditor] = useState<TiptapEditor | null>(null);
   const editorInstanceRef = useRef<TiptapEditor | null>(null);
+  const grovePageSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const mossNoteDockRef = useRef<MossNoteDockHandle | null>(null);
   const titleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 최신 editor content를 ref에 보관 — useAutoSave가 getContent()로 접근
@@ -146,6 +153,18 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
   const handleEditorUpdate = useCallback((content: object) => {
     latestContentRef.current = content;
   }, []);
+
+  const handleSpeechFinalResult = useCallback((text: string) => {
+    editorInstanceRef.current?.chain().focus().insertContent(text).run();
+  }, []);
+
+  const {
+    interimTranscript,
+    isListening,
+    isSupported: isSpeechSupported,
+    start: startSpeech,
+    stop: stopSpeech,
+  } = useSpeechRecognition({ onFinalResult: handleSpeechFinalResult });
 
   const { scheduleSave, save } = useAutoSave({
     pageId,
@@ -219,6 +238,16 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
   const handleHighlightColorsChange = useCallback((highlightColors: Page["highlightColors"]) => {
     setCurrentPage((page) => (page ? { ...page, highlightColors } : page));
   }, [setCurrentPage]);
+
+  const handleCollaborationEnabledChange = useCallback(async (enabled: boolean) => {
+    setCurrentPage((page) => (page ? { ...page, collaborationEnabled: enabled } : page));
+    await updatePage(pageId, { collaborationEnabled: enabled });
+  }, [pageId, updatePage, setCurrentPage]);
+
+  const handleLineIndicatorEnabledChange = useCallback(async (enabled: boolean) => {
+    setCurrentPage((page) => (page ? { ...page, lineIndicatorEnabled: enabled } : page));
+    await updatePage(pageId, { lineIndicatorEnabled: enabled });
+  }, [pageId, updatePage, setCurrentPage]);
 
   const handleSelectPage = (selectedPageId: string) => {
     if (selectedPageId === pageId) {
@@ -296,11 +325,14 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
     );
   }
 
+  const collabActive = !COLLABORATION_GLOBALLY_DISABLED && activePage.collaborationEnabled;
+
   return (
     <CollaborationProvider
       key={pageId}
       pageId={pageId}
-      active={COLLABORATION_ENABLED && activePage.type === "document"}
+      active={collabActive}
+      pageType={activePage.type}
     >
       {/* Top Bar */}
       <header className="h-12 border-b border-[var(--color-border)] flex items-center justify-between px-4 shrink-0 bg-[var(--color-background)]">
@@ -339,9 +371,7 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
         </div>
         <div className="flex items-center gap-2">
           <SaveStatusIndicator onRetry={() => void save()} />
-          {COLLABORATION_ENABLED && activePage.type === "document" ? (
-            <CollaborationAvatars />
-          ) : null}
+          {collabActive ? <CollaborationAvatars /> : null}
           <button className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]">
             <Sparkles className="h-4 w-4" />
           </button>
@@ -353,6 +383,8 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
             highlightColors={activePage.highlightColors}
             isPublic={activePage.isPublic}
             shareId={activePage.shareId}
+            collaborationEnabled={activePage.collaborationEnabled}
+            lineIndicatorEnabled={activePage.lineIndicatorEnabled}
             onShareUpdate={(isPublic, shareId) => {
               setCurrentPage((page) =>
                 page ? { ...page, isPublic, shareId } : page
@@ -360,6 +392,8 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
             }}
             onHeadingFontSizesChange={handleHeadingFontSizesChange}
             onHighlightColorsChange={handleHighlightColorsChange}
+            onCollaborationEnabledChange={handleCollaborationEnabledChange}
+            onLineIndicatorEnabledChange={handleLineIndicatorEnabledChange}
             onExport={
               activePage.type === "document" ? handleExportPage : undefined
             }
@@ -368,9 +402,9 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden bg-[var(--color-background)]">
+      <div className="relative flex-1 overflow-hidden bg-[var(--color-background)]">
         {activePage.type === "document" && (
-          <div className="h-full overflow-y-auto">
+          <div ref={grovePageSurfaceRef} className="relative h-full overflow-y-auto">
             {activePage.coverImage ? (
               <div className="w-full px-0 pt-0">
                 <GrovePageCanopy
@@ -381,7 +415,7 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
               </div>
             ) : null}
 
-            <div className="max-w-4xl mx-auto px-12 py-8">
+            <div className="max-w-4xl mx-auto px-12 pb-28 pt-8">
               {!activePage.coverImage ? (
                 <GrovePageCanopy
                   page={activePage}
@@ -469,14 +503,27 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
                   placeholder="Type something..."
                   workspaceId={workspaceId}
                   pageId={pageId}
+                  lineIndicatorEnabled={activePage.lineIndicatorEnabled}
                   onContentContainerReady={setGroveContentElement}
                   onEditorReady={(editor) => {
                     editorInstanceRef.current = editor;
+                    setToolbarEditor(editor);
                   }}
+                  interimTranscript={interimTranscript}
+                  isSpeechListening={isListening}
+                  mossNoteDockRef={mossNoteDockRef}
+                  mossNoteSurfaceRef={grovePageSurfaceRef}
                 />
               )}
             </div>
             <TableOfContents container={groveContentElement} />
+            <GroveInsertionToolbar
+              editor={toolbarEditor}
+              isListening={isListening}
+              isSpeechSupported={isSpeechSupported}
+              onToggleSpeech={isListening ? stopSpeech : startSpeech}
+              onToggleMossNote={() => mossNoteDockRef.current?.togglePlacement()}
+            />
           </div>
         )}
 
@@ -486,12 +533,22 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
               embedded={true}
               roomSlug={activePage.id}
               title={activePage.title || "Jungle Clearing"}
+              onTitleChange={handleTitleChange}
             />
           </div>
         )}
 
         {activePage.type === "database" && (
-          <DatabaseWorkspace pageId={pageId} workspaceId={workspaceId} />
+          <>
+            <DatabaseWorkspace
+              pageId={pageId}
+              workspaceId={workspaceId}
+              mossNoteDockRef={mossNoteDockRef}
+            />
+            <GroveInsertionToolbar
+              onToggleMossNote={() => mossNoteDockRef.current?.togglePlacement()}
+            />
+          </>
         )}
       </div>
 
