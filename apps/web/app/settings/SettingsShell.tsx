@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   User,
   Palette,
@@ -12,7 +12,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 interface NavItem {
   id: string;
@@ -36,8 +35,12 @@ export function SettingsShell({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
+  const [pathname, setPathname] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setPathname(window.location.pathname);
+  }, []);
 
   const isActive = (href: string) => {
     if (href === "/settings") {

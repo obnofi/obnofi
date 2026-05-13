@@ -3,11 +3,15 @@ import type { Comment, Element, Room, User } from "@obnofi/types/clearing";
 const SAMPLE_NAMES = ["Mina", "Theo", "Iris", "Jun", "Luca"];
 const SAMPLE_COLORS = ["fern", "sun", "rose", "sky"] as const;
 
+function createClearingId() {
+  return crypto.randomUUID();
+}
+
 export function createDemoUser(): User {
   const name = SAMPLE_NAMES[Math.floor(Math.random() * SAMPLE_NAMES.length)];
   const color = SAMPLE_COLORS[Math.floor(Math.random() * SAMPLE_COLORS.length)];
   return {
-    id: crypto.randomUUID(),
+    id: createClearingId(),
     name,
     email: `${name.toLowerCase()}@obnofi.local`,
     avatarUrl: null,
@@ -17,11 +21,11 @@ export function createDemoUser(): User {
   };
 }
 
-export function createDemoRoom(ownerId: string): Room {
+export function createDemoRoom(ownerId: string, slug = "jungle-clearing"): Room {
   return {
-    id: "c9fd4b0b-2ca7-4410-b0f4-94d4d4470ed8",
+    id: createClearingId(),
     name: "Jungle Clearing",
-    slug: "jungle-clearing",
+    slug,
     ownerId,
     background: "paper",
     createdAt: new Date().toISOString(),
@@ -31,9 +35,13 @@ export function createDemoRoom(ownerId: string): Room {
 
 export function createDemoElements(roomId: string, userId: string): Element[] {
   const now = new Date().toISOString();
+  const stickyId = createClearingId();
+  const shapeId = createClearingId();
+  const textId = createClearingId();
+
   return [
     {
-      id: "e313be67-c195-422c-95f5-7997c01f6a6b",
+      id: stickyId,
       roomId,
       type: "sticky",
       x: 260,
@@ -56,7 +64,7 @@ export function createDemoElements(roomId: string, userId: string): Element[] {
       },
     },
     {
-      id: "a70b4f35-ef64-4ae3-af3e-8f56ff9c5089",
+      id: shapeId,
       roomId,
       type: "shape",
       x: 640,
@@ -81,7 +89,7 @@ export function createDemoElements(roomId: string, userId: string): Element[] {
       },
     },
     {
-      id: "1154d556-37e4-4d29-9307-6116533b62cc",
+      id: textId,
       roomId,
       type: "text",
       x: 1050,
@@ -106,7 +114,7 @@ export function createDemoElements(roomId: string, userId: string): Element[] {
       },
     },
     {
-      id: "8dcc4094-d4b3-4ca2-8c76-84e35f9778e1",
+      id: createClearingId(),
       roomId,
       type: "connector",
       x: 0,
@@ -127,8 +135,8 @@ export function createDemoElements(roomId: string, userId: string): Element[] {
         kind: "connector",
         start: { x: 510, y: 285 },
         end: { x: 1048, y: 302 },
-        fromElementId: "e313be67-c195-422c-95f5-7997c01f6a6b",
-        toElementId: "1154d556-37e4-4d29-9307-6116533b62cc",
+        fromElementId: stickyId,
+        toElementId: textId,
         arrowStart: false,
         arrowEnd: true,
         lineStyle: "solid",
@@ -140,7 +148,7 @@ export function createDemoElements(roomId: string, userId: string): Element[] {
 
 export function createDemoComment(roomId: string, elementId: string | null, authorId: string): Comment {
   return {
-    id: "a7a726fd-f1bf-405b-8f59-bca5a5bda6ab",
+    id: createClearingId(),
     roomId,
     elementId,
     authorId,

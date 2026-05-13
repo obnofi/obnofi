@@ -19,6 +19,20 @@ const HEADING_PATTERN = /^(#{1,6})\s+(.*)$/;
 const HORIZONTAL_RULE_PATTERN = /^(?:---|\*\*\*|___)\s*$/;
 const CODE_FENCE_PATTERN = /^```/;
 
+const CODE_BLOCK_LANGUAGE_ALIASES: Record<string, string> = {
+  cjs: "javascript",
+  js: "javascript",
+  jsx: "react",
+  mjs: "javascript",
+  sh: "bash",
+  shell: "bash",
+  terminal: "bash",
+  ts: "typescript",
+  tsx: "react-ts",
+  txt: "plaintext",
+  text: "plaintext",
+};
+
 function clampMarkdownSource(markdown: string) {
   const normalized = markdown.replace(/\r\n?/g, "\n").trim();
   if (!normalized) {
@@ -266,7 +280,9 @@ function consumeBlockquote(lines: string[], startIndex: number) {
 
 function consumeCodeBlock(lines: string[], startIndex: number) {
   const openingLine = lines[startIndex];
-  const language = openingLine.slice(3).trim();
+  const rawLanguage = openingLine.slice(3).trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+  const language =
+    CODE_BLOCK_LANGUAGE_ALIASES[rawLanguage] ?? rawLanguage ?? "plaintext";
   const codeLines: string[] = [];
   let index = startIndex + 1;
 
@@ -282,8 +298,11 @@ function consumeCodeBlock(lines: string[], startIndex: number) {
   return {
     node: {
       type: "codeBlock",
-      attrs: { language: language || null },
-      content: [createTextNode(codeLines.join("\n"))],
+      attrs: {
+        language: language || "plaintext",
+        code: codeLines.join("\n"),
+        isOpen: true,
+      },
     },
     nextIndex: index,
   };

@@ -56,6 +56,8 @@ export function InlineDatabaseView({
         isPublic: false,
         shareId: null,
         sharePassword: null,
+        collaborationEnabled: false,
+        lineIndicatorEnabled: false,
         database: data,
       });
     } catch (error) {

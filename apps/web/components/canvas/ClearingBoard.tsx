@@ -437,16 +437,21 @@ function saveLocalClearingSnapshot(roomSlug: string, snapshot: LocalClearingSnap
 
 export function ClearingBoard({
   embedded = false,
+  realtimeEnabled = true,
   roomSlug,
   title,
+  onTitleChange,
 }: {
   embedded?: boolean;
+  realtimeEnabled?: boolean;
   roomSlug: string;
   title?: string;
+  onTitleChange?: (title: string) => void;
 }) {
   const { data: session } = useSession();
   const boardRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const dragStateRef = useRef<DragState>(null);
   const panStateRef = useRef<PanState>(null);
   const drawStateRef = useRef<DrawState>(null);
@@ -474,6 +479,8 @@ export function ClearingBoard({
   const [embedDraftUrl, setEmbedDraftUrl] = useState<string | null>(null);
   const [activeEmojiStamp, setActiveEmojiStamp] = useState<string | null>(null);
   const [floatingStamps, setFloatingStamps] = useState<FloatingEmojiStamp[]>([]);
+  const [isTitleEditing, setIsTitleEditing] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(title ?? "");
   const [activeThreadTarget, setActiveThreadTarget] = useState<{
     elementId: string | null;
     x: number;
@@ -512,6 +519,7 @@ export function ClearingBoard({
   } = useElementStore();
   const canUndo = past.length > 0;
   const canRedo = future.length > 0;
+  const clearingTitle = title ?? room?.name ?? "Jungle Clearing";
   const {
     clearSelection,
     selectedIds,
@@ -527,6 +535,7 @@ export function ClearingBoard({
     setCurrentUser,
     setPresenceUsers,
   } = useUserStore();
+  const currentUserId = currentUser?.id ?? null;
 
   const elementLookup = useMemo(
     () => Object.fromEntries(elements.map((element) => [element.id, element])),
@@ -572,9 +581,37 @@ export function ClearingBoard({
     viewportRef.current = viewport;
   }, [viewport]);
 
+  useEffect(() => {
+    if (!isTitleEditing) {
+      setTitleDraft(clearingTitle);
+    }
+  }, [clearingTitle, isTitleEditing]);
+
+  useEffect(() => {
+    if (isTitleEditing) {
+      titleInputRef.current?.focus();
+      titleInputRef.current?.select();
+    }
+  }, [isTitleEditing]);
+
+  const commitClearingTitle = useCallback(() => {
+    const nextTitle = titleDraft.trim() || "Jungle Clearing";
+    setIsTitleEditing(false);
+    setTitleDraft(nextTitle);
+
+    if (nextTitle !== clearingTitle) {
+      onTitleChange?.(nextTitle);
+    }
+  }, [clearingTitle, onTitleChange, titleDraft]);
+
+  const cancelClearingTitleEdit = useCallback(() => {
+    setIsTitleEditing(false);
+    setTitleDraft(clearingTitle);
+  }, [clearingTitle]);
+
   const applyRemoteElementUpsert = useCallback(
     (element: Element) => {
-      const existingElement = elements.find(
+      const existingElement = useElementStore.getState().elements.find(
         (candidate) => candidate.id === element.id
       );
       const serializedElement = JSON.stringify(element);
@@ -586,7 +623,7 @@ export function ClearingBoard({
       skipRemoteUpsertsRef.current.set(element.id, serializedElement);
       upsertElement(element);
     },
-    [elements, upsertElement]
+    [upsertElement]
   );
 
   const applyRemoteElementDelete = useCallback(
@@ -636,24 +673,42 @@ export function ClearingBoard({
   );
 
   useEffect(() => {
-    if (!currentUser) {
+    const activeUser = currentUserRef.current;
+
+    if (!activeUser || activeUser.id !== currentUserId) {
       return;
     }
 
     let isMounted = true;
+    currentRoomRef.current = null;
+    presenceChannelReadyRef.current = false;
+    suppressPersistenceRef.current = true;
+    pendingUpsertsRef.current.clear();
+    pendingDeletesRef.current.clear();
+    skipRemoteUpsertsRef.current.clear();
+    skipRemoteDeletesRef.current.clear();
+    previousElementsRef.current = [];
+    setIsBootstrapping(true);
+    setRoom(null);
+    setComments([]);
+    setElements([]);
+    clearSelection();
+    setSelectedElement(null);
+    resetViewport();
+
     const supabaseEnabled = isSupabaseConfigured();
     setIsSupabaseLive(supabaseEnabled);
 
     const bootstrap = async () => {
       const localSnapshot = loadLocalClearingSnapshot(roomSlug);
       const fallbackRoom =
-        localSnapshot?.room ?? createDemoRoom(currentUser.id);
+        localSnapshot?.room ?? createDemoRoom(activeUser.id, roomSlug);
       const fallbackElements =
         localSnapshot?.elements ??
-        createDemoElements(fallbackRoom.id, currentUser.id);
+        createDemoElements(fallbackRoom.id, activeUser.id);
       const fallbackComments =
         localSnapshot?.comments ??
-        [createDemoComment(fallbackRoom.id, fallbackElements[0]?.id ?? null, currentUser.id)];
+        [createDemoComment(fallbackRoom.id, fallbackElements[0]?.id ?? null, activeUser.id)];
 
       if (!supabaseEnabled) {
         if (!isMounted) {
@@ -664,7 +719,7 @@ export function ClearingBoard({
         suppressPersistenceRef.current = true;
         setElements(fallbackElements);
         setComments(fallbackComments);
-        setPresenceUsers([currentUser]);
+        setPresenceUsers([activeUser]);
         setSaveStatus("saved");
         setIsBootstrapping(false);
         queueMicrotask(() => {
@@ -678,11 +733,11 @@ export function ClearingBoard({
       try {
         const userResult = await supabase.from("users").upsert(
           {
-            id: currentUser.id,
-            name: currentUser.name,
-            email: currentUser.email,
-            avatar_url: currentUser.avatarUrl,
-            color: currentUser.color,
+            id: activeUser.id,
+            name: activeUser.name,
+            email: activeUser.email,
+            avatar_url: activeUser.avatarUrl,
+            color: activeUser.color,
             last_seen_at: new Date().toISOString(),
           },
           { onConflict: "id" }
@@ -716,7 +771,7 @@ export function ClearingBoard({
             .insert({
               name: "Jungle Clearing",
               slug: roomSlug,
-              owner_id: currentUser.id,
+              owner_id: activeUser.id,
               background: "paper",
             })
             .select("*")
@@ -748,7 +803,7 @@ export function ClearingBoard({
 
         let nextElements: Element[];
         if (!elementResult.data || elementResult.data.length === 0) {
-          nextElements = createDemoElements(activeRoom.id, currentUser.id);
+          nextElements = createDemoElements(activeRoom.id, activeUser.id);
           const demoElementResult = await supabase.from("elements").insert(
             nextElements.map((element) => ({
               id: element.id,
@@ -781,7 +836,7 @@ export function ClearingBoard({
 
         let nextComments: Comment[];
         if (!commentResult.data || commentResult.data.length === 0) {
-          nextComments = [createDemoComment(activeRoom.id, nextElements[0]?.id ?? null, currentUser.id)];
+          nextComments = [createDemoComment(activeRoom.id, nextElements[0]?.id ?? null, activeUser.id)];
           const demoCommentResult = await supabase.from("comments").insert(
             nextComments.map((comment) => ({
               id: comment.id,
@@ -816,6 +871,11 @@ export function ClearingBoard({
           suppressPersistenceRef.current = false;
         });
 
+        if (!realtimeEnabled) {
+          setPresenceUsers([activeUser]);
+          return;
+        }
+
         const channel = supabase
           .channel(`clearing-room:${activeRoom.id}`, {
             config: {
@@ -824,7 +884,7 @@ export function ClearingBoard({
                 ack: true,
               },
               presence: {
-                key: currentUser.id,
+                key: activeUser.id,
                 enabled: true,
               },
             },
@@ -854,7 +914,7 @@ export function ClearingBoard({
                 ...(presence as unknown as User),
                 lastSeenAt: new Date().toISOString(),
               }));
-            setPresenceUsers([currentUser, ...nextUsers.filter((user) => user.id !== currentUser.id)]);
+            setPresenceUsers([activeUser, ...nextUsers.filter((user) => user.id !== activeUser.id)]);
           })
           .on(
             "postgres_changes",
@@ -912,7 +972,7 @@ export function ClearingBoard({
         channel.subscribe(async (status) => {
           if (status === "SUBSCRIBED") {
             presenceChannelReadyRef.current = true;
-            await channel.track(currentUser);
+            await channel.track(activeUser);
             return;
           }
 
@@ -928,7 +988,7 @@ export function ClearingBoard({
         suppressPersistenceRef.current = true;
         setElements(fallbackElements);
         setComments(fallbackComments);
-        setPresenceUsers([currentUser]);
+        setPresenceUsers([activeUser]);
         setIsSupabaseLive(false);
         setSaveStatus("saved");
         queueMicrotask(() => {
@@ -946,21 +1006,24 @@ export function ClearingBoard({
     return () => {
       isMounted = false;
       presenceChannelReadyRef.current = false;
+      suppressPersistenceRef.current = true;
       if (presenceChannelRef.current) {
-        syncCursorPresence(undefined);
         void presenceChannelRef.current.unsubscribe();
+        presenceChannelRef.current = null;
       }
     };
   }, [
     applyRemoteElementDelete,
     applyRemoteElementUpsert,
-    currentUser,
+    clearSelection,
+    currentUserId,
+    realtimeEnabled,
+    resetViewport,
     roomSlug,
     setComments,
-    setCurrentUser,
     setElements,
     setPresenceUsers,
-    syncCursorPresence,
+    setSelectedElement,
   ]);
 
   const persistElement = useCallback(async (element: Element) => {
@@ -2128,6 +2191,42 @@ export function ClearingBoard({
     });
   };
 
+  const clearingTitleControl = isTitleEditing ? (
+    <input
+      ref={titleInputRef}
+      value={titleDraft}
+      aria-label="Clearing title"
+      className="min-w-0 w-[320px] max-w-full rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-xl font-semibold text-[var(--color-text-primary)] outline-none"
+      onChange={(event) => setTitleDraft(event.target.value)}
+      onBlur={commitClearingTitle}
+      onClick={(event) => event.stopPropagation()}
+      onDoubleClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          event.currentTarget.blur();
+        }
+
+        if (event.key === "Escape") {
+          event.preventDefault();
+          cancelClearingTitleEdit();
+        }
+      }}
+    />
+  ) : (
+    <button
+      type="button"
+      className="min-w-0 max-w-full truncate rounded-md px-2 py-1 text-left text-xl font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-hover)]"
+      title="더블클릭해서 제목 수정"
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        setIsTitleEditing(true);
+      }}
+    >
+      {clearingTitle}
+    </button>
+  );
+
   return (
     <div
       className={`flex flex-col bg-[var(--color-background)] text-[var(--color-text-primary)] ${
@@ -2136,24 +2235,24 @@ export function ClearingBoard({
     >
       {!embedded ? (
         <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-4 px-6 py-4">
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">
-              Clearing
-            </p>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold">{title ?? room?.name ?? "Jungle Clearing"}</h1>
-              <span className="rounded-full border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-text-secondary)]">
-                {isSupabaseLive ? "Supabase live" : "Local mode"}
-              </span>
+          <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-4 px-6 py-4">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">
+                Clearing
+              </p>
+              <div className="flex items-center gap-3">
+                {clearingTitleControl}
+                <span className="rounded-full border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-text-secondary)]">
+                  {isSupabaseLive ? "Supabase live" : "Local mode"}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+              <span>{elements.length} elements</span>
+              <span>{comments.length} comments</span>
+              <span>{others.length + (currentUser ? 1 : 0)} gardeners</span>
             </div>
           </div>
-          <div className="flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-            <span>{elements.length} elements</span>
-            <span>{comments.length} comments</span>
-            <span>{others.length + (currentUser ? 1 : 0)} gardeners</span>
-          </div>
-        </div>
         </header>
       ) : null}
 
@@ -2172,6 +2271,15 @@ export function ClearingBoard({
           <div className="absolute right-4 top-4 z-30 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)]/90 px-3 py-1 text-[11px] text-[var(--color-text-secondary)] backdrop-blur">
             {getClearingSaveLabel(saveStatus, isSupabaseLive)}
           </div>
+
+          {embedded ? (
+            <div
+              className="absolute left-4 right-28 top-4 z-30 rounded-xl bg-[var(--color-surface)]/90 px-2 py-1 backdrop-blur sm:right-auto sm:max-w-[420px]"
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              {clearingTitleControl}
+            </div>
+          ) : null}
 
           <div className="absolute bottom-4 left-4 z-20 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/90 px-4 py-3 text-sm backdrop-blur">
             <p className="font-medium text-[var(--color-text-primary)]">Presence</p>

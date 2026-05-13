@@ -42,6 +42,22 @@ const edgeTypes: EdgeTypes = {
   relationEdge: RelationEdge
 }
 
+function getNextTableName(tables: TableDef[]): string {
+  const existingNames = new Set(tables.map(table => table.name))
+  const baseName = 'new_table'
+
+  if (!existingNames.has(baseName)) {
+    return baseName
+  }
+
+  let index = 2
+  while (existingNames.has(`${baseName}_${index}`)) {
+    index += 1
+  }
+
+  return `${baseName}_${index}`
+}
+
 const ErdCanvas = forwardRef<ErdCanvasHandle, ErdCanvasProps>(function ErdCanvas({
   nodes,
   edges,
@@ -71,8 +87,9 @@ const ErdCanvas = forwardRef<ErdCanvasHandle, ErdCanvasProps>(function ErdCanvas
   }, [])
 
   const handleAddTable = useCallback(() => {
+    const tables = nodes.map(node => (node.data as TableNodeData).table)
     const newTable: TableDef = {
-      name: `new_table_${Date.now()}`,
+      name: getNextTableName(tables),
       columns: [
         { name: 'id', type: 'BIGINT', nullable: false, primaryKey: true, unique: true, autoIncrement: true }
       ],

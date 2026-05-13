@@ -121,6 +121,29 @@ test("/database 입력시 인라인 데이터베이스가 삽입된다", async (
   await expect(page.getByTestId("inline-database-ready").last()).toBeVisible();
 });
 
+test("/github 입력시 GitHub 임베드 블록이 삽입된다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  await focusEditorTail(page);
+  await page.keyboard.type("/github");
+  await page.keyboard.press("Enter");
+
+  const githubEmbed = page.getByTestId("github-embed-block").last();
+  await expect(githubEmbed).toBeVisible();
+
+  await githubEmbed
+    .getByLabel("GitHub URL")
+    .fill("https://github.com/openai/codex/pull/1");
+  await githubEmbed.getByRole("button", { name: "임베드" }).click();
+
+  await expect(githubEmbed.getByRole("link")).toHaveAttribute(
+    "href",
+    "https://github.com/openai/codex/pull/1"
+  );
+  await expect(githubEmbed).toContainText("Pull request #1");
+  await expect(githubEmbed).toContainText("openai/codex#1");
+});
+
 test("/button 입력시 버튼 블록이 삽입된다", async ({ page }) => {
   await gotoWorkspaceDocument(page);
 
