@@ -75,6 +75,8 @@ export const PAGE_DETAIL_SELECT = {
   isPublic: true,
   shareId: true,
   sharePassword: true,
+  collaborationEnabled: true,
+  lineIndicatorEnabled: true,
   createdAt: true,
   updatedAt: true,
   database: { select: { id: true } },
@@ -106,6 +108,8 @@ export const PAGE_SELECT = {
   isPublic: true,
   shareId: true,
   sharePassword: true,
+  collaborationEnabled: true,
+  lineIndicatorEnabled: true,
   createdAt: true,
   updatedAt: true,
   database: { select: { id: true } },
@@ -148,6 +152,8 @@ export type PrismaPageRow = {
   isPublic: boolean;
   shareId: string | null;
   sharePassword: string | null;
+  collaborationEnabled?: boolean | null;
+  lineIndicatorEnabled?: boolean | null;
   createdAt: Date;
   updatedAt: Date;
   database?: { id: string } | null;
@@ -237,6 +243,8 @@ export function toPage(p: PrismaPageRow): Page {
     sharePassword: p.sharePassword ?? null,
     databaseId: p.database?.id ?? null,
     parentDatabaseId: p.parentDatabaseId ?? null,
+    collaborationEnabled: p.collaborationEnabled ?? false,
+    lineIndicatorEnabled: p.lineIndicatorEnabled ?? false,
   };
 }
 

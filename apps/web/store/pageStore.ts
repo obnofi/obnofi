@@ -49,6 +49,41 @@ function mergePagePreservingDocumentContent(
   };
 }
 
+function mergeCachedPage(previousPage: Page | null | undefined, nextPage: Page): Page {
+  if (!previousPage) {
+    return nextPage;
+  }
+
+  return {
+    ...previousPage,
+    ...nextPage,
+    content:
+      nextPage.content !== null
+        ? nextPage.content
+        : previousPage.content,
+  };
+}
+
+function upsertCachedPage(pages: Page[], nextPage: Page): Page[] {
+  let found = false;
+  const mergedPages = pages.map((page) => {
+    if (page.id !== nextPage.id) {
+      return page;
+    }
+
+    found = true;
+    return mergeCachedPage(page, nextPage);
+  });
+
+  return found ? mergedPages : [...mergedPages, nextPage];
+}
+
+function mergePageListCache(previousPages: Page[], nextPages: Page[]): Page[] {
+  const previousPageMap = new Map(previousPages.map((page) => [page.id, page]));
+
+  return nextPages.map((page) => mergeCachedPage(previousPageMap.get(page.id), page));
+}
+
 function buildOptimisticPage(
   input: CreatePageInput,
   existingPages: Page[]
@@ -83,6 +118,8 @@ function buildOptimisticPage(
     sharePassword: null,
     databaseId: input.databaseId ?? null,
     parentDatabaseId: null,
+    collaborationEnabled: false,
+    lineIndicatorEnabled: false,
   };
 }
 
@@ -163,7 +200,11 @@ export const usePageStore = create<PageState>((set, get) => ({
       const response = await fetch(`/api/pages?workspaceId=${workspaceId}`);
       if (!response.ok) throw new Error("Failed to fetch pages");
       const pages = await response.json();
-      set({ pages, isLoading: false, initializedWorkspaceId: workspaceId });
+      set((state) => ({
+        pages: mergePageListCache(state.pages, pages),
+        isLoading: false,
+        initializedWorkspaceId: workspaceId,
+      }));
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Unknown error",
@@ -231,7 +272,16 @@ export const usePageStore = create<PageState>((set, get) => ({
           activePageFetchController = null;
         }
 
-        set({ currentPage: page, isLoading: false });
+        set((state) => {
+          const cachedPage = state.pages.find((p) => p.id === page.id);
+          const nextCurrentPage = mergeCachedPage(cachedPage, page);
+
+          return {
+            pages: upsertCachedPage(state.pages, nextCurrentPage),
+            currentPage: nextCurrentPage,
+            isLoading: false,
+          };
+        });
       })();
 
       await activePageFetchPromise;
@@ -422,11 +472,21 @@ export const usePageStore = create<PageState>((set, get) => ({
     }),
 
   setPages: (pages: Page[], workspaceId?: string) =>
-    set(
-      workspaceId !== undefined
-        ? { pages, initializedWorkspaceId: workspaceId }
-        : { pages }
-    ),
+    set((state) => {
+      const shouldPreserveCache =
+        workspaceId === undefined || state.initializedWorkspaceId === workspaceId;
+
+      return workspaceId !== undefined
+        ? {
+            pages: shouldPreserveCache
+              ? mergePageListCache(state.pages, pages)
+              : pages,
+            initializedWorkspaceId: workspaceId,
+          }
+        : {
+            pages: mergePageListCache(state.pages, pages),
+          };
+    }),
 
   getChildPages: (parentId: string | null) => {
     const { pages } = get();

@@ -181,6 +181,8 @@ export async function PATCH(
     if ("parentId" in body) updateData.parentId = body.parentId;
     if ("order" in body) updateData.order = body.order;
     if ("isPublic" in body) updateData.isPublic = body.isPublic;
+    if ("collaborationEnabled" in body) updateData.collaborationEnabled = Boolean(body.collaborationEnabled);
+    if ("lineIndicatorEnabled" in body) updateData.lineIndicatorEnabled = Boolean(body.lineIndicatorEnabled);
     const shouldReturnDetailedPage = "content" in body;
 
     const updatedPage = await prisma.page.update({

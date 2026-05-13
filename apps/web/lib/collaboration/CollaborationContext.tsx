@@ -44,12 +44,14 @@ interface CollaborationContextValue {
   ydoc: Y.Doc | null;
   provider: WebsocketProvider | null;
   isSynced: boolean;
+  pageType: "document" | "canvas" | "database" | null;
 }
 
 const defaultDocumentContext: CollaborationContextValue = {
   ydoc: null,
   provider: null,
   isSynced: false,
+  pageType: null,
 };
 
 const CollaborationContext = createContext<CollaborationContextValue>({
@@ -61,10 +63,12 @@ const CollaborationPresenceContext = createContext<CollaborationUser[]>([]);
 export function CollaborationProvider({
   pageId,
   active,
+  pageType = null,
   children,
 }: {
   pageId: string;
   active: boolean;
+  pageType?: "document" | "canvas" | "database" | null;
   children: ReactNode;
 }) {
   const { data: session } = useSession();
@@ -239,8 +243,8 @@ export function CollaborationProvider({
   }, [currentUserPresenceId, provider]);
 
   const value = useMemo(
-    () => ({ ydoc, provider, isSynced }),
-    [ydoc, provider, isSynced]
+    () => ({ ydoc, provider, isSynced, pageType }),
+    [ydoc, provider, isSynced, pageType]
   );
 
   return (
