@@ -16,6 +16,8 @@ const DEFAULT_HIGHLIGHT_COLORS: PageHighlightColor[] = [
 
 let activePageFetchController: AbortController | null = null;
 let activePageFetchSequence = 0;
+let activePageFetchPageId: string | null = null;
+let activePageFetchPromise: Promise<void> | null = null;
 
 function isOptimisticPageId(pageId: string) {
   return pageId.startsWith("optimistic-");
@@ -172,9 +174,7 @@ export const usePageStore = create<PageState>((set, get) => ({
 
   fetchPage: async (pageId: string) => {
     const cachedPage = get().pages.find((page) => page.id === pageId) ?? null;
-    const canUseCachedPage =
-      cachedPage !== null &&
-      (cachedPage.type !== "document" || cachedPage.content !== null);
+    const canUseCachedPage = cachedPage !== null;
     let controller: AbortController | null = null;
     let fetchSequence = 0;
 
@@ -187,6 +187,15 @@ export const usePageStore = create<PageState>((set, get) => ({
           ? get().currentPage
           : null,
     });
+
+    if (activePageFetchPageId === pageId && activePageFetchPromise) {
+      try {
+        await activePageFetchPromise;
+      } catch {
+        // The owner request updates store error state; duplicate callers only wait.
+      }
+      return;
+    }
 
     try {
       if (isOptimisticPageId(pageId)) {
@@ -204,23 +213,28 @@ export const usePageStore = create<PageState>((set, get) => ({
       activePageFetchController?.abort();
       controller = new AbortController();
       activePageFetchController = controller;
+      activePageFetchPageId = pageId;
       fetchSequence = ++activePageFetchSequence;
 
-      const response = await fetch(`/api/pages/${pageId}`, {
-        signal: controller.signal,
-      });
-      if (!response.ok) throw new Error("Failed to fetch page");
-      const page = await response.json();
+      activePageFetchPromise = (async () => {
+        const response = await fetch(`/api/pages/${pageId}`, {
+          signal: controller?.signal,
+        });
+        if (!response.ok) throw new Error("Failed to fetch page");
+        const page = await response.json();
 
-      if (fetchSequence !== activePageFetchSequence) {
-        return;
-      }
+        if (fetchSequence !== activePageFetchSequence) {
+          return;
+        }
 
-      if (controller && activePageFetchController === controller) {
-        activePageFetchController = null;
-      }
+        if (controller && activePageFetchController === controller) {
+          activePageFetchController = null;
+        }
 
-      set({ currentPage: page, isLoading: false });
+        set({ currentPage: page, isLoading: false });
+      })();
+
+      await activePageFetchPromise;
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         if (fetchSequence === activePageFetchSequence) {
@@ -238,6 +252,10 @@ export const usePageStore = create<PageState>((set, get) => ({
     } finally {
       if (controller && activePageFetchController === controller) {
         activePageFetchController = null;
+      }
+      if (activePageFetchPageId === pageId) {
+        activePageFetchPageId = null;
+        activePageFetchPromise = null;
       }
     }
   },
