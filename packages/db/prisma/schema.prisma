@@ -62,12 +62,13 @@ model User {
   // { fontFamily, fontSize, highlightColors: string[], darkMode }
   preferences   Json      @default("{}")
 
-  accounts        Account[]
-  sessions        Session[]
-  ownedWorkspaces Workspace[]       @relation("WorkspaceOwner")
-  memberships     WorkspaceMember[]
-  comments        Comment[]
-  cliTokens       CliToken[]
+  accounts              Account[]
+  sessions              Session[]
+  ownedWorkspaces       Workspace[]          @relation("WorkspaceOwner")
+  memberships           WorkspaceMember[]
+  comments              Comment[]
+  cliTokens             CliToken[]
+  pageCollaborations    PageCollaborator[]
 }
 
 // ── CLI TOKEN ──────────────────────────────────────────
@@ -127,6 +128,28 @@ enum Role {
   MEMBER
 }
 
+// ── PAGE COLLABORATOR ──────────────────────────────────
+
+model PageCollaborator {
+  id        String          @id @default(cuid())
+  pageId    String
+  userId    String
+  role      CollabRole      @default(EDITOR)
+  invitedBy String
+  createdAt DateTime        @default(now())
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@index([userId])
+}
+
+enum CollabRole {
+  EDITOR
+  VIEWER
+}
+
 // ── PAGE ──────────────────────────────────────────────
 
 model Page {
@@ -151,22 +174,25 @@ model Page {
   updatedAt        DateTime @updatedAt
   createdBy        String?
   lastEditedBy     String?
-  isPublic         Boolean  @default(false)
-  shareId          String?  @unique
-  sharePassword    String?
-  parentDatabaseId String?
+  isPublic              Boolean  @default(false)
+  shareId               String?  @unique
+  sharePassword         String?
+  parentDatabaseId      String?
+  collaborationEnabled  Boolean  @default(false)
+  lineIndicatorEnabled  Boolean  @default(false)
 
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  parent         Page?           @relation("PageTree", fields: [parentId], references: [id])
-  children       Page[]          @relation("PageTree")
+  workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent         Page?                @relation("PageTree", fields: [parentId], references: [id])
+  children       Page[]               @relation("PageTree")
   database       Database?
-  parentDatabase Database?       @relation("DatabaseRows", fields: [parentDatabaseId], references: [id])
+  parentDatabase Database?            @relation("DatabaseRows", fields: [parentDatabaseId], references: [id])
   propertyValues PropertyValue[]
   comments       Comment[]
-  outgoingLinks  PageLink[]      @relation("LinkSource")
-  incomingLinks  PageLink[]      @relation("LinkTarget")
+  outgoingLinks  PageLink[]           @relation("LinkSource")
+  incomingLinks  PageLink[]           @relation("LinkTarget")
   files          File[]
   yjsDocument    YjsDocument?
+  collaborators  PageCollaborator[]
 
   @@index([workspaceId])
   @@index([workspaceId, type])
