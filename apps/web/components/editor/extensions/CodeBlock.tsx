@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { InputRule, Node, mergeAttributes } from "@tiptap/core";
 import {
   NodeViewWrapper,
@@ -93,6 +93,11 @@ function CodeBlockView(props: ReactNodeViewProps) {
 
   const currentLang = LANGUAGES.find((l) => l.id === language) || LANGUAGES[0];
   const isRunnable = currentLang.sandpackTemplate !== null;
+  const codeLineCount = useMemo(
+    () => Math.max(1, localCode.split("\n").length),
+    [localCode]
+  );
+  const codeEditorRows = Math.min(Math.max(3, codeLineCount), 24);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -335,23 +340,23 @@ function CodeBlockView(props: ReactNodeViewProps) {
         {/* 메인 콘텐츠: 코드 + 미리보기 (2열 레이아웃) */}
         <div className={`grid ${showPreview && isRunnable ? "grid-cols-2" : "grid-cols-1"} divide-x divide-[var(--color-border)]`}>
           {/* 코드 영역 */}
-          <div className={`${!isExpanded ? "hidden" : ""} min-h-[200px]`}>
+          <div className={`${!isExpanded ? "hidden" : ""}`}>
             {isEditable ? (
               <textarea
                 value={localCode}
                 onChange={handleCodeChange}
                 placeholder="코드를 입력하세요..."
                 spellCheck={false}
-                className="h-full min-h-[200px] w-full resize-none bg-transparent p-4 font-mono text-sm leading-relaxed text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-placeholder)]"
+                className="block max-h-[520px] min-h-[96px] w-full resize-none overflow-y-auto bg-transparent p-4 font-mono text-sm leading-relaxed text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-placeholder)]"
                 style={{
                   fontFamily:
                     '"SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace',
                 }}
-                rows={Math.max(8, localCode.split("\n").length)}
+                rows={codeEditorRows}
               />
             ) : (
               <pre
-                className="h-full min-h-[200px] overflow-x-auto p-4 font-mono text-sm leading-relaxed text-[var(--color-text-primary)]"
+                className="max-h-[520px] min-h-[96px] overflow-auto p-4 font-mono text-sm leading-relaxed text-[var(--color-text-primary)]"
                 style={{
                   fontFamily:
                     '"SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace',
@@ -447,7 +452,7 @@ function CodeBlockView(props: ReactNodeViewProps) {
         {/* 푸터 */}
         <div className="flex items-center justify-between border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-1.5 text-xs text-[var(--color-text-secondary)]">
           <span>
-            {localCode.split("\n").length} 줄
+            {codeLineCount} 줄
             {localCode.length > 0 && ` · ${localCode.length} 문자`}
             {!isExpanded && " · 접힘"}
             {showPreview && " · 미리보기 실행 중"}

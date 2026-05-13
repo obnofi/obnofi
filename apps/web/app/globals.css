@@ -229,6 +229,220 @@ body {
   min-width: 0;
 }
 
+.grove-insert-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  color: var(--color-text-primary);
+}
+
+.grove-insert-block__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.grove-insert-block__empty {
+  border-radius: var(--radius-md);
+  padding: 18px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  text-align: center;
+}
+
+.grove-table-block {
+  display: grid;
+  gap: 0;
+  overflow-x: auto;
+}
+
+.grove-table-block__row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+}
+
+.grove-table-block__cell {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.grove-table-block__cell:focus,
+.grove-web-clip__note:focus {
+  border-color: var(--color-accent);
+}
+
+.grove-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.grove-file-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  padding: 8px 10px;
+}
+
+.grove-file-list__item span:last-child {
+  color: var(--color-text-secondary);
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+.grove-link-embed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-primary);
+  padding: 12px 14px;
+  text-decoration: none;
+}
+
+.grove-link-embed:hover {
+  background: var(--color-hover);
+}
+
+.grove-github-embed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  color: var(--color-text-primary);
+}
+
+.grove-github-embed__header,
+.grove-github-embed__card,
+.grove-github-embed__form {
+  display: flex;
+  align-items: center;
+}
+
+.grove-github-embed__header {
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.grove-github-embed__kind {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.grove-github-embed__card {
+  gap: 12px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  padding: 8px 0;
+  text-decoration: none;
+}
+
+.grove-github-embed__card:hover .grove-github-embed__title {
+  color: var(--color-accent);
+}
+
+.grove-github-embed__title,
+.grove-github-embed__meta {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grove-github-embed__title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.grove-github-embed__meta {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.grove-github-embed__form {
+  gap: 8px;
+}
+
+.grove-github-embed__input {
+  min-width: 0;
+  flex: 1 1 auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  padding: 7px 9px;
+  outline: none;
+}
+
+.grove-github-embed__input:focus {
+  border-color: var(--color-accent);
+}
+
+.grove-github-embed__button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+}
+
+.grove-github-embed__button:disabled {
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
+  cursor: default;
+}
+
+.grove-web-clip__url {
+  color: var(--color-accent);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.grove-web-clip__url:hover {
+  text-decoration: underline;
+}
+
+.grove-web-clip__note {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  padding: 10px;
+  resize: vertical;
+}
+
 .editor .ProseMirror .grove-task-item.is-checked .grove-task-item__content {
   color: var(--color-text-secondary) !important;
   text-decoration: line-through;
@@ -954,6 +1168,10 @@ html.jungle {
   100% { transform: scale(1); }
 }
 
+@keyframes graphEdgeFadeIn {
+  from { opacity: 0; }
+}
+
 /* Collaboration cursors (CollaborationCursor extension) */
 .collaboration-cursor__caret {
   border-left: 2px solid;
@@ -1044,4 +1262,21 @@ html.jungle {
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
+}
+
+/* Line presence indicator — 줄 점유 표시 (LinePresenceExtension) */
+.line-presence-block {
+  position: relative;
+}
+
+.line-presence-block::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 2px;
+  bottom: 2px;
+  width: 3px;
+  border-radius: 9999px;
+  background-color: var(--line-presence-color, #958DF1);
+  pointer-events: none;
 }

@@ -21,6 +21,10 @@ type DraggedColumnBlock = {
 
 const columnBlockDragKey = new PluginKey("groveColumnBlockDrag");
 
+function isValidDocPosition(doc: ProseMirrorNode, pos: number) {
+  return Number.isInteger(pos) && pos >= 0 && pos <= doc.content.size;
+}
+
 function isDirectColumnBlock(
   node: ProseMirrorNode,
   parent: ProseMirrorNode | null
@@ -107,6 +111,10 @@ function moveColumnBlock(
   event: DragEvent
 ) {
   const { state } = view;
+  if (!isValidDocPosition(state.doc, dragged.pos)) {
+    return false;
+  }
+
   const node = state.doc.nodeAt(dragged.pos);
 
   if (!node || !isDirectColumnBlock(node, state.doc.resolve(dragged.pos).parent)) {
@@ -200,7 +208,9 @@ function createColumnBlockDragPlugin() {
           }
 
           const pos = Number(handle.dataset.groveBlockPos);
-          const node = Number.isFinite(pos) ? view.state.doc.nodeAt(pos) : null;
+          const node = isValidDocPosition(view.state.doc, pos)
+            ? view.state.doc.nodeAt(pos)
+            : null;
 
           if (!node) {
             return false;

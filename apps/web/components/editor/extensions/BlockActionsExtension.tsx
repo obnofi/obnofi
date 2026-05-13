@@ -443,13 +443,22 @@ function createBlockActionsPlugin() {
       },
       apply(tr, value) {
         const meta = tr.getMeta(blockActionsPluginKey) as BlockActionsMeta | undefined;
+        const nextValue = { ...value };
+
+        if (tr.docChanged && nextValue.dropPos !== null) {
+          const mappedDropPos = tr.mapping.mapResult(nextValue.dropPos, -1);
+          nextValue.dropPos =
+            mappedDropPos.deleted || mappedDropPos.pos > tr.doc.content.size
+              ? null
+              : Math.max(0, mappedDropPos.pos);
+        }
 
         if (!meta) {
-          return value;
+          return nextValue;
         }
 
         return {
-          ...value,
+          ...nextValue,
           ...meta,
         };
       },
@@ -499,7 +508,12 @@ function createBlockActionsPlugin() {
           );
         });
 
-        if (pluginState?.dropPos !== null && pluginState?.dropPos !== undefined) {
+        if (
+          pluginState?.dropPos !== null &&
+          pluginState?.dropPos !== undefined &&
+          pluginState.dropPos >= 0 &&
+          pluginState.dropPos <= state.doc.content.size
+        ) {
           decorations.push(
             Decoration.widget(
               pluginState.dropPos,

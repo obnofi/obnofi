@@ -8,11 +8,9 @@ import {
   type ReactNodeViewProps,
 } from "@tiptap/react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
+import { DatabasePageCard } from "@/components/database/DatabasePageCard";
 import { useUIStore } from "@/store/useUIStore";
 import { Page, PropertyType, ViewType } from "@obnofi/types";
-
-const DatabasePageCard = dynamic(() => import("@/components/database/DatabasePageCard").then(mod => mod.DatabasePageCard), { ssr: false, loading: () => <div className="p-8 text-center text-sm text-[var(--color-text-secondary)]">Loading database...</div> });
 
 interface DatabaseBlockExtensionOptions {
   workspaceId?: string;

@@ -187,9 +187,9 @@ const SUBMENU_GROUPS: GroupConfig[] = [
     id: "g-github",
     category: "developer",
     title: "GitHub",
-    description: "Gist, 이슈, PR",
+    description: "Repository, Gist, 이슈, PR",
     icon: "GitGraph",
-    childIds: ["githubGist", "githubIssue"],
+    childIds: ["githubEmbed", "githubGist", "githubIssue"],
   },
 ];
 
@@ -419,6 +419,13 @@ export function SlashCommandList({
         case "dbDiagram":
           (chain as typeof chain & { insertDbDiagram: () => typeof chain })
             .insertDbDiagram()
+            .run();
+          break;
+        case "githubEmbed":
+        case "githubGist":
+        case "githubIssue":
+          (chain as typeof chain & { insertGitHubEmbedBlock: () => typeof chain })
+            .insertGitHubEmbedBlock()
             .run();
           break;
         case "columns2":

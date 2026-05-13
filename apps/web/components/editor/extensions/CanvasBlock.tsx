@@ -139,6 +139,7 @@ function CanvasBlockView(props: ReactNodeViewProps) {
           >
             <ClearingBoard
               embedded={true}
+              realtimeEnabled={false}
               roomSlug={canvasPage.id}
               title={canvasPage.title || "Inline Clearing"}
             />

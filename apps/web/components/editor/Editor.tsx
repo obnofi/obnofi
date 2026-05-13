@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, type CSSProperties } from "react";
+import { useState, useCallback, useRef, useEffect, type CSSProperties, type Ref, type RefObject } from "react";
 import { useEditor, EditorContent, type Editor as TiptapEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Collaboration from "@tiptap/extension-collaboration";
 import { GroveCollaborationCursor } from "@/components/editor/extensions/GroveCollaborationCursor";
+import { LinePresenceExtension } from "@/components/editor/extensions/LinePresenceExtension";
 import { useCollaboration, userColor } from "@/lib/collaboration/CollaborationContext";
 import "tippy.js/dist/tippy.css";
 import { useSession } from "next-auth/react";
@@ -34,13 +35,23 @@ import { SubPageBlock } from "@/components/editor/extensions/SubPageBlock";
 import { BlockActionsExtension } from "@/components/editor/extensions/BlockActionsExtension";
 import { BlockActionBar } from "@/components/editor/BlockActionBar";
 import { CollaboratorBlockAvatars } from "@/components/editor/CollaboratorBlockAvatars";
-import { SpeechRecognitionButton } from "@/components/editor/SpeechRecognitionButton";
 import { SpeechInputIndicator } from "@/components/editor/SpeechInputIndicator";
 import { TextHighlightToolbar } from "@/components/editor/TextHighlightToolbar";
 import { TextHighlightMark } from "@/components/editor/extensions/TextHighlightMark";
 import { TaskItem, TaskList } from "@/components/editor/extensions/TaskList";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import {
+  MossNoteDock,
+  type MossNoteDockHandle,
+} from "@/components/workspace/MossNoteDock";
+import {
+  FileDropBlock,
+  GitHubEmbedBlock,
+  GroveTableBlock,
+  LinkEmbedBlock,
+  WebClipBlock,
+} from "@/components/editor/extensions/GroveInsertionBlocks";
 import type { PageHeadingFontSizes, PageHighlightColor } from "@obnofi/types";
+import type { MossNoteAnchor } from "@/lib/moss-notes";
 
 interface EditorProps {
   content: object | null;
@@ -50,6 +61,7 @@ interface EditorProps {
   pageUpdatedAt?: string;
   yjsUpdatedAt?: string | null;
   editable?: boolean;
+  lineIndicatorEnabled?: boolean;
   /** 에디터 내용 변경 시 호출 — 최신 JSON content 전달 */
   onUpdate?: (content: object) => void;
   /** 변경 발생 알림 (자동저장 트리거용) */
@@ -59,6 +71,10 @@ interface EditorProps {
   pageId?: string;
   onContentContainerReady?: (node: HTMLDivElement | null) => void;
   onEditorReady?: (editor: TiptapEditor | null) => void;
+  interimTranscript?: string;
+  isSpeechListening?: boolean;
+  mossNoteDockRef?: Ref<MossNoteDockHandle>;
+  mossNoteSurfaceRef?: RefObject<HTMLElement>;
 }
 
 function tiptapDocumentsMatch(a: object | null, b: object | null) {
@@ -73,6 +89,7 @@ export function Editor({
   pageUpdatedAt,
   yjsUpdatedAt,
   editable = true,
+  lineIndicatorEnabled = false,
   onUpdate,
   onEdit,
   placeholder = "Type something...",
@@ -80,6 +97,10 @@ export function Editor({
   pageId,
   onContentContainerReady,
   onEditorReady,
+  interimTranscript = "",
+  isSpeechListening = false,
+  mossNoteDockRef,
+  mossNoteSurfaceRef,
 }: EditorProps) {
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [isButtonModalOpen, setIsButtonModalOpen] = useState(false);
@@ -96,10 +117,6 @@ export function Editor({
   const { data: session } = useSession();
   const { ydoc, provider, isSynced } = useCollaboration();
 
-  const handleSpeechFinalResult = useCallback((text: string) => {
-    editorRef.current?.chain().focus().insertContent(text).run();
-  }, []);
-
   const handleEditorShellRef = useCallback(
     (node: HTMLDivElement | null) => {
       editorShellRef.current = node;
@@ -107,9 +124,6 @@ export function Editor({
     },
     [onContentContainerReady]
   );
-
-  const { interimTranscript, isListening, isSupported, start, stop } =
-    useSpeechRecognition({ onFinalResult: handleSpeechFinalResult });
 
   useEffect(() => { onUpdateRef.current = onUpdate; }, [onUpdate]);
   useEffect(() => { onEditRef.current = onEdit; }, [onEdit]);
@@ -217,6 +231,41 @@ export function Editor({
     },
     [workspaceId]
   );
+  const getMossNoteAnchor = useCallback((): MossNoteAnchor => {
+    const activeEditor = editorRef.current;
+    if (!activeEditor) {
+      return { kind: "page" };
+    }
+
+    const { from, to, empty } = activeEditor.state.selection;
+    if (empty) {
+      return { kind: "page" };
+    }
+
+    const quote = activeEditor.state.doc.textBetween(from, to, " ").trim();
+    if (!quote) {
+      return { kind: "page" };
+    }
+
+    return { kind: "selection", quote, from, to };
+  }, []);
+  const revealMossNoteAnchor = useCallback((anchor: MossNoteAnchor) => {
+    const activeEditor = editorRef.current;
+    if (!activeEditor || anchor.kind !== "selection") {
+      return;
+    }
+
+    const docSize = activeEditor.state.doc.content.size;
+    const from = Math.max(1, Math.min(anchor.from ?? 1, docSize));
+    const to = Math.max(from, Math.min(anchor.to ?? from, docSize));
+
+    activeEditor
+      .chain()
+      .focus()
+      .setTextSelection({ from, to })
+      .scrollIntoView()
+      .run();
+  }, []);
 
   const editor = useEditor({
     extensions: [
@@ -236,6 +285,14 @@ export function Editor({
                 image: session?.user?.image ?? null,
               },
             }),
+            ...(lineIndicatorEnabled
+              ? [
+                  LinePresenceExtension.configure({
+                    awareness: provider.awareness,
+                    localClientId: provider.awareness.clientID,
+                  }),
+                ]
+              : []),
           ]
         : []),
       DatabaseBlock.configure({ workspaceId, pageId }),
@@ -246,6 +303,11 @@ export function Editor({
       ColumnLayoutBlock,
       MathBlock,
       LinkedDatabaseBlock.configure({ workspaceId, pageId }),
+      GroveTableBlock,
+      FileDropBlock,
+      LinkEmbedBlock,
+      GitHubEmbedBlock,
+      WebClipBlock,
       CustomEmojiNode,
       PersonalEmojiExtension,
       DbDiagramExtension.configure({ workspaceId, pageId }),
@@ -319,17 +381,8 @@ export function Editor({
         }
         className={`editor prose max-w-none text-[#111110] dark:prose-invert dark:text-zinc-100 [&:focus-within]:outline-none [&_*]:focus-visible:outline-none ${
           editable ? "cursor-text" : ""
-        }`}
+        } ${lineIndicatorEnabled && ydoc ? "pl-4" : ""}`}
       >
-        {editable && (
-          <div className="not-prose flex justify-end pb-1">
-            <SpeechRecognitionButton
-              isListening={isListening}
-              isSupported={isSupported}
-              onToggle={isListening ? stop : start}
-            />
-          </div>
-        )}
         <EditorContent
           editor={editor}
           className="[&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:text-[#111110] [&_.ProseMirror]:outline-none dark:[&_.ProseMirror]:text-zinc-100 [&_.ProseMirror-focused]:outline-none [&_.ProseMirror-focused]:ring-0 [&_.ProseMirror-focused]:border-transparent [&_.ProseMirror-placeholder]:text-zinc-400 [&_.ProseMirror-placeholder]:before:content-[attr(data-placeholder)] [&_.ProseMirror-placeholder]:before:pointer-events-none"
@@ -347,10 +400,20 @@ export function Editor({
           />
         ) : null}
         <SpeechInputIndicator
-          isListening={isListening}
+          isListening={isSpeechListening}
           interimTranscript={interimTranscript}
         />
       </div>
+
+      {editable && pageId ? (
+        <MossNoteDock
+          ref={mossNoteDockRef}
+          pageId={pageId}
+          surfaceRef={mossNoteSurfaceRef ?? editorShellRef}
+          getAnchor={getMossNoteAnchor}
+          onRevealAnchor={revealMossNoteAnchor}
+        />
+      ) : null}
 
       <LinkDatabaseModal
         isOpen={isLinkModalOpen}
