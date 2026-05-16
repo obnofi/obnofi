@@ -44,6 +44,7 @@ export function useDbDiagramSync(
   const nodesRef = useRef<Node[]>([])
   const edgesRef = useRef<Edge[]>([])
   const initialLayoutRef = useRef(buildPositionMap(initialLayout))
+  const latestSqlRef = useRef(initialSql)
 
   // Keep refs in sync
   useEffect(() => {
@@ -56,6 +57,7 @@ export function useDbDiagramSync(
 
   // Sync SQL -> ERD (with debounce)
   const syncSqlToErd = useCallback((newSql: string) => {
+    latestSqlRef.current = newSql
     const { schema: newSchema, errors } = parseMySQLDDL(newSql)
     
     if (errors.length > 0) {
@@ -99,6 +101,7 @@ export function useDbDiagramSync(
     const newSql = generateMySQLDDL(newSchema)
     
     isUpdatingFromErd.current = true
+    latestSqlRef.current = newSql
     setSqlInternal(newSql)
     setSchema(newSchema)
     
@@ -110,10 +113,20 @@ export function useDbDiagramSync(
 
   // Public setSql with skipSync option
   const setSql = useCallback((newSql: string, skipSync: boolean = false) => {
+    latestSqlRef.current = newSql
     setSqlInternal(newSql)
     
     if (skipSync) {
       // Just update SQL without triggering ERD sync
+      return
+    }
+
+    if (!newSql.trim()) {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+        debounceTimerRef.current = null
+      }
+      syncSqlToErd(newSql)
       return
     }
 
@@ -135,9 +148,11 @@ export function useDbDiagramSync(
       positionsRef.current = extractPositions(updated)
       return updated
     })
-    
-    // Trigger SQL update (debounced)
-    if (!isUpdatingFromErd.current) {
+
+    const shouldUpdateSql = changes.some(change => change.type === 'remove')
+
+    // Dragging/selecting/resizing nodes only changes layout, not DDL.
+    if (shouldUpdateSql && !isUpdatingFromErd.current) {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current)
       }
@@ -154,9 +169,10 @@ export function useDbDiagramSync(
       edgesRef.current = updated
       return updated
     })
-    
-    // Trigger SQL update
-    if (!isUpdatingFromErd.current) {
+
+    const shouldUpdateSql = changes.some(change => change.type === 'remove')
+
+    if (shouldUpdateSql && !isUpdatingFromErd.current) {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current)
       }
@@ -172,6 +188,7 @@ export function useDbDiagramSync(
 
     const newSql = generateMySQLDDL(updatedSchema)
     isUpdatingFromErd.current = true
+    latestSqlRef.current = newSql
     setSqlInternal(newSql)
 
     // Build updated nodes: update existing tables in-place, add nodes for new tables
@@ -214,9 +231,18 @@ export function useDbDiagramSync(
   // Initial sync
   useEffect(() => {
     if (initialSql) {
+      if (initialSql !== latestSqlRef.current) {
+        latestSqlRef.current = initialSql
+        setSqlInternal(initialSql)
+      }
       syncSqlToErd(initialSql)
-    } else if (initialLayoutRef.current.size > 0) {
-      positionsRef.current = new Map(initialLayoutRef.current)
+    } else {
+      latestSqlRef.current = ''
+      setSqlInternal('')
+      syncSqlToErd('')
+      if (initialLayoutRef.current.size > 0) {
+        positionsRef.current = new Map(initialLayoutRef.current)
+      }
     }
     
     return () => {

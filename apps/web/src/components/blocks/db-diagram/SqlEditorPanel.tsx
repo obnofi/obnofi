@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import CodeMirror from '@uiw/react-codemirror'
+import CodeMirror, { EditorView } from '@uiw/react-codemirror'
 import { sql as sqlLang, MySQL } from '@codemirror/lang-sql'
 import { vscodeDark } from '@uiw/codemirror-theme-vscode'
 import { xcodeLight } from '@uiw/codemirror-theme-xcode'
@@ -13,6 +13,57 @@ interface SqlEditorPanelProps {
   width: number
   onResize: (delta: number) => void
 }
+
+const keepSqlEditorEventsInside = EditorView.domEventHandlers({
+  pointerdown: event => {
+    event.stopPropagation()
+    return false
+  },
+  mousedown: event => {
+    event.stopPropagation()
+    return false
+  },
+  mouseup: event => {
+    event.stopPropagation()
+    return false
+  },
+  click: event => {
+    event.stopPropagation()
+    return false
+  },
+  dblclick: event => {
+    event.stopPropagation()
+    return false
+  },
+  selectstart: event => {
+    event.stopPropagation()
+    return false
+  },
+  dragstart: event => {
+    event.stopPropagation()
+    return false
+  },
+  keydown: event => {
+    event.stopPropagation()
+    return false
+  },
+  keyup: event => {
+    event.stopPropagation()
+    return false
+  },
+})
+
+const selectableSqlEditor = EditorView.theme({
+  '&': {
+    userSelect: 'text',
+  },
+  '.cm-scroller': {
+    userSelect: 'text',
+  },
+  '.cm-content': {
+    userSelect: 'text',
+  },
+})
 
 export default function SqlEditorPanel({
   sql,
@@ -88,9 +139,10 @@ export default function SqlEditorPanel({
         <CodeMirror
           value={sql}
           height="100%"
-          extensions={[sqlLang({ dialect: MySQL })]}
+          extensions={[sqlLang({ dialect: MySQL }), keepSqlEditorEventsInside, selectableSqlEditor]}
           theme={isDark ? vscodeDark : xcodeLight}
           onChange={onChange}
+          draggable={false}
           basicSetup={{
             lineNumbers: true,
             highlightActiveLineGutter: true,

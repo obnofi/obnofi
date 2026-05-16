@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { ReactFlowProvider } from '@xyflow/react'
 import type { Connection } from '@xyflow/react'
 import type { DbSchema } from '@obnofi/types/db-diagram'
 import { useDbDiagramSync } from '@/src/hooks/useDbDiagramSync'
@@ -61,7 +60,11 @@ export default function DbDiagramLayout({
   } = useDbDiagramSync(initialSql, initialLayout)
 
   useEffect(() => {
-    onSqlChange?.(sql)
+    // React 렌더링 사이클 완료 후 콜백 실행 (flushSync 방지)
+    const timeoutId = setTimeout(() => {
+      onSqlChange?.(sql)
+    }, 0)
+    return () => clearTimeout(timeoutId)
   }, [onSqlChange, sql])
 
   useEffect(() => {
@@ -70,7 +73,11 @@ export default function DbDiagramLayout({
     }
 
     const positions = Object.fromEntries(extractPositions(nodes))
-    onLayoutChange(positions)
+    // React 렌더링 사이클 완료 후 콜백 실행 (flushSync 방지)
+    const timeoutId = setTimeout(() => {
+      onLayoutChange(positions)
+    }, 0)
+    return () => clearTimeout(timeoutId)
   }, [nodes, onLayoutChange])
 
   const handleSqlChange = useCallback((newSql: string) => {
@@ -206,25 +213,23 @@ export default function DbDiagramLayout({
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden relative">
-        <ReactFlowProvider>
-          <SqlEditorPanel
-            sql={sql}
-            onChange={handleSqlChange}
-            parseError={parseError}
-            tableCount={tableCount}
-            width={panelWidth}
-            onResize={handleResize}
-          />
-          <ErdCanvas
-            ref={erdCanvasRef}
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={handleConnect}
-            onSchemaChange={handleSchemaChange}
-          />
-        </ReactFlowProvider>
+        <SqlEditorPanel
+          sql={sql}
+          onChange={handleSqlChange}
+          parseError={parseError}
+          tableCount={tableCount}
+          width={panelWidth}
+          onResize={handleResize}
+        />
+        <ErdCanvas
+          ref={erdCanvasRef}
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={handleConnect}
+          onSchemaChange={handleSchemaChange}
+        />
       </div>
     </div>
   )

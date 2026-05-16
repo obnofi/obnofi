@@ -14,7 +14,6 @@ import {
   type NodeChange,
   type EdgeChange,
 } from '@xyflow/react'
-import '@xyflow/react/dist/style.css'
 
 import TableNode from './TableNode'
 import RelationEdge from './RelationEdge'
@@ -157,6 +156,7 @@ const ErdCanvas = forwardRef<ErdCanvasHandle, ErdCanvasProps>(function ErdCanvas
         minZoom={0.1}
         maxZoom={2}
         connectionRadius={50}
+        preventScrolling={false}
         defaultEdgeOptions={{
           type: 'relationEdge',
           animated: false,

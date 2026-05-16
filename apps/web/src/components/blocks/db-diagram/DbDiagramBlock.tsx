@@ -1,10 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
-import dynamic from 'next/dynamic'
+import DbDiagramLayout from './DbDiagramLayout'
 import { usePageStore } from '@/store/pageStore'
-
-const DbDiagramLayout = dynamic(() => import('./DbDiagramLayout'), { ssr: false, loading: () => <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-secondary)]">Loading database diagram...</div> })
 
 interface DbDiagramBlockProps {
   node: {
@@ -35,11 +33,17 @@ export default function DbDiagramBlock({ node, updateAttributes }: DbDiagramBloc
   }, [isFullscreen])
 
   const handleSqlChange = (newSql: string) => {
-    updateAttributes({ sql: newSql })
+    // React 렌더링 사이클 완료 후 업데이트 (flushSync 방지)
+    setTimeout(() => {
+      updateAttributes({ sql: newSql })
+    }, 0)
   }
 
   const handleLayoutChange = (newLayout: Record<string, { x: number; y: number }>) => {
-    updateAttributes({ layout: newLayout })
+    // React 렌더링 사이클 완료 후 업데이트 (flushSync 방지)
+    setTimeout(() => {
+      updateAttributes({ layout: newLayout })
+    }, 0)
   }
 
   return (
