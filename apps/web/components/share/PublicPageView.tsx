@@ -1,6 +1,6 @@
 "use client";
 
-import { Editor } from "@/components/editor/Editor";
+import { PublicReadonlyEditor } from "@/components/share/PublicReadonlyEditor";
 import { PageGlyph } from "@/components/workspace/PageGlyph";
 
 interface PublicPageViewProps {
@@ -56,7 +56,7 @@ export function PublicPageView({
           </div>
 
           <div className="text-[#111110] dark:text-zinc-300 leading-relaxed">
-            <Editor content={content} editable={false} />
+            <PublicReadonlyEditor content={content} />
           </div>
         </article>
       </div>
