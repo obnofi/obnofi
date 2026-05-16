@@ -9,6 +9,7 @@ export type GraphCanvasNodeData = GraphLinkNode;
 export const GraphNode = memo(function GraphNode({
   data,
   selected,
+  dragging,
 }: NodeProps) {
   const nodeData = data as GraphCanvasNodeData;
   const size = typeof nodeData.size === "number" ? nodeData.size : 10;
@@ -42,7 +43,9 @@ export const GraphNode = memo(function GraphNode({
 
       {/* dot */}
       <div
-        className="rounded-full transition-transform duration-150 group-hover:scale-[1.5]"
+        className={`rounded-full transition-all ease-out group-hover:scale-[1.5] ${
+          dragging ? "duration-75" : "duration-500"
+        }`}
         style={{
           width: size,
           height: size,
@@ -52,19 +55,29 @@ export const GraphNode = memo(function GraphNode({
             : "none",
           boxShadow: selected
             ? `0 0 0 ${Math.round(size * 0.6)}px rgba(180, 180, 180, 0.12)`
+            : dragging
+            ? `0 0 0 ${Math.round(size * 0.8)}px rgba(200, 200, 200, 0.2), 0 8px 24px rgba(0,0,0,0.3)`
             : undefined,
-          transform: selected ? "scale(1.5)" : undefined,
-          animation: "graphNodeAppear 0.45s cubic-bezier(0.34,1.56,0.64,1) both",
+          transform: selected ? "scale(1.5)" : dragging ? "scale(1.3)" : undefined,
+          animation: "graphNodeAppear 0.6s cubic-bezier(0.22,1,0.36,1) both",
+          willChange: "transform",
+          cursor: dragging ? "grabbing" : "grab",
         }}
       />
 
       {/* 라벨 */}
       <div
-        className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-center transition-opacity duration-150 group-hover:opacity-100"
-        style={{ top: size + 5, opacity: nodeData.isCurrentNote ? 0.9 : 0.65 }}
+        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 text-center transition-all ease-out group-hover:opacity-100 ${
+          dragging ? "duration-75" : "duration-500"
+        }`}
+        style={{ 
+          top: size + 5, 
+          opacity: dragging ? 1 : nodeData.isCurrentNote ? 0.9 : 0.65,
+          transform: dragging ? "translateX(-50%) scale(1.1)" : "translateX(-50%)",
+        }}
       >
         <span
-          className="block max-w-[88px] truncate text-[10px] font-medium leading-none"
+          className="block max-w-[120px] truncate text-[11px] font-medium leading-none"
           style={{ color: labelColor }}
         >
           {nodeData.label}

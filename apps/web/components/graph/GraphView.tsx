@@ -19,7 +19,6 @@ import {
   type NodeMouseHandler,
   type NodeTypes,
 } from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
 import { Loader2, Orbit } from "lucide-react";
 import type { Page } from "@obnofi/types";
 import { GraphNode, type GraphCanvasNodeData } from "@/components/graph/GraphNode";
@@ -71,8 +70,11 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
     }
   }, [queryPageId, setFocusedNote]);
 
+  const hasSetInitialNote = useRef(false);
+
   useEffect(() => {
     let mounted = true;
+    hasSetInitialNote.current = false;
 
     const loadPages = async () => {
       setIsLoading(true);
@@ -93,7 +95,9 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
         }
 
         setPages(nextPages);
-        if (!queryPageId && nextPages[0]) {
+        // queryPageId가 없고 아직 초기 노드를 설정하지 않았을 때만 setFocusedNote 호출
+        if (!queryPageId && nextPages[0] && !hasSetInitialNote.current) {
+          hasSetInitialNote.current = true;
           setFocusedNote(nextPages[0].id);
         }
       } catch (loadError) {
@@ -116,7 +120,9 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
     return () => {
       mounted = false;
     };
-  }, [workspaceId, queryPageId, setFocusedNote]);
+    // queryPageId와 setFocusedNote를 의존성에서 제거하여 workspaceId 변경 시에만 실행
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]);
 
   const graphData = useGraphData({
     pages,
@@ -171,7 +177,7 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
   }, [graphData.edges, graphData.nodes]);
 
   useEffect(() => {
-    const nextNodes: GraphFlowNode[] = graphData.nodes.map((node, index) => {
+    const nextNodes: GraphFlowNode[] = graphData.nodes.map((node) => {
       const savedPosition = savedPositionsRef.current.get(node.id);
 
       return {
@@ -237,6 +243,45 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
       router.push(`/workspace/${workspaceId}?page=${nextId}`);
     },
     [router, setFocusedNote, workspaceId]
+  );
+
+  // 노드 드래그 시작
+  const handleNodeDragStart = useCallback(
+    (_event: React.MouseEvent, node: GraphFlowNode) => {
+      setNodes((current) =>
+        current.map((n) =>
+          n.id === node.id ? { ...n, dragging: true } : n
+        )
+      );
+    },
+    [setNodes]
+  );
+
+  // 노드 드래그 중 실시간 위치 업데이트
+  const handleNodeDrag = useCallback(
+    (_event: React.MouseEvent, node: GraphFlowNode) => {
+      setNodes((current) =>
+        current.map((n) =>
+          n.id === node.id
+            ? { ...n, position: node.position, dragging: true }
+            : n
+        )
+      );
+    },
+    [setNodes]
+  );
+
+  const handleNodeDragStop = useCallback(
+    (_event: React.MouseEvent, node: GraphFlowNode) => {
+      setNodes((current) =>
+        current.map((n) =>
+          n.id === node.id ? { ...n, dragging: false } : n
+        )
+      );
+      // 저장된 위치 업데이트
+      savedPositionsRef.current.set(node.id, { ...node.position });
+    },
+    [setNodes]
   );
 
   const handleLocalModeToggle = useCallback(() => {
@@ -318,7 +363,13 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
             edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            nodesDraggable={true}
+            nodesConnectable={false}
+            elementsSelectable={true}
             onNodeClick={handleNodeClick}
+            onNodeDragStart={handleNodeDragStart}
+            onNodeDrag={handleNodeDrag}
+            onNodeDragStop={handleNodeDragStop}
             minZoom={0.1}
             maxZoom={1.8}
             fitView

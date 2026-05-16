@@ -39,11 +39,12 @@ export const GraphEdge = memo(function GraphEdge({
       id={String(id)}
       path={edgePath}
       style={{
-        stroke: "rgba(130, 130, 130, 0.32)",
-        strokeWidth: edgeData.thickness ?? 0.5,
+        stroke: "rgba(130, 130, 130, 0.28)",
+        strokeWidth: edgeData.thickness ?? 0.8,
         strokeDasharray: edgeData.isUnresolved ? "4 4" : undefined,
-        opacity: edgeData.isUnresolved ? 0.38 : 0.72,
-        animation: "graphEdgeFadeIn 0.5s ease-out 0.08s backwards",
+        opacity: edgeData.isUnresolved ? 0.35 : 0.6,
+        animation: "graphEdgeFadeIn 0.8s cubic-bezier(0.22,1,0.36,1) 0.1s backwards",
+        transition: "all 0.5s cubic-bezier(0.22,1,0.36,1)",
       }}
     />
   );

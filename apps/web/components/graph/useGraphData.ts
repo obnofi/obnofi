@@ -38,8 +38,8 @@ interface UseGraphDataResult {
 }
 
 const WIKILINK_REGEX = /\[\[([^[\]]+)\]\]/g;
-const MIN_NODE_SIZE = 10;
-const MAX_NODE_SIZE = 28;
+const MIN_NODE_SIZE = 18;
+const MAX_NODE_SIZE = 24;
 const MIN_EDGE_WIDTH = 0.5;
 const MAX_EDGE_WIDTH = 1.5;
 
@@ -70,6 +70,15 @@ function scaleValue(value: number, maxValue: number, min: number, max: number) {
   }
 
   return Math.round(min + ((max - min) * value) / maxValue);
+}
+
+function scaleNodeSize(connectionCount: number, maxConnectionCount: number) {
+  if (maxConnectionCount <= 0) {
+    return MIN_NODE_SIZE;
+  }
+
+  const normalized = Math.sqrt(connectionCount) / Math.sqrt(maxConnectionCount);
+  return Math.round(MIN_NODE_SIZE + (MAX_NODE_SIZE - MIN_NODE_SIZE) * normalized);
 }
 
 function collectReferences(value: unknown, references: RawReference[]) {
@@ -238,7 +247,7 @@ function createGraphFromPages(pages: Page[], focusedNoteId: string | null) {
       backlinkCount: incoming,
       connectionCount,
       isOrphan: connectionCount === 0,
-      size: scaleValue(connectionCount, maxConnectionCount, MIN_NODE_SIZE, MAX_NODE_SIZE),
+      size: scaleNodeSize(connectionCount, maxConnectionCount),
     };
   });
 
