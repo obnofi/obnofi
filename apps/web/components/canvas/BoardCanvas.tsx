@@ -11,6 +11,7 @@ type BoardCanvasProps = {
   gridSize?: number;
   minScale?: number;
   maxScale?: number;
+  embedded?: boolean;
   onCanvasPointerDown?: (
     event: React.PointerEvent<HTMLDivElement>,
     point: { x: number; y: number }
@@ -44,6 +45,7 @@ export function BoardCanvas({
   gridSize = 24,
   minScale = 0.1,
   maxScale = 5,
+  embedded = false,
   onCanvasPointerDown,
   onCanvasPointerMove,
   onCanvasPointerUp,
@@ -231,7 +233,11 @@ export function BoardCanvas({
   return (
     <div
       ref={rootRef}
-      className={joinClassNames("relative h-full w-full overflow-hidden touch-none", className)}
+      className={joinClassNames(
+        "relative h-full w-full overflow-hidden",
+        embedded ? "touch-auto" : "touch-none",
+        className
+      )}
       onContextMenu={(event) => {
         if (event.button === 1 || isSpacePressed) {
           event.preventDefault();

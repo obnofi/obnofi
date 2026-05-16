@@ -511,6 +511,7 @@ export function ClearingBoard({
     setElements,
     addElement,
     updateElement,
+    updateElements,
     removeElement,
     upsertElement,
     pushHistory,
@@ -1821,29 +1822,34 @@ export function ClearingBoard({
       const deltaX = scenePoint.x - activeDrag.offsetX - target.x;
       const deltaY = scenePoint.y - activeDrag.offsetY - target.y;
       const movingIds = Object.keys(activeDrag.groupOrigin);
+      const timestamp = new Date().toISOString();
+      const dragPatches: Record<string, Partial<Element>> = {};
+
       movingIds.forEach((id) => {
         const origin = activeDrag.groupOrigin[id];
         const candidate = elementLookup[id];
         if (!origin || !candidate) {
           return;
         }
-        updateElement(id, {
+        dragPatches[id] = {
           x: origin.x + deltaX,
           y: origin.y + deltaY,
-          updatedAt: new Date().toISOString(),
-        });
+          updatedAt: timestamp,
+        };
       });
 
       // Move elements inside the dragged sections using pre-calculated origins
       if (activeDrag.sectionChildOrigins) {
         Object.entries(activeDrag.sectionChildOrigins).forEach(([childId, origin]) => {
-          updateElement(childId, {
+          dragPatches[childId] = {
             x: origin.x + deltaX,
             y: origin.y + deltaY,
-            updatedAt: new Date().toISOString(),
-          });
+            updatedAt: timestamp,
+          };
         });
       }
+
+      updateElements(dragPatches);
     }
 
     lastScenePointRef.current = scenePoint;
@@ -2060,7 +2066,13 @@ export function ClearingBoard({
   };
 
   const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    if (!boardRef.current || !event.metaKey) {
+    if (!boardRef.current) {
+      return;
+    }
+
+    if (!event.metaKey) {
+      // embedded 모드에서는 일반 스크롤을 외부 스크롤 컨테이너로 전파
+      // (preventDefault를 호출하지 않으면 자동으로 bubble됨)
       return;
     }
 
@@ -2229,6 +2241,7 @@ export function ClearingBoard({
 
   return (
     <div
+      data-testid={embedded ? "inline-canvas" : "workspace-canvas"}
       className={`flex flex-col bg-[var(--color-background)] text-[var(--color-text-primary)] ${
         embedded ? "h-full" : "min-h-screen"
       }`}
