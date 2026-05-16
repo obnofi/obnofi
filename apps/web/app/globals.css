@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -322,100 +323,121 @@ body {
 }
 
 .grove-github-embed {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 12px;
   color: var(--color-text-primary);
 }
 
-.grove-github-embed__header,
 .grove-github-embed__card,
 .grove-github-embed__form {
   display: flex;
   align-items: center;
-}
-
-.grove-github-embed__header {
-  gap: 8px;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.grove-github-embed__kind {
-  margin-left: auto;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  font-weight: 400;
+  gap: 12px;
+  min-height: 72px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px;
 }
 
 .grove-github-embed__card {
-  gap: 12px;
-  border-radius: var(--radius-md);
   color: var(--color-text-primary);
-  padding: 8px 0;
   text-decoration: none;
+  transition: background 120ms ease;
+}
+
+.grove-github-embed__card:hover {
+  background: var(--color-hover);
 }
 
 .grove-github-embed__card:hover .grove-github-embed__title {
   color: var(--color-accent);
 }
 
-.grove-github-embed__title,
-.grove-github-embed__meta {
-  margin: 0;
+.grove-github-embed__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+}
+
+.grove-github-embed__body {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.grove-github-embed__title {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.grove-github-embed__title {
-  font-size: 15px;
-  font-weight: 600;
-}
-
 .grove-github-embed__meta {
   color: var(--color-text-secondary);
   font-size: 12px;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grove-github-embed__open {
+  flex: 0 0 auto;
+  color: var(--color-text-secondary);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.grove-github-embed__card:hover .grove-github-embed__open {
+  opacity: 1;
 }
 
 .grove-github-embed__form {
-  gap: 8px;
+  background: transparent;
 }
 
 .grove-github-embed__input {
   min-width: 0;
   flex: 1 1 auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 0;
   background: transparent;
   color: var(--color-text-primary);
   font-size: 14px;
-  padding: 7px 9px;
+  padding: 0;
   outline: none;
 }
 
-.grove-github-embed__input:focus {
-  border-color: var(--color-accent);
+.grove-github-embed__input::placeholder {
+  color: var(--color-text-placeholder);
 }
 
 .grove-github-embed__button {
   flex: 0 0 auto;
   border: 0;
-  border-radius: var(--radius-md);
-  background: var(--color-accent);
-  color: #fff;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-accent);
   cursor: pointer;
   font-size: 13px;
-  font-weight: 600;
-  padding: 8px 12px;
+  font-weight: 500;
+  padding: 4px 6px;
+}
+
+.grove-github-embed__button:hover:not(:disabled) {
+  background: var(--color-accent-subtle);
 }
 
 .grove-github-embed__button:disabled {
-  background: var(--color-hover);
+  background: transparent;
   color: var(--color-text-secondary);
   cursor: default;
 }
@@ -1162,14 +1184,42 @@ html.jungle {
 /* Graph View - edge stacking is controlled via React Flow edge zIndex */
 
 @keyframes graphNodeAppear {
-  0%   { transform: scale(0); opacity: 0; }
-  60%  { transform: scale(1.22); opacity: 1; }
-  80%  { transform: scale(0.90); }
-  100% { transform: scale(1); }
+  0%   { transform: scale(0) translateY(10px); opacity: 0; }
+  40%  { transform: scale(1.15) translateY(-2px); opacity: 0.9; }
+  70%  { transform: scale(0.95) translateY(1px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); }
 }
 
 @keyframes graphEdgeFadeIn {
-  from { opacity: 0; }
+  0% { opacity: 0; stroke-dashoffset: 20; }
+  100% { opacity: 1; stroke-dashoffset: 0; }
+}
+
+/* Graph View - Node repulsion/push animation */
+@keyframes nodePushAway {
+  0% { transform: scale(1); }
+  30% { transform: scale(0.85); }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Graph View - Dragging node glow pulse */
+@keyframes dragGlowPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(200, 200, 200, 0.15); }
+  50% { box-shadow: 0 0 0 8px rgba(200, 200, 200, 0.08); }
+}
+
+/* Graph View styles */
+.graph-view-flow .react-flow__node {
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.graph-view-flow .react-flow__node.dragging {
+  z-index: 1000 !important;
+}
+
+.graph-view-flow .react-flow__node.selecting {
+  animation: nodePushAway 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Collaboration cursors (CollaborationCursor extension) */
