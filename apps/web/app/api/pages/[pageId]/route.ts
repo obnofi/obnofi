@@ -212,15 +212,114 @@ export async function DELETE(
   try {
     const { pageId } = await params;
 
-    // Cascades handle children / database / propertyValues
-    await prisma.page.delete({ where: { id: pageId } });
+    await prisma.$transaction(async (tx) => {
+      const rootPage = await tx.page.findUnique({
+        where: { id: pageId },
+        select: { id: true },
+      });
+
+      if (!rootPage) {
+        return;
+      }
+
+      const pageIds = new Set<string>([pageId]);
+      const databaseIds = new Set<string>();
+      let frontier = [pageId];
+
+      while (frontier.length > 0) {
+        const [children, databases] = await Promise.all([
+          tx.page.findMany({
+            where: { parentId: { in: frontier } },
+            select: { id: true },
+          }),
+          tx.database.findMany({
+            where: { pageId: { in: frontier } },
+            select: { id: true },
+          }),
+        ]);
+
+        const nextFrontier: string[] = [];
+        for (const child of children) {
+          if (!pageIds.has(child.id)) {
+            pageIds.add(child.id);
+            nextFrontier.push(child.id);
+          }
+        }
+
+        const newDatabaseIds = databases
+          .map((database) => database.id)
+          .filter((databaseId) => !databaseIds.has(databaseId));
+
+        for (const databaseId of newDatabaseIds) {
+          databaseIds.add(databaseId);
+        }
+
+        if (newDatabaseIds.length > 0) {
+          const specimens = await tx.page.findMany({
+            where: { parentDatabaseId: { in: newDatabaseIds } },
+            select: { id: true },
+          });
+
+          for (const specimen of specimens) {
+            if (!pageIds.has(specimen.id)) {
+              pageIds.add(specimen.id);
+              nextFrontier.push(specimen.id);
+            }
+          }
+        }
+
+        frontier = nextFrontier;
+      }
+
+      const ids = Array.from(pageIds);
+      await Promise.all([
+        tx.page.updateMany({
+          where: { parentId: { in: ids } },
+          data: { parentId: null },
+        }),
+        databaseIds.size > 0
+          ? tx.page.updateMany({
+              where: { parentDatabaseId: { in: Array.from(databaseIds) } },
+              data: { parentDatabaseId: null },
+            })
+          : Promise.resolve(),
+        tx.comment.updateMany({
+          where: { pageId: { in: ids }, parentId: { not: null } },
+          data: { parentId: null },
+        }),
+        tx.file.updateMany({
+          where: { pageId: { in: ids } },
+          data: { pageId: null },
+        }),
+      ]);
+
+      await Promise.all([
+        tx.pageLink.deleteMany({
+          where: {
+            OR: [{ sourceId: { in: ids } }, { targetId: { in: ids } }],
+          },
+        }),
+        tx.pageCollaborator.deleteMany({ where: { pageId: { in: ids } } }),
+        tx.yjsDocument.deleteMany({ where: { pageId: { in: ids } } }),
+        tx.propertyValue.deleteMany({ where: { pageId: { in: ids } } }),
+      ]);
+
+      await tx.comment.deleteMany({ where: { pageId: { in: ids } } });
+      if (databaseIds.size > 0) {
+        await tx.database.deleteMany({
+          where: { id: { in: Array.from(databaseIds) } },
+        });
+      }
+      await tx.page.deleteMany({ where: { id: { in: ids } } });
+    });
 
     return NextResponse.json({ success: true });
   } catch (e) {
     const code = (e as { code?: string })?.code;
     if (code === "P2025") {
-      return NextResponse.json({ error: "Page not found" }, { status: 404 });
+      return NextResponse.json({ success: true });
     }
+    console.error("[DELETE /api/pages/[pageId]]", e);
     return NextResponse.json(
       { error: "Failed to delete page" },
       { status: 500 }
