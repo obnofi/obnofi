@@ -11,7 +11,7 @@ export function resolvePersistedYjsContent(
   try {
     const ydoc = new Y.Doc();
     Y.applyUpdate(ydoc, new Uint8Array(state));
-    return yDocToProsemirrorJSON(ydoc, "default") as object;
+    return yDocToProsemirrorJSON(ydoc) as object;
   } catch {
     return null;
   }

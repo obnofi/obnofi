@@ -13,7 +13,7 @@ const indentClasses: Record<1 | 2 | 3, string> = {
 };
 
 export function TableOfContents({ container }: TableOfContentsProps) {
-  const { headings, activeHeadingId } = useTOC(container);
+  const { headings, activeHeadingId, scrollToHeading } = useTOC(container);
 
   if (headings.length <= 1) {
     return null;
@@ -30,12 +30,7 @@ export function TableOfContents({ container }: TableOfContentsProps) {
               <li key={heading.id}>
                 <button
                   type="button"
-                  onClick={() => {
-                    document.getElementById(heading.id)?.scrollIntoView({
-                      behavior: "smooth",
-                      block: "start",
-                    });
-                  }}
+                  onClick={() => scrollToHeading(heading.id)}
                   className={`block w-full truncate rounded-md py-1 text-left text-[12px] leading-5 transition ${indentClasses[heading.level]} ${
                     isActive
                       ? "font-semibold text-[var(--color-text-primary)]"

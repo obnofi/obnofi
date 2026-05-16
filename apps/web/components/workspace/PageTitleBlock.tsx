@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface PageTitleBlockProps {
   value: string;
@@ -23,45 +23,49 @@ export function PageTitleBlock({
   testId,
 }: PageTitleBlockProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFocusedRef = useRef(false);
   const isComposingRef = useRef(false);
-  const lastCommittedValueRef = useRef(value);
+  const lastReportedValueRef = useRef(value);
   const [draftValue, setDraftValue] = useState(value);
+  
+  // 고유한 id 생성 (testId이 있으면 사용, 없으면 랜덤)
+  const id = useMemo(() => testId || `page-title-${Math.random().toString(36).slice(2, 9)}`, [testId]);
 
-  const clearCommitTimer = () => {
-    if (commitTimerRef.current) {
-      clearTimeout(commitTimerRef.current);
-      commitTimerRef.current = null;
-    }
-  };
-
-  const commitValue = (nextValue: string) => {
-    clearCommitTimer();
-
-    if (lastCommittedValueRef.current === nextValue) {
+  const reportValue = (nextValue: string) => {
+    if (lastReportedValueRef.current === nextValue) {
       return;
     }
 
-    lastCommittedValueRef.current = nextValue;
+    lastReportedValueRef.current = nextValue;
     onChange(nextValue);
   };
 
-  const scheduleCommit = (nextValue: string) => {
-    clearCommitTimer();
-    commitTimerRef.current = setTimeout(() => {
-      commitValue(nextValue);
-    }, 250);
-  };
-
+  // textarea auto-resize - 초기 마운트 시에만 높이 조정
   useEffect(() => {
     const node = textareaRef.current;
-    if (!node) {
-      return;
-    }
+    if (!node) return;
 
-    node.style.height = "0px";
+    node.style.height = "auto";
     node.style.height = `${node.scrollHeight}px`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 값이 변경될 때 높이 조정 (스크롤 방해 방지)
+  useEffect(() => {
+    const node = textareaRef.current;
+    if (!node || !isFocusedRef.current) return;
+
+    // 현재 커서 위치 저장
+    const selectionStart = node.selectionStart;
+    const selectionEnd = node.selectionEnd;
+
+    // 높이 조정
+    node.style.height = "auto";
+    node.style.height = `${node.scrollHeight}px`;
+
+    // 커서 위치 복원 (높이 조정으로 인한 포커스 손실 방지)
+    node.selectionStart = selectionStart;
+    node.selectionEnd = selectionEnd;
   }, [draftValue]);
 
   useEffect(() => {
@@ -70,19 +74,15 @@ export function PageTitleBlock({
     }
 
     setDraftValue(value);
-    lastCommittedValueRef.current = value;
+    lastReportedValueRef.current = value;
   }, [value]);
-
-  useEffect(() => {
-    return () => {
-      clearCommitTimer();
-    };
-  }, []);
 
   return (
     <div className="mb-6">
       <textarea
         ref={textareaRef}
+        id={id}
+        name="page-title"
         rows={1}
         value={draftValue}
         placeholder={placeholder}
@@ -92,7 +92,7 @@ export function PageTitleBlock({
         }}
         onBlur={() => {
           isFocusedRef.current = false;
-          commitValue(draftValue);
+          reportValue(draftValue);
         }}
         onCompositionStart={() => {
           isComposingRef.current = true;
@@ -101,15 +101,12 @@ export function PageTitleBlock({
           isComposingRef.current = false;
           const nextValue = event.currentTarget.value;
           setDraftValue(nextValue);
-          scheduleCommit(nextValue);
+          reportValue(nextValue);
         }}
         onChange={(event) => {
           const nextValue = event.target.value;
           setDraftValue(nextValue);
-
-          if (!isComposingRef.current) {
-            scheduleCommit(nextValue);
-          }
+          reportValue(nextValue);
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) {

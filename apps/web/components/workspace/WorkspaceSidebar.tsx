@@ -981,8 +981,28 @@ function WorkspaceSidebarInner({ workspaceId }: WorkspaceSidebarProps) {
   };
 
   const handleDeletePage = async (pageId: string) => {
+    const deletedPageIds = new Set<string>();
+    const queue = [pageId];
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (deletedPageIds.has(current)) continue;
+      deletedPageIds.add(current);
+
+      pages.forEach((page) => {
+        if (page.parentId === current && !deletedPageIds.has(page.id)) {
+          queue.push(page.id);
+        }
+      });
+    }
+
     await deletePage(pageId);
-    if (currentPageId === pageId) {
+
+    const deletionApplied = !usePageStore
+      .getState()
+      .pages.some((page) => page.id === pageId);
+
+    if (deletionApplied && currentPageId && deletedPageIds.has(currentPageId)) {
       router.push(`/workspace/${workspaceId}`);
     }
   };

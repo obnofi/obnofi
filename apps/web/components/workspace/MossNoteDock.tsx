@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useRef,
   useState,
   forwardRef,
   type RefObject,
@@ -32,6 +33,7 @@ export interface MossNoteDockHandle {
 const STICKY_WIDTH = 192;
 const STICKY_HEIGHT = 152;
 const DEFAULT_BODY = "새 메모";
+const OPTIMISTIC_MOSS_NOTE_PREFIX = "optimistic-moss-note-";
 
 const colorOptions: Array<{ value: MossNoteColor; label: string; className: string }> = [
   { value: "sun", label: "Sun", className: "bg-[var(--color-sticky-sun)]" },
@@ -45,6 +47,30 @@ function colorClass(color: MossNoteColor) {
 
 function getMossNoteError(error: unknown) {
   return error instanceof Error ? error.message : "메모를 처리하지 못했습니다";
+}
+
+function createOptimisticMossNoteId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${OPTIMISTIC_MOSS_NOTE_PREFIX}${crypto.randomUUID()}`;
+  }
+
+  return `${OPTIMISTIC_MOSS_NOTE_PREFIX}${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+}
+
+function isOptimisticMossNoteId(mossNoteId: string) {
+  return mossNoteId.startsWith(OPTIMISTIC_MOSS_NOTE_PREFIX);
+}
+
+function isSameMossNoteContent(first: MossNote, second: MossNote) {
+  return (
+    first.body === second.body &&
+    first.color === second.color &&
+    first.resolved === second.resolved &&
+    JSON.stringify(first.anchor) === JSON.stringify(second.anchor) &&
+    JSON.stringify(first.position) === JSON.stringify(second.position)
+  );
 }
 
 function clampPosition(surface: HTMLElement, position: MossNotePosition) {
@@ -68,6 +94,12 @@ function clientPointToSurfacePosition(
     x: clientX - rect.left + surface.scrollLeft - STICKY_WIDTH / 2,
     y: clientY - rect.top + surface.scrollTop - 24,
   });
+}
+
+function isMossNoteInteractiveTarget(target: EventTarget | null) {
+  return target instanceof HTMLElement
+    ? Boolean(target.closest("button, textarea, input, select, a"))
+    : false;
 }
 
 export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(function MossNoteDock(
@@ -94,6 +126,19 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
     y: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const mossNotesRef = useRef<MossNote[]>([]);
+
+  const applyMossNotes = useCallback((updater: (current: MossNote[]) => MossNote[]) => {
+    setMossNotes((current) => {
+      const next = updater(current);
+      mossNotesRef.current = next;
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    mossNotesRef.current = mossNotes;
+  }, [mossNotes]);
 
   useImperativeHandle(
     ref,
@@ -116,11 +161,12 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
       if (!response.ok) {
         throw new Error("메모를 불러오지 못했습니다");
       }
-      setMossNotes(await response.json());
+      const nextMossNotes = await response.json();
+      applyMossNotes(() => nextMossNotes);
     } catch (fetchError) {
       setError(getMossNoteError(fetchError));
     }
-  }, [pageId]);
+  }, [applyMossNotes, pageId]);
 
   useEffect(() => {
     void fetchMossNotes();
@@ -173,12 +219,18 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
 
   const patchMossNote = useCallback(
     async (mossNoteId: string, patch: Partial<MossNote>) => {
-      setMossNotes((current) =>
+      const previousMossNotes = mossNotesRef.current;
+
+      applyMossNotes((current) =>
         current.map((mossNote) =>
           mossNote.id === mossNoteId ? { ...mossNote, ...patch } : mossNote
         )
       );
       setError(null);
+
+      if (isOptimisticMossNoteId(mossNoteId)) {
+        return;
+      }
 
       try {
         const response = await fetch(
@@ -195,17 +247,17 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
         }
 
         const updatedMossNote = await response.json();
-        setMossNotes((current) =>
+        applyMossNotes((current) =>
           current.map((mossNote) =>
             mossNote.id === mossNoteId ? updatedMossNote : mossNote
           )
         );
       } catch (patchError) {
+        applyMossNotes(() => previousMossNotes);
         setError(getMossNoteError(patchError));
-        void fetchMossNotes();
       }
     },
-    [fetchMossNotes, pageId]
+    [applyMossNotes, pageId]
   );
 
   useEffect(() => {
@@ -219,7 +271,7 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
         event.clientX - dragOffset.x + STICKY_WIDTH / 2,
         event.clientY - dragOffset.y + 24
       );
-      setMossNotes((current) =>
+      applyMossNotes((current) =>
         current.map((mossNote) =>
           mossNote.id === draggingId
             ? { ...mossNote, position: nextPosition }
@@ -244,10 +296,32 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [dragOffset.x, dragOffset.y, draggingId, patchMossNote, surface]);
+  }, [applyMossNotes, dragOffset.x, dragOffset.y, draggingId, patchMossNote, surface]);
 
   const createMossNoteAt = async (position: MossNotePosition) => {
+    const anchor = getAnchor?.() ?? { kind: "page" };
+    const now = new Date().toISOString();
+    const optimisticMossNote: MossNote = {
+      id: createOptimisticMossNoteId(),
+      pageId,
+      blockId: null,
+      body: DEFAULT_BODY,
+      color,
+      anchor,
+      position,
+      resolved: false,
+      authorId: "",
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    applyMossNotes((current) => [optimisticMossNote, ...current]);
+    setEditingId(optimisticMossNote.id);
+    setEditingBody("");
+    setIsPlacing(false);
     setError(null);
+
+    let hasReconciledOptimisticMossNote = false;
 
     try {
       const response = await fetch(`/api/pages/${pageId}/moss-notes`, {
@@ -256,7 +330,7 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
         body: JSON.stringify({
           body: DEFAULT_BODY,
           color,
-          anchor: getAnchor?.() ?? { kind: "page" },
+          anchor,
           position,
         }),
       });
@@ -266,19 +340,82 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
       }
 
       const nextMossNote = await response.json();
-      setMossNotes((current) => [nextMossNote, ...current]);
-      setEditingId(nextMossNote.id);
-      setEditingBody("");
-      setIsPlacing(false);
+      const currentOptimisticMossNote = mossNotesRef.current.find(
+        (mossNote) => mossNote.id === optimisticMossNote.id
+      );
+
+      if (!currentOptimisticMossNote) {
+        await fetch(`/api/pages/${pageId}/moss-notes/${nextMossNote.id}`, {
+          method: "DELETE",
+        });
+        return;
+      }
+
+      const reconciledMossNote: MossNote = {
+        ...nextMossNote,
+        body: currentOptimisticMossNote.body,
+        color: currentOptimisticMossNote.color,
+        anchor: currentOptimisticMossNote.anchor,
+        position: currentOptimisticMossNote.position,
+        resolved: currentOptimisticMossNote.resolved,
+      };
+
+      applyMossNotes((current) =>
+        current.map((mossNote) =>
+          mossNote.id === optimisticMossNote.id ? reconciledMossNote : mossNote
+        )
+      );
+      hasReconciledOptimisticMossNote = true;
+      setEditingId((current) =>
+        current === optimisticMossNote.id ? nextMossNote.id : current
+      );
+
+      if (!isSameMossNoteContent(reconciledMossNote, nextMossNote)) {
+        const syncResponse = await fetch(
+          `/api/pages/${pageId}/moss-notes/${nextMossNote.id}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              body: reconciledMossNote.body,
+              color: reconciledMossNote.color,
+              anchor: reconciledMossNote.anchor,
+              position: reconciledMossNote.position,
+              resolved: reconciledMossNote.resolved,
+            }),
+          }
+        );
+
+        if (!syncResponse.ok) {
+          throw new Error("메모를 저장하지 못했습니다");
+        }
+      }
     } catch (createError) {
+      if (hasReconciledOptimisticMossNote) {
+        void fetchMossNotes();
+        setError(getMossNoteError(createError));
+        return;
+      }
+
+      applyMossNotes((current) =>
+        current.filter((mossNote) => mossNote.id !== optimisticMossNote.id)
+      );
+      setEditingId((current) =>
+        current === optimisticMossNote.id ? null : current
+      );
       setError(getMossNoteError(createError));
     }
   };
 
   const deleteMossNote = async (mossNoteId: string) => {
-    const previousMossNotes = mossNotes;
-    setMossNotes((current) => current.filter((mossNote) => mossNote.id !== mossNoteId));
+    const previousMossNotes = mossNotesRef.current;
+    applyMossNotes((current) => current.filter((mossNote) => mossNote.id !== mossNoteId));
     setError(null);
+
+    if (isOptimisticMossNoteId(mossNoteId)) {
+      setEditingId((current) => (current === mossNoteId ? null : current));
+      return;
+    }
 
     try {
       const response = await fetch(
@@ -290,7 +427,7 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
         throw new Error("메모를 삭제하지 못했습니다");
       }
     } catch (deleteError) {
-      setMossNotes(previousMossNotes);
+      applyMossNotes(() => previousMossNotes);
       setError(getMossNoteError(deleteError));
     }
   };
@@ -331,7 +468,9 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
             return (
               <article
                 key={mossNote.id}
-                className={`pointer-events-auto absolute rounded-md p-3 text-sm shadow-lg ${colorClass(mossNote.color)} ${
+                className={`pointer-events-auto absolute rounded-md p-3 text-sm shadow-lg ${
+                  isEditing ? "" : "cursor-grab active:cursor-grabbing"
+                } ${colorClass(mossNote.color)} ${
                   mossNote.resolved ? "opacity-55" : ""
                 }`}
                 style={{
@@ -347,6 +486,26 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
                     mossNoteId: mossNote.id,
                     x: event.clientX,
                     y: event.clientY,
+                  });
+                }}
+                onPointerDown={(event) => {
+                  if (isEditing || isMossNoteInteractiveTarget(event.target)) {
+                    return;
+                  }
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setDraggingId(mossNote.id);
+                  setDragOffset({
+                    x:
+                      event.clientX -
+                      (surface?.getBoundingClientRect().left ?? 0) +
+                      (surface?.scrollLeft ?? 0) -
+                      mossNote.position.x,
+                    y:
+                      event.clientY -
+                      (surface?.getBoundingClientRect().top ?? 0) +
+                      (surface?.scrollTop ?? 0) -
+                      mossNote.position.y,
                   });
                 }}
               >
@@ -404,7 +563,7 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
                         setEditingBody("");
                       }
                     }}
-                    className="min-h-24 w-full resize-none border-0 bg-transparent p-0 leading-5 text-[var(--color-text-primary)] outline-none"
+                    className="min-h-24 w-full resize-none border-0 bg-transparent p-0 leading-5 text-[var(--color-text-primary)] outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
                     autoFocus
                   />
                 ) : (

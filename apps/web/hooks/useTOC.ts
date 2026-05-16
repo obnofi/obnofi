@@ -11,6 +11,7 @@ export interface TOCHeading {
 interface UseTOCResult {
   activeHeadingId: string | null;
   headings: TOCHeading[];
+  scrollToHeading: (headingId: string) => void;
 }
 
 const HEADING_SELECTOR = "h1, h2, h3";
@@ -45,13 +46,35 @@ function getScrollParent(element: HTMLElement | null) {
   while (current) {
     const styles = window.getComputedStyle(current);
     const overflowY = styles.overflowY;
-    if ((overflowY === "auto" || overflowY === "scroll") && current.scrollHeight > current.clientHeight) {
+    if (
+      (overflowY === "auto" || overflowY === "scroll") &&
+      current.scrollHeight > current.clientHeight
+    ) {
       return current;
     }
     current = current.parentElement;
   }
 
   return null;
+}
+
+function findHeadingElement(container: HTMLElement, headingId: string) {
+  const scopedElement = container.querySelector<HTMLElement>(
+    `#${CSS.escape(headingId)}`
+  );
+
+  if (scopedElement) {
+    return scopedElement;
+  }
+
+  const documentElement = document.getElementById(headingId);
+  return documentElement instanceof HTMLElement ? documentElement : null;
+}
+
+function getVisibleHeadingElements(container: HTMLElement) {
+  return Array.from(container.querySelectorAll<HTMLElement>(HEADING_SELECTOR)).filter(
+    (element) => Boolean(getHeadingLevel(element) && element.textContent?.trim())
+  );
 }
 
 function headingsMatch(a: TOCHeading[], b: TOCHeading[]) {
@@ -143,6 +166,8 @@ export function useTOC(container: HTMLElement | null): UseTOCResult {
       childList: true,
       subtree: true,
       characterData: true,
+      // 스타일 변경으로 인한 스크롤 방지를 위해 attributes 감시 제한
+      attributeFilter: ["id"],
     });
 
     return () => {
@@ -160,8 +185,12 @@ export function useTOC(container: HTMLElement | null): UseTOCResult {
       return;
     }
 
+    const currentHeadingElements = getVisibleHeadingElements(container);
     const headingElements = headings
-      .map((heading) => document.getElementById(heading.id))
+      .map((heading, index) => {
+        const element = findHeadingElement(container, heading.id);
+        return element ?? currentHeadingElements[index] ?? null;
+      })
       .filter((element): element is HTMLElement => element instanceof HTMLElement);
 
     if (headingElements.length === 0) {
@@ -211,11 +240,62 @@ export function useTOC(container: HTMLElement | null): UseTOCResult {
     };
   }, [container, headings]);
 
+  const scrollToHeading = useMemo(() => {
+    return (headingId: string) => {
+      if (!container) {
+        return;
+      }
+
+      const headingIndex = headings.findIndex(
+        (heading) => heading.id === headingId
+      );
+      const headingElement =
+        findHeadingElement(container, headingId) ??
+        (headingIndex >= 0
+          ? getVisibleHeadingElements(container)[headingIndex] ?? null
+          : null);
+      if (!headingElement) {
+        return;
+      }
+
+      if (!headingElement.id) {
+        headingElement.id = headingId;
+      }
+
+      const scrollParent = getScrollParent(container);
+      const scrollOffset = 96;
+
+      if (scrollParent) {
+        const parentRect = scrollParent.getBoundingClientRect();
+        const headingRect = headingElement.getBoundingClientRect();
+        const nextTop =
+          headingRect.top - parentRect.top + scrollParent.scrollTop - scrollOffset;
+
+        scrollParent.scrollTo({
+          top: Math.max(0, nextTop),
+          behavior: "smooth",
+        });
+        setActiveHeadingId(headingId);
+        return;
+      }
+
+      window.scrollTo({
+        top: Math.max(
+          0,
+          headingElement.getBoundingClientRect().top + window.scrollY - scrollOffset
+        ),
+        behavior: "smooth",
+      });
+      setActiveHeadingId(headingId);
+    };
+  }, [container, headings]);
+
   return useMemo(
     () => ({
       activeHeadingId,
       headings,
+      scrollToHeading,
     }),
-    [activeHeadingId, headings]
+    [activeHeadingId, headings, scrollToHeading]
   );
 }
