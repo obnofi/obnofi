@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { InputRule, Node, mergeAttributes } from "@tiptap/core";
 import {
@@ -11,7 +12,6 @@ import { useRouter } from "next/navigation";
 import { DatabasePageCard } from "@/components/database/DatabasePageCard";
 import { useUIStore } from "@/store/useUIStore";
 import { Page, PropertyType, ViewType } from "@obnofi/types";
-import { InlineBlockShell } from "@/components/editor/InlineBlockShell";
 
 interface DatabaseBlockExtensionOptions {
   workspaceId?: string;
@@ -150,6 +150,11 @@ function DatabaseBlockView(props: ReactNodeViewProps) {
     [updateDatabaseBlockAttrs]
   );
 
+  useEffect(() => {
+    console.log("[DatabaseBlock] mounted", { pageId, databaseId, workspaceId });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const hasLoadedPages = useRef(false);
 
   const loadDatabasePages = useCallback(async () => {
@@ -242,61 +247,59 @@ function DatabaseBlockView(props: ReactNodeViewProps) {
     <NodeViewWrapper
       className="my-4"
       contentEditable={false}
-      onMouseDown={(event) => event.stopPropagation()}
-      onClick={(event) => event.stopPropagation()}
+      data-inline-block="true"
+      onClick={(e) => { e.stopPropagation(); console.log("[DatabaseBlock] interacted", { pageId, databaseId }); }}
     >
-      <InlineBlockShell activationHint="더블클릭하여 데이터베이스 편집">
-        <DatabasePageCard
-          pageId={pageId}
-          containerTestId="inline-database-embed"
-          loadingTestId="inline-database-loading"
-          readyTestId="inline-database-ready"
-          emptyTestId="inline-database-empty"
-          onOpenRow={(rowId) => openGrovePageSideTab(rowId, workspaceId)}
-          selection={
-            props.editor.isEditable
-              ? {
-                  pages: databasePages,
-                  selectedValue,
-                  onChange: (nextPageId) => {
-                    const nextPage = databasePages.find(
-                      (candidate) => candidate.id === nextPageId
-                    );
+      <DatabasePageCard
+        pageId={pageId}
+        containerTestId="inline-database-embed"
+        loadingTestId="inline-database-loading"
+        readyTestId="inline-database-ready"
+        emptyTestId="inline-database-empty"
+        onOpenRow={(rowId) => openGrovePageSideTab(rowId, workspaceId)}
+        selection={
+          props.editor.isEditable
+            ? {
+                pages: databasePages,
+                selectedValue,
+                onChange: (nextPageId) => {
+                  const nextPage = databasePages.find(
+                    (candidate) => candidate.id === nextPageId
+                  );
 
-                    updateDatabaseBlockAttrs({
-                      pageId: nextPage?.id ?? null,
-                      databaseId: nextPage?.databaseId ?? null,
-                      autoCreate: false,
-                    });
-                  },
-                  onCreate: () => {
-                    void createDatabasePage();
-                  },
-                  onOpen: handleSelectionOpen,
-                }
-              : undefined
-          }
-          onOpenDatabase={
-            workspaceId && pageId
-              ? () => router.push(`/workspace/${workspaceId}?page=${pageId}`)
-              : undefined
-          }
-          compact={false}
-          editableTitle={props.editor.isEditable}
-          viewType={viewType}
-          onViewTypeChange={handleViewTypeChange}
-          onSurfaceStateChange={handleSurfaceStateChange}
-          maxContentHeightClass="max-h-[720px]"
-          emptyMessage={
-            isCreating
-              ? "Creating Grove Catalog..."
-              : props.editor.isEditable
-              ? "Grove Catalog is being prepared."
-              : "Database preview unavailable."
-          }
-          state={pageId ? undefined : isCreating ? "creating" : "empty"}
-        />
-      </InlineBlockShell>
+                  updateDatabaseBlockAttrs({
+                    pageId: nextPage?.id ?? null,
+                    databaseId: nextPage?.databaseId ?? null,
+                    autoCreate: false,
+                  });
+                },
+                onCreate: () => {
+                  void createDatabasePage();
+                },
+                onOpen: handleSelectionOpen,
+              }
+            : undefined
+        }
+        onOpenDatabase={
+          workspaceId && pageId
+            ? () => router.push(`/workspace/${workspaceId}?page=${pageId}`)
+            : undefined
+        }
+        compact={false}
+        editableTitle={props.editor.isEditable}
+        viewType={viewType}
+        onViewTypeChange={handleViewTypeChange}
+        onSurfaceStateChange={handleSurfaceStateChange}
+        maxContentHeightClass="max-h-[720px]"
+        emptyMessage={
+          isCreating
+            ? "Creating Grove Catalog..."
+            : props.editor.isEditable
+            ? "Grove Catalog is being prepared."
+            : "Database preview unavailable."
+        }
+        state={pageId ? undefined : isCreating ? "creating" : "empty"}
+      />
     </NodeViewWrapper>
   );
 }
@@ -305,7 +308,7 @@ export const DatabaseBlock = Node.create<DatabaseBlockExtensionOptions>({
   name: "databaseNode",
   group: "block",
   atom: true,
-  selectable: true,
+  selectable: false,
   draggable: true,
 
   addOptions() {
@@ -345,7 +348,16 @@ export const DatabaseBlock = Node.create<DatabaseBlockExtensionOptions>({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(DatabaseBlockView);
+    return ReactNodeViewRenderer(DatabaseBlockView, {
+      stopEvent: ({ event }) => {
+        if (event.type === "mousedown") return true;
+        const target = event.target as HTMLElement;
+        return (
+          ["INPUT", "BUTTON", "SELECT", "TEXTAREA"].includes(target?.tagName ?? "") ||
+          Boolean(target?.isContentEditable)
+        );
+      },
+    });
   },
 
   addCommands() {
@@ -353,17 +365,17 @@ export const DatabaseBlock = Node.create<DatabaseBlockExtensionOptions>({
       insertDatabaseNode:
         () =>
         ({ commands }) =>
-          commands.insertContent({
-            type: this.name,
-            attrs: createDatabaseBlockAttrs(this.options),
-          }) && commands.createParagraphNear(),
+          commands.insertContent([
+            { type: this.name, attrs: createDatabaseBlockAttrs(this.options) },
+            { type: "paragraph" },
+          ]),
       insertDatabaseEmbed:
         () =>
         ({ commands }) =>
-          commands.insertContent({
-            type: this.name,
-            attrs: createDatabaseBlockAttrs(this.options),
-          }) && commands.createParagraphNear(),
+          commands.insertContent([
+            { type: this.name, attrs: createDatabaseBlockAttrs(this.options) },
+            { type: "paragraph" },
+          ]),
     };
   },
 
@@ -379,11 +391,10 @@ export const DatabaseBlock = Node.create<DatabaseBlockExtensionOptions>({
 
           chain()
             .deleteRange({ from: deleteFrom, to })
-            .insertContent({
-              type: this.name,
-              attrs: createDatabaseBlockAttrs(this.options),
-            })
-            .createParagraphNear()
+            .insertContent([
+              { type: this.name, attrs: createDatabaseBlockAttrs(this.options) },
+              { type: "paragraph" },
+            ])
             .run();
         },
       }),

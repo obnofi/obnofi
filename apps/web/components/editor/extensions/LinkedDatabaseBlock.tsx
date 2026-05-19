@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Node, mergeAttributes } from "@tiptap/core";
 import {
   NodeViewWrapper,
@@ -29,12 +30,17 @@ function LinkedDatabaseBlockView(props: ReactNodeViewProps) {
   const attrs = props.node.attrs as LinkedDatabaseBlockAttrs;
   const { pageId, workspaceId } = attrs;
 
+  useEffect(() => {
+    console.log("[LinkedDatabaseBlock] mounted", { pageId, workspaceId });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <NodeViewWrapper
       className="my-4"
       contentEditable={false}
-      onMouseDown={(event) => event.stopPropagation()}
-      onClick={(event) => event.stopPropagation()}
+      data-inline-block="true"
+      onClick={() => console.log("[LinkedDatabaseBlock] interacted", { pageId })}
     >
       <DatabasePageCard
         pageId={pageId}
@@ -61,7 +67,7 @@ export const LinkedDatabaseBlock = Node.create<LinkedDatabaseBlockExtensionOptio
   name: "linkedDatabaseEmbed",
   group: "block",
   atom: true,
-  selectable: true,
+  selectable: false,
   draggable: true,
 
   addOptions() {
@@ -97,7 +103,16 @@ export const LinkedDatabaseBlock = Node.create<LinkedDatabaseBlockExtensionOptio
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(LinkedDatabaseBlockView);
+    return ReactNodeViewRenderer(LinkedDatabaseBlockView, {
+      stopEvent: ({ event }) => {
+        if (event.type === "mousedown") return true;
+        const target = event.target as HTMLElement;
+        return (
+          ["INPUT", "BUTTON", "SELECT", "TEXTAREA"].includes(target?.tagName ?? "") ||
+          Boolean(target?.isContentEditable)
+        );
+      },
+    });
   },
 
   addCommands() {
