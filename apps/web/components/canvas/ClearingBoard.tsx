@@ -85,6 +85,13 @@ type ClearingElementBroadcast =
       elementId: string;
     };
 
+type ClearingBootstrapState = {
+  room: Room;
+  elements: Element[];
+  comments: Comment[];
+  isSupabaseLive: boolean;
+};
+
 const PRESENCE_COLOR_MAP: Record<string, string> = {
   ink: "#37352F",
   fern: "#2E7D45",
@@ -94,8 +101,18 @@ const PRESENCE_COLOR_MAP: Record<string, string> = {
   sky: "#337EA9",
 };
 
+const clearingBootstrapCache = new Map<string, ClearingBootstrapState>();
+const clearingBootstrapRequests = new Map<
+  string,
+  Promise<ClearingBootstrapState>
+>();
+
 function clampZoom(zoom: number) {
   return Math.min(2.4, Math.max(0.35, zoom));
+}
+
+function getClearingBootstrapKey(roomSlug: string, userId: string) {
+  return `${userId}:${roomSlug}`;
 }
 
 function getLocalUser() {
@@ -700,6 +717,21 @@ export function ClearingBoard({
     const supabaseEnabled = isSupabaseConfigured();
     setIsSupabaseLive(supabaseEnabled);
 
+    const cacheKey = getClearingBootstrapKey(roomSlug, activeUser.id);
+
+    const applyBootstrapState = (state: ClearingBootstrapState) => {
+      currentRoomRef.current = state.room;
+      setRoom(state.room);
+      suppressPersistenceRef.current = true;
+      setElements(state.elements);
+      setComments(state.comments);
+      setIsSupabaseLive(state.isSupabaseLive);
+      setSaveStatus("saved");
+      queueMicrotask(() => {
+        suppressPersistenceRef.current = false;
+      });
+    };
+
     const bootstrap = async () => {
       const localSnapshot = loadLocalClearingSnapshot(roomSlug);
       const fallbackRoom =
@@ -711,172 +743,197 @@ export function ClearingBoard({
         localSnapshot?.comments ??
         [createDemoComment(fallbackRoom.id, fallbackElements[0]?.id ?? null, activeUser.id)];
 
+      const cachedBootstrap = clearingBootstrapCache.get(cacheKey);
+      if (embedded && cachedBootstrap) {
+        if (!isMounted) {
+          return;
+        }
+
+        applyBootstrapState(cachedBootstrap);
+        setPresenceUsers([activeUser]);
+        setIsBootstrapping(false);
+        return;
+      }
+
       if (!supabaseEnabled) {
         if (!isMounted) {
           return;
         }
-        currentRoomRef.current = fallbackRoom;
-        setRoom(fallbackRoom);
-        suppressPersistenceRef.current = true;
-        setElements(fallbackElements);
-        setComments(fallbackComments);
+        const fallbackState: ClearingBootstrapState = {
+          room: fallbackRoom,
+          elements: fallbackElements,
+          comments: fallbackComments,
+          isSupabaseLive: false,
+        };
+        clearingBootstrapCache.set(cacheKey, fallbackState);
+        applyBootstrapState(fallbackState);
         setPresenceUsers([activeUser]);
-        setSaveStatus("saved");
         setIsBootstrapping(false);
-        queueMicrotask(() => {
-          suppressPersistenceRef.current = false;
-        });
         return;
       }
 
       const supabase = createBrowserSupabaseClient();
 
       try {
-        const userResult = await supabase.from("users").upsert(
-          {
-            id: activeUser.id,
-            name: activeUser.name,
-            email: activeUser.email,
-            avatar_url: activeUser.avatarUrl,
-            color: activeUser.color,
-            last_seen_at: new Date().toISOString(),
-          },
-          { onConflict: "id" }
-        );
-        assertSupabaseSuccess(userResult, "users upsert failed");
+        let bootstrapRequest = clearingBootstrapRequests.get(cacheKey);
 
-        let activeRoom: Room;
-        const roomResult = await supabase
-          .from("rooms")
-          .select("*")
-          .eq("slug", roomSlug)
-          .maybeSingle();
+        if (!bootstrapRequest) {
+          bootstrapRequest = (async () => {
+            const userResult = await supabase.from("users").upsert(
+              {
+                id: activeUser.id,
+                name: activeUser.name,
+                email: activeUser.email,
+                avatar_url: activeUser.avatarUrl,
+                color: activeUser.color,
+                last_seen_at: new Date().toISOString(),
+              },
+              { onConflict: "id" }
+            );
+            assertSupabaseSuccess(userResult, "users upsert failed");
 
-        if (roomResult.error) {
-          throw roomResult.error;
+            let activeRoom: Room;
+            const roomResult = await supabase
+              .from("rooms")
+              .select("*")
+              .eq("slug", roomSlug)
+              .maybeSingle();
+
+            if (roomResult.error) {
+              throw roomResult.error;
+            }
+
+            if (roomResult.data) {
+              activeRoom = {
+                id: roomResult.data.id,
+                name: roomResult.data.name,
+                slug: roomResult.data.slug,
+                ownerId: roomResult.data.owner_id,
+                background: roomResult.data.background,
+                createdAt: roomResult.data.created_at,
+                updatedAt: roomResult.data.updated_at,
+              };
+            } else {
+              const insertedRoom = await supabase
+                .from("rooms")
+                .insert({
+                  name: "Jungle Clearing",
+                  slug: roomSlug,
+                  owner_id: activeUser.id,
+                  background: "paper",
+                })
+                .select("*")
+                .single();
+
+              if (insertedRoom.error || !insertedRoom.data) {
+                throw insertedRoom.error;
+              }
+
+              activeRoom = {
+                id: insertedRoom.data.id,
+                name: insertedRoom.data.name,
+                slug: insertedRoom.data.slug,
+                ownerId: insertedRoom.data.owner_id,
+                background: insertedRoom.data.background,
+                createdAt: insertedRoom.data.created_at,
+                updatedAt: insertedRoom.data.updated_at,
+              };
+            }
+
+            const elementResult = await supabase
+              .from("elements")
+              .select("*")
+              .eq("room_id", activeRoom.id)
+              .order("z_index", { ascending: true });
+            assertSupabaseSuccess(elementResult, "elements load failed");
+
+            let nextElements: Element[];
+            if (!elementResult.data || elementResult.data.length === 0) {
+              nextElements = createDemoElements(activeRoom.id, activeUser.id);
+              const demoElementResult = await supabase.from("elements").insert(
+                nextElements.map((element) => ({
+                  id: element.id,
+                  room_id: element.roomId,
+                  type: element.type,
+                  x: element.x,
+                  y: element.y,
+                  width: element.width,
+                  height: element.height,
+                  rotation: element.rotation,
+                  z_index: element.zIndex,
+                  created_by: element.createdBy,
+                  style: element.style,
+                  content: element.content,
+                  created_at: element.createdAt,
+                  updated_at: element.updatedAt,
+                }))
+              );
+              assertSupabaseSuccess(demoElementResult, "demo elements insert failed");
+            } else {
+              nextElements = (elementResult.data as Record<string, unknown>[]).map(toElement);
+            }
+
+            const commentResult = await supabase
+              .from("comments")
+              .select("*")
+              .eq("room_id", activeRoom.id)
+              .order("created_at", { ascending: true });
+            assertSupabaseSuccess(commentResult, "comments load failed");
+
+            let nextComments: Comment[];
+            if (!commentResult.data || commentResult.data.length === 0) {
+              nextComments = [createDemoComment(activeRoom.id, nextElements[0]?.id ?? null, activeUser.id)];
+              const demoCommentResult = await supabase.from("comments").insert(
+                nextComments.map((comment) => ({
+                  id: comment.id,
+                  room_id: comment.roomId,
+                  element_id: comment.elementId,
+                  author_id: comment.authorId,
+                  body: comment.body,
+                  content: comment.content ?? comment.body,
+                  parent_id: comment.parentId ?? null,
+                  x: comment.x,
+                  y: comment.y,
+                  resolved: comment.resolved ?? false,
+                  created_at: comment.createdAt,
+                  updated_at: comment.updatedAt,
+                }))
+              );
+              assertSupabaseSuccess(demoCommentResult, "demo comments insert failed");
+            } else {
+              nextComments = (commentResult.data as Record<string, unknown>[]).map(toComment);
+            }
+
+            const nextState: ClearingBootstrapState = {
+              room: activeRoom,
+              elements: nextElements,
+              comments: nextComments,
+              isSupabaseLive: true,
+            };
+
+            clearingBootstrapCache.set(cacheKey, nextState);
+            return nextState;
+          })().finally(() => {
+            clearingBootstrapRequests.delete(cacheKey);
+          });
+
+          clearingBootstrapRequests.set(cacheKey, bootstrapRequest);
         }
 
-        if (roomResult.data) {
-          activeRoom = {
-            id: roomResult.data.id,
-            name: roomResult.data.name,
-            slug: roomResult.data.slug,
-            ownerId: roomResult.data.owner_id,
-            background: roomResult.data.background,
-            createdAt: roomResult.data.created_at,
-            updatedAt: roomResult.data.updated_at,
-          };
-        } else {
-          const insertedRoom = await supabase
-            .from("rooms")
-            .insert({
-              name: "Jungle Clearing",
-              slug: roomSlug,
-              owner_id: activeUser.id,
-              background: "paper",
-            })
-            .select("*")
-            .single();
-
-          if (insertedRoom.error || !insertedRoom.data) {
-            throw insertedRoom.error;
-          }
-
-          activeRoom = {
-            id: insertedRoom.data.id,
-            name: insertedRoom.data.name,
-            slug: insertedRoom.data.slug,
-            ownerId: insertedRoom.data.owner_id,
-            background: insertedRoom.data.background,
-            createdAt: insertedRoom.data.created_at,
-            updatedAt: insertedRoom.data.updated_at,
-          };
-        }
-
-        currentRoomRef.current = activeRoom;
-
-        const elementResult = await supabase
-          .from("elements")
-          .select("*")
-          .eq("room_id", activeRoom.id)
-          .order("z_index", { ascending: true });
-        assertSupabaseSuccess(elementResult, "elements load failed");
-
-        let nextElements: Element[];
-        if (!elementResult.data || elementResult.data.length === 0) {
-          nextElements = createDemoElements(activeRoom.id, activeUser.id);
-          const demoElementResult = await supabase.from("elements").insert(
-            nextElements.map((element) => ({
-              id: element.id,
-              room_id: element.roomId,
-              type: element.type,
-              x: element.x,
-              y: element.y,
-              width: element.width,
-              height: element.height,
-              rotation: element.rotation,
-              z_index: element.zIndex,
-              created_by: element.createdBy,
-              style: element.style,
-              content: element.content,
-              created_at: element.createdAt,
-              updated_at: element.updatedAt,
-            }))
-          );
-          assertSupabaseSuccess(demoElementResult, "demo elements insert failed");
-        } else {
-          nextElements = (elementResult.data as Record<string, unknown>[]).map(toElement);
-        }
-
-        const commentResult = await supabase
-          .from("comments")
-          .select("*")
-          .eq("room_id", activeRoom.id)
-          .order("created_at", { ascending: true });
-        assertSupabaseSuccess(commentResult, "comments load failed");
-
-        let nextComments: Comment[];
-        if (!commentResult.data || commentResult.data.length === 0) {
-          nextComments = [createDemoComment(activeRoom.id, nextElements[0]?.id ?? null, activeUser.id)];
-          const demoCommentResult = await supabase.from("comments").insert(
-            nextComments.map((comment) => ({
-              id: comment.id,
-              room_id: comment.roomId,
-              element_id: comment.elementId,
-              author_id: comment.authorId,
-              body: comment.body,
-              content: comment.content ?? comment.body,
-              parent_id: comment.parentId ?? null,
-              x: comment.x,
-              y: comment.y,
-              resolved: comment.resolved ?? false,
-              created_at: comment.createdAt,
-              updated_at: comment.updatedAt,
-            }))
-          );
-          assertSupabaseSuccess(demoCommentResult, "demo comments insert failed");
-        } else {
-          nextComments = (commentResult.data as Record<string, unknown>[]).map(toComment);
-        }
+        const bootstrapState = await bootstrapRequest;
 
         if (!isMounted) {
           return;
         }
 
-        setRoom(activeRoom);
-        suppressPersistenceRef.current = true;
-        setElements(nextElements);
-        setComments(nextComments);
-        setSaveStatus("saved");
-        queueMicrotask(() => {
-          suppressPersistenceRef.current = false;
-        });
+        applyBootstrapState(bootstrapState);
 
         if (!realtimeEnabled) {
           setPresenceUsers([activeUser]);
           return;
         }
 
+        const activeRoom = bootstrapState.room;
         const channel = supabase
           .channel(`clearing-room:${activeRoom.id}`, {
             config: {
@@ -984,17 +1041,15 @@ export function ClearingBoard({
           return;
         }
         logClearingPersistenceError("bootstrap failed, switching to local mode", error);
-        currentRoomRef.current = fallbackRoom;
-        setRoom(fallbackRoom);
-        suppressPersistenceRef.current = true;
-        setElements(fallbackElements);
-        setComments(fallbackComments);
+        const fallbackState: ClearingBootstrapState = {
+          room: fallbackRoom,
+          elements: fallbackElements,
+          comments: fallbackComments,
+          isSupabaseLive: false,
+        };
+        clearingBootstrapCache.set(cacheKey, fallbackState);
+        applyBootstrapState(fallbackState);
         setPresenceUsers([activeUser]);
-        setIsSupabaseLive(false);
-        setSaveStatus("saved");
-        queueMicrotask(() => {
-          suppressPersistenceRef.current = false;
-        });
       } finally {
         if (isMounted) {
           setIsBootstrapping(false);
@@ -1018,6 +1073,7 @@ export function ClearingBoard({
     applyRemoteElementUpsert,
     clearSelection,
     currentUserId,
+    embedded,
     realtimeEnabled,
     resetViewport,
     roomSlug,
@@ -1131,6 +1187,23 @@ export function ClearingBoard({
       void flushCanvasPersistence();
     }, 800);
   }, [flushCanvasPersistence]);
+
+  useEffect(() => {
+    const activeUser = currentUserRef.current;
+    if (!activeUser || !room || isBootstrapping) {
+      return;
+    }
+
+    clearingBootstrapCache.set(
+      getClearingBootstrapKey(roomSlug, activeUser.id),
+      {
+        room,
+        elements,
+        comments,
+        isSupabaseLive,
+      }
+    );
+  }, [comments, elements, isBootstrapping, isSupabaseLive, room, roomSlug]);
 
   useEffect(() => {
     if (isBootstrapping) {
@@ -2206,6 +2279,7 @@ export function ClearingBoard({
   const clearingTitleControl = isTitleEditing ? (
     <input
       ref={titleInputRef}
+      name="clearing-title"
       value={titleDraft}
       aria-label="Clearing title"
       className="min-w-0 w-[320px] max-w-full rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-xl font-semibold text-[var(--color-text-primary)] outline-none"
@@ -2617,6 +2691,7 @@ export function ClearingBoard({
             </p>
             <input
               autoFocus
+              name="embed-url"
               className="mt-4 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 text-sm outline-none"
               value={embedDraftUrl}
               onChange={(event) => setEmbedDraftUrl(event.target.value)}
@@ -2643,6 +2718,7 @@ export function ClearingBoard({
 
       <input
         ref={fileInputRef}
+        name="clearing-image-upload"
         accept="image/png,image/jpeg,image/webp,image/gif"
         className="hidden"
         type="file"
