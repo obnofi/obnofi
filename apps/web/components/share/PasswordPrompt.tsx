@@ -65,6 +65,7 @@ export function PasswordPrompt({ shareId, onSuccess }: PasswordPromptProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
             <input
+              name="page-password"
               type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}

@@ -50,6 +50,7 @@ export function DateCell({ value, endValue, onChange }: DateCellProps) {
             <div>
               <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Start date</label>
               <input
+                name="date-start"
                 type="date"
                 value={value ?? ""}
                 onChange={(e) => onChange(e.target.value || null, endValue ?? undefined)}
@@ -59,6 +60,7 @@ export function DateCell({ value, endValue, onChange }: DateCellProps) {
             <div>
               <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">End date (optional)</label>
               <input
+                name="date-end"
                 type="date"
                 value={endValue ?? ""}
                 onChange={(e) => onChange(value, e.target.value || undefined)}

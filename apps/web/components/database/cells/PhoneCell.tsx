@@ -52,6 +52,7 @@ export function PhoneCell({ value, onChange }: PhoneCellProps) {
     <div className="relative flex items-center">
       <Phone className="absolute left-2 h-3.5 w-3.5 text-zinc-400" />
       <input
+        name="phone-cell"
         type="tel"
         value={localValue}
         onChange={handleChange}

@@ -412,6 +412,7 @@ export function Canvas({ content, onUpdate, compact = false }: CanvasProps) {
           <div className="flex items-center gap-2 rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-800">
             <PencilRuler className="h-4 w-4 text-zinc-400" />
             <input
+              name="brush-size"
               type="range"
               min={2}
               max={24}

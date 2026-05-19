@@ -401,6 +401,7 @@ function SearchDialog({
           <Search className="h-4 w-4 shrink-0 text-[var(--color-text-secondary)]" />
           <input
             ref={inputRef}
+            name="page-search"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="페이지 제목이나 본문 검색"

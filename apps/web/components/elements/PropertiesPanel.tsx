@@ -34,6 +34,7 @@ export function PropertiesPanel() {
             <label className="flex flex-col gap-2 text-sm">
               <span>Fill color</span>
               <input
+                name="shape-fill-color"
                 type="color"
                 value={selectedShape.content.fill}
                 onChange={(event) =>
@@ -50,6 +51,7 @@ export function PropertiesPanel() {
             <label className="flex flex-col gap-2 text-sm">
               <span>Border color</span>
               <input
+                name="shape-border-color"
                 type="color"
                 value={selectedShape.style.color}
                 onChange={(event) =>
@@ -66,6 +68,7 @@ export function PropertiesPanel() {
             <label className="flex flex-col gap-2 text-sm">
               <span>Border width</span>
               <input
+                name="shape-border-width"
                 max={12}
                 min={0}
                 type="range"
@@ -84,6 +87,7 @@ export function PropertiesPanel() {
             <label className="flex flex-col gap-2 text-sm">
               <span>Opacity</span>
               <input
+                name="shape-opacity"
                 max={1}
                 min={0.1}
                 step={0.05}

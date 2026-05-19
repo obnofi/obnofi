@@ -549,6 +549,7 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
 
                 {isEditing ? (
                   <textarea
+                    name="moss-note-body"
                     value={editingBody}
                     onChange={(event) => setEditingBody(event.target.value)}
                     onBlur={saveEditing}

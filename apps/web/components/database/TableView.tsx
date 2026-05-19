@@ -183,6 +183,7 @@ export function TableView({
 
                         <input
                           ref={nameInputRef}
+                          name="new-property-name"
                           type="text"
                           value={newPropName}
                           onChange={(e) => setNewPropName(e.target.value)}

@@ -31,6 +31,7 @@ export function TextCell({ value, onChange, placeholder }: TextCellProps) {
 
   return (
     <input
+      name="text-cell"
       type="text"
       value={localValue}
       onChange={handleChange}

@@ -32,6 +32,7 @@ export function EmbedElement({
             onPointerDown={(event) => event.stopPropagation()}
           >
             {element.content.faviconUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 alt=""
                 className="h-10 w-10 rounded-xl border bg-white"

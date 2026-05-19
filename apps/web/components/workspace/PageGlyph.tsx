@@ -24,6 +24,7 @@ export function PageGlyph({
     if (page.icon.startsWith("http") || page.icon.startsWith("data:")) {
       return (
         <span className={className}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={page.icon}
             alt="페이지 아이콘"

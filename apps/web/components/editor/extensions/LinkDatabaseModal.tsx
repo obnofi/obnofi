@@ -140,6 +140,7 @@ export function LinkDatabaseModal({
           <Search className="h-5 w-5 text-zinc-400" />
           <input
             ref={inputRef}
+            name="database-search"
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}

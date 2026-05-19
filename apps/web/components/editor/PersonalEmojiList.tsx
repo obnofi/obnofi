@@ -628,6 +628,7 @@ export const PersonalEmojiList = forwardRef<
                   title={`:${item.label}:`}
                 >
                   {item.kind === "personal" ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={item.emoji.src}
                       alt={item.emoji.alt ?? item.emoji.name}

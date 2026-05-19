@@ -19,6 +19,7 @@ export function SiteLogo({
         media="(prefers-color-scheme: dark)"
         srcSet="/obnofidarkmodelogo.png"
       />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/obnofilogosvg.svg"
         alt={alt}

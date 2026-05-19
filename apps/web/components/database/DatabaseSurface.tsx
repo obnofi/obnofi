@@ -167,6 +167,7 @@ export function DatabaseSurface({
         {isQueryPanelOpen ? (
           <div className="mt-3 grid gap-2 md:grid-cols-5">
             <input
+              name="global-filter"
               type="search"
               value={queryState.globalFilter}
               onChange={(event) => setGlobalFilter(event.target.value)}
@@ -174,6 +175,7 @@ export function DatabaseSurface({
               className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-placeholder)] focus:border-[var(--color-accent)]"
             />
             <select
+              name="filter-column"
               value={queryState.activeFilterColumnId ?? ""}
               onChange={(event) => setActiveFilterColumn(event.target.value || null)}
               className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)]"
@@ -187,6 +189,7 @@ export function DatabaseSurface({
               ))}
             </select>
             <input
+              name="filter-value"
               type="search"
               value={activeFilterValue}
               onChange={(event) => setActiveFilterValue(event.target.value)}
@@ -195,6 +198,7 @@ export function DatabaseSurface({
               className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-placeholder)] disabled:cursor-not-allowed disabled:opacity-50 focus:border-[var(--color-accent)]"
             />
             <select
+              name="sort-column"
               value={activeSort?.id ?? ""}
               onChange={(event) =>
                 setSorting(
@@ -215,6 +219,7 @@ export function DatabaseSurface({
             </select>
             <div className="flex gap-2">
               <select
+                name="sort-direction"
                 value={activeSort?.desc ? "desc" : "asc"}
                 onChange={(event) =>
                   activeSort

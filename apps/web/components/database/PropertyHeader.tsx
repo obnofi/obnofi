@@ -59,6 +59,7 @@ export function PropertyHeader({
         <div className="flex flex-col gap-0.5 min-w-0 flex-1">
           {isEditingName ? (
             <input
+              name="property-name"
               type="text"
               value={nameValue}
               onChange={(e) => setNameValue(e.target.value)}

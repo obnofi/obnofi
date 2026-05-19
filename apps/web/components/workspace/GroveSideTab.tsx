@@ -418,6 +418,7 @@ function TaskSideTabContent({ task }: { task: SideTabTask }) {
         />
       ) : null}
       <input
+        name="task-name"
         type="text"
         value={draftTask.name}
         onChange={(event) =>
@@ -429,6 +430,7 @@ function TaskSideTabContent({ task }: { task: SideTabTask }) {
         <div className="flex items-center justify-between gap-3">
           <span className="text-[var(--color-text-secondary)]">Status</span>
           <select
+            name="task-status"
             value={draftTask.status}
             onChange={(event) =>
               setDraftTask((current) => ({
@@ -449,6 +451,7 @@ function TaskSideTabContent({ task }: { task: SideTabTask }) {
             Date
           </span>
           <input
+            name="task-date"
             type="date"
             value={draftTask.date ?? ""}
             onChange={(event) =>
@@ -480,6 +483,7 @@ function TaskSideTabContent({ task }: { task: SideTabTask }) {
         </div>
       </div>
       <textarea
+        name="task-description"
         value={draftTask.description ?? ""}
         onChange={(event) =>
           setDraftTask((current) => ({

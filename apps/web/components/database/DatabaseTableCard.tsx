@@ -209,6 +209,7 @@ export function DatabaseTableCard({
             <div className="min-w-0">
               {onTitleChange ? (
                 <input
+                  name="database-title"
                   type="text"
                   value={databasePage.title}
                   onChange={(event) => onTitleChange(event.target.value)}

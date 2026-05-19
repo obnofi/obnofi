@@ -116,6 +116,7 @@ export function ImageElement({
           borderRadius: `${element.content.borderRadius}%`,
         }}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           alt={element.content.alt}
           className="h-full w-full"

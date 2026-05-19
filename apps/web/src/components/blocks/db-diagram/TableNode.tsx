@@ -97,6 +97,7 @@ const TableNode = memo(function TableNode(props: NodeProps) {
         {isEditingName ? (
           <input
             ref={nameInputRef}
+            name="table-name"
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
             onBlur={handleNameSubmit}

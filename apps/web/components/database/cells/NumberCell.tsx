@@ -51,6 +51,7 @@ export function NumberCell({
 
   return (
     <input
+      name="number-cell"
       type="number"
       value={localValue}
       onChange={handleChange}

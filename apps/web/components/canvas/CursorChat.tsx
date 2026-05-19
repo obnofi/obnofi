@@ -32,6 +32,7 @@ export function CursorChat({
       {isEditing ? (
         <div className="pointer-events-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2 shadow-lg">
           <input
+            name="cursor-chat-message"
             autoFocus
             className="w-48 bg-transparent text-sm text-[var(--color-text-primary)] outline-none"
             placeholder="Say something..."

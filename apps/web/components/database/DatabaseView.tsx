@@ -117,6 +117,7 @@ export function DatabaseView({
           <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-md">
             <Search className="w-4 h-4 text-zinc-400" />
             <input
+              name="row-filter"
               type="text"
               placeholder="Filter..."
               value={searchQuery}

@@ -52,6 +52,7 @@ export function EmailCell({ value, onChange }: EmailCellProps) {
     <div className="relative flex items-center">
       <Mail className="absolute left-2 h-3.5 w-3.5 text-zinc-400" />
       <input
+        name="email-cell"
         type="email"
         value={localValue}
         onChange={handleChange}

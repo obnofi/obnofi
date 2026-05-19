@@ -112,6 +112,7 @@ function LinkEmbedModal({ isOpen, onClose, onConfirm }: LinkEmbedModalProps) {
           </label>
           <input
             id="grove-link-embed-url"
+            name="grove-link-embed-url"
             ref={inputRef}
             value={url}
             onChange={(event) => setUrl(event.target.value)}
@@ -247,7 +248,7 @@ export function GroveInsertionToolbar({
   return (
     <div
       data-export-ignore="true"
-      className="pointer-events-none absolute bottom-4 left-1/2 z-30 w-full max-w-[calc(100%-32px)] -translate-x-1/2 px-2"
+      className="pointer-events-none absolute bottom-8 left-1/2 z-30 w-full max-w-[calc(100%-32px)] -translate-x-1/2 px-2"
     >
       <div className="pointer-events-auto mx-auto flex w-fit max-w-full items-center gap-1 overflow-x-auto rounded-[26px] border border-[var(--color-border)] bg-[var(--color-surface)]/95 px-2 py-2 shadow-[0_18px_50px_rgba(15,23,42,0.14)] backdrop-blur-xl">
         {items.map(({ id, Icon, onClick, disabled, active }) => (
@@ -271,6 +272,7 @@ export function GroveInsertionToolbar({
       </div>
       <input
         ref={fileInputRef}
+        name="grove-file-upload"
         className="hidden"
         type="file"
         multiple

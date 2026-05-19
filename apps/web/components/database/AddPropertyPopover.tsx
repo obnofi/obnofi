@@ -53,6 +53,7 @@ export function AddPropertyPopover({ onAdd }: AddPropertyPopoverProps) {
 
             <input
               ref={nameInputRef}
+              name="property-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}

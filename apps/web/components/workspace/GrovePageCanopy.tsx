@@ -270,6 +270,7 @@ export function GrovePageCanopy({
     <div className="mb-6">
       <input
         ref={canopyInputRef}
+        name="canopy-image-upload"
         type="file"
         accept="image/*"
         className="hidden"
@@ -277,6 +278,7 @@ export function GrovePageCanopy({
       />
       <input
         ref={iconInputRef}
+        name="icon-image-upload"
         type="file"
         accept="image/*"
         className="hidden"
@@ -288,6 +290,7 @@ export function GrovePageCanopy({
           <div className="group relative mb-5 overflow-hidden rounded-[20px]">
             {page.coverImage ? (
               <div className="relative h-[220px] w-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={page.coverImage}
                   alt={`${page.title || "Untitled"} cover`}
@@ -351,6 +354,7 @@ export function GrovePageCanopy({
                     className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-left transition hover:border-[var(--color-accent)]"
                   >
                     <div className="h-20 w-full">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={preset.url}
                         alt={preset.label}
@@ -437,6 +441,7 @@ export function GrovePageCanopy({
                   <label className="relative block">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-placeholder)]" />
                     <input
+                      name="glyph-search"
                       type="text"
                       value={glyphQuery}
                       onChange={(event) => setGlyphQuery(event.target.value)}

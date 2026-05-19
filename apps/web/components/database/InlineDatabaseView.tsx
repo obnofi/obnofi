@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Database, Loader2, ChevronRight } from "lucide-react";
 import { useUIStore } from "@/store/useUIStore";
 import { DatabasePage } from "@obnofi/types";

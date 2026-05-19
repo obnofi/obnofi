@@ -92,6 +92,7 @@ export function PropertyOptionsEditor({
             <div className="flex flex-1 items-center gap-2">
               {editingOptionId === option.id ? (
                 <input
+                  name="option-label"
                   type="text"
                   value={option.label}
                   onChange={(e) =>
@@ -159,6 +160,7 @@ export function PropertyOptionsEditor({
 
       <div className="flex items-center gap-2">
         <input
+          name="new-option-label"
           type="text"
           value={newOptionLabel}
           onChange={(e) => setNewOptionLabel(e.target.value)}

@@ -187,6 +187,7 @@ const ErdCanvas = forwardRef<ErdCanvasHandle, ErdCanvasProps>(function ErdCanvas
             <div>
               <label className="block text-[10px] font-medium text-[#787774] dark:text-[#7F7F7F] mb-1">컬럼명</label>
               <input
+                name="column-name"
                 type="text"
                 value={selectedColumn.column.name}
                 onChange={(e) => {
@@ -202,6 +203,7 @@ const ErdCanvas = forwardRef<ErdCanvasHandle, ErdCanvasProps>(function ErdCanvas
             <div>
               <label className="block text-[10px] font-medium text-[#787774] dark:text-[#7F7F7F] mb-1">타입</label>
               <input
+                name="column-type"
                 type="text"
                 value={selectedColumn.column.type}
                 onChange={(e) => {
@@ -223,6 +225,7 @@ const ErdCanvas = forwardRef<ErdCanvasHandle, ErdCanvasProps>(function ErdCanvas
               ] as const).map(({ key, label }) => (
                 <label key={key} className="flex items-center gap-1 px-1.5 py-0.5 bg-[#F7F7F5] dark:bg-[#2F2F2F] rounded cursor-pointer hover:bg-[#EBEBEA] dark:hover:bg-[#383838]">
                   <input
+                    name={`column-flag-${key}`}
                     type="checkbox"
                     checked={(selectedColumn.column as any)[key]}
                     onChange={(e) => {
@@ -241,6 +244,7 @@ const ErdCanvas = forwardRef<ErdCanvasHandle, ErdCanvasProps>(function ErdCanvas
             <div>
               <label className="block text-[10px] font-medium text-[#787774] dark:text-[#7F7F7F] mb-1">기본값</label>
               <input
+                name="column-default-value"
                 type="text"
                 value={selectedColumn.column.defaultValue || ''}
                 onChange={(e) => {

@@ -35,6 +35,7 @@ export function PersonCell({ value, users = [], onChange }: PersonCellProps) {
         {selectedUser ? (
           <div className="flex items-center gap-1.5">
             {selectedUser.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={selectedUser.avatar} alt={selectedUser.name} className="h-5 w-5 rounded-full object-cover" />
             ) : (
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-selected)] text-xs font-medium text-[var(--color-text-primary)]">
@@ -79,6 +80,7 @@ export function PersonCell({ value, users = [], onChange }: PersonCellProps) {
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--color-hover)]"
                 >
                   {user.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={user.avatar} alt={user.name} className="h-5 w-5 rounded-full object-cover" />
                   ) : (
                     <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-selected)] text-xs font-medium text-[var(--color-text-primary)]">
