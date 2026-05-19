@@ -19,7 +19,8 @@ import {
   type NodeMouseHandler,
   type NodeTypes,
 } from "@xyflow/react";
-import { Loader2, Orbit } from "lucide-react";
+import { ArrowLeft, Loader2, Orbit } from "lucide-react";
+import Link from "next/link";
 import type { Page } from "@obnofi/types";
 import { GraphNode, type GraphCanvasNodeData } from "@/components/graph/GraphNode";
 import { GraphEdge } from "@/components/graph/GraphEdge";
@@ -33,6 +34,19 @@ interface GraphViewProps {
 
 type GraphFlowNode = Node<GraphCanvasNodeData, "graphNode">;
 type GraphFlowEdge = Edge<{ thickness: number; isUnresolved: boolean }, "graphEdge">;
+
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+
+function createGraphSeedPosition(index: number, total: number) {
+  const spread = Math.max(160, Math.sqrt(total) * 120);
+  const radius = Math.sqrt(index + 0.5) * (spread / Math.max(1, Math.sqrt(total)));
+  const angle = index * GOLDEN_ANGLE;
+
+  return {
+    x: Math.cos(angle) * radius,
+    y: Math.sin(angle) * radius,
+  };
+}
 
 const nodeTypes: NodeTypes = {
   graphNode: GraphNode,
@@ -86,7 +100,7 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
         );
 
         if (!response.ok) {
-          throw new Error("Failed to fetch graph pages");
+          throw new Error("그래프 데이터를 불러오는 데 실패했습니다.");
         }
 
         const nextPages = (await response.json()) as Page[];
@@ -106,7 +120,7 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
         }
 
         setError(
-          loadError instanceof Error ? loadError.message : "Failed to load graph"
+          loadError instanceof Error ? loadError.message : "그래프를 불러오는 데 실패했습니다."
         );
       } finally {
         if (mounted) {
@@ -177,17 +191,13 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
   }, [graphData.edges, graphData.nodes]);
 
   useEffect(() => {
-    const nextNodes: GraphFlowNode[] = graphData.nodes.map((node) => {
+    const nextNodes: GraphFlowNode[] = graphData.nodes.map((node, index, allNodes) => {
       const savedPosition = savedPositionsRef.current.get(node.id);
 
       return {
         id: node.id,
         type: "graphNode",
-        // savedPosition이 없으면 중앙 근처 랜덤 → d3-force가 폭발적으로 퍼뜨림
-        position: savedPosition ?? {
-          x: (Math.random() - 0.5) * 40,
-          y: (Math.random() - 0.5) * 40,
-        },
+        position: savedPosition ?? createGraphSeedPosition(index, allNodes.length),
         data: {
           ...node,
           size: node.size,
@@ -313,13 +323,21 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
     <>
       <header className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-background)] px-5 py-3">
         <div className="flex items-center gap-3">
+          <Link
+            href={`/workspace/${workspaceId}${queryPageId ? `?page=${queryPageId}` : ""}`}
+            data-testid="graph-back-link"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
+            aria-label="워크스페이스로 돌아가기"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
           <div className="flex items-center gap-2">
             <div>
               <h1 className="text-sm font-semibold text-[var(--color-text-primary)]">
                 Graph View
               </h1>
               <p className="text-xs text-[var(--color-text-secondary)]">
-                {graphData.nodes.length} nodes, {graphData.edges.length} links
+                {graphData.nodes.length}개 노드, {graphData.edges.length}개 링크
               </p>
             </div>
           </div>
@@ -348,10 +366,10 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
                 <Orbit className="h-6 w-6 text-[var(--color-text-placeholder)]" />
               </div>
               <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
-                No pages yet
+                아직 페이지가 없어요
               </h2>
               <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                Create a few notes with <code>[[wikilink]]</code> to grow the graph.
+                <code>{"[[위키링크]]"}</code>로 노트를 몇 개 만들어 그래프를 키워보세요.
               </p>
             </div>
           </div>
@@ -382,19 +400,20 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="text-xs font-medium text-[var(--color-text-primary)]">
-                  Local Graph
+                  로컬 그래프
                 </span>
                 <button
                   type="button"
                   onClick={handleLocalModeToggle}
                   className="rounded-md px-2 py-1 text-xs text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
                 >
-                  {isLocalMode ? "On" : "Off"}
+                  {isLocalMode ? "켜짐" : "꺼짐"}
                 </button>
               </div>
               <div className="flex items-center gap-3">
                 <input
                   type="range"
+                  name="graph-depth"
                   min={1}
                   max={4}
                   step={1}

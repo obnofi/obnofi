@@ -44,7 +44,6 @@ export const GraphEdge = memo(function GraphEdge({
         strokeDasharray: edgeData.isUnresolved ? "4 4" : undefined,
         opacity: edgeData.isUnresolved ? 0.35 : 0.6,
         animation: "graphEdgeFadeIn 0.8s cubic-bezier(0.22,1,0.36,1) 0.1s backwards",
-        transition: "all 0.5s cubic-bezier(0.22,1,0.36,1)",
       }}
     />
   );

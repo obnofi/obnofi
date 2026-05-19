@@ -28,34 +28,60 @@ interface SimulationEdge extends SimulationLinkDatum<SimulationNode> {
   target: string;
 }
 
-// 노드의 충돌 반경 계산 (라벨 포함)
-function getCollisionRadius(node: { data: { size?: number; label?: unknown } }) {
-  const size = node.data.size ?? 10;
-  const label = typeof node.data.label === "string" ? node.data.label : "";
-  
-  // 라벨 너비 추정 (글자당 7px)
-  const labelWidth = Math.min(100, label.length * 7);
-  // 노드 본체 크기
-  const nodeWidth = size * 2;
-  const nodeHeight = size * 2;
-  
-  // 실제 너비/높이
-  const width = Math.max(nodeWidth, labelWidth);
-  const height = nodeHeight + 20; // 라벨 공간 추가
-  
-  // 대각선의 절반 + 여유 공간
-  return Math.hypot(width, height) / 2 + 40;
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+
+function isFinitePosition(value: number | undefined) {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
-function getLinkNode(value: string | number | SimulationNode | undefined) {
-  return typeof value === "object" && value !== null ? value : null;
+function getVisualRadius(node: { data: { size?: number; label?: unknown } }) {
+  const size = node.data.size ?? 10;
+  return Math.max(10, size / 2);
+}
+
+function getCollisionRadius(node: { data: { size?: number; label?: unknown } }) {
+  return getVisualRadius(node) + 12;
+}
+
+function createSeedPosition(index: number, total: number) {
+  const safeTotal = Math.max(1, total);
+  const baseSpacing = Math.max(70, Math.min(132, 52 + Math.sqrt(safeTotal) * 4));
+  const radius = Math.sqrt(index + 0.5) * baseSpacing;
+  const angle = index * GOLDEN_ANGLE;
+
+  return {
+    x: Math.cos(angle) * radius,
+    y: Math.sin(angle) * radius,
+  };
+}
+
+function hasSpreadPositions(
+  nodes: Array<Node<{ size?: number }, "graphNode">>
+) {
+  const positions = nodes.filter(
+    (node) => isFinitePosition(node.position.x) && isFinitePosition(node.position.y)
+  );
+
+  if (positions.length === 0) {
+    return false;
+  }
+
+  const avgRadius =
+    positions.reduce(
+      (sum, node) => sum + Math.hypot(node.position.x, node.position.y),
+      0
+    ) / positions.length;
+
+  return avgRadius > 48;
 }
 
 interface UseGraphSimulationParams {
   nodes: Array<Node<{ size?: number }, "graphNode">>;
   edges: Array<Edge<{ thickness?: number }, "graphEdge">>;
   graphKey: string;
-  setNodes: React.Dispatch<React.SetStateAction<Array<Node<{ size?: number }, "graphNode">>>>;
+  setNodes: React.Dispatch<
+    React.SetStateAction<Array<Node<{ size?: number }, "graphNode">>>
+  >;
 }
 
 export function useGraphSimulation({
@@ -67,77 +93,98 @@ export function useGraphSimulation({
   const simulationRef = useRef<ReturnType<typeof forceSimulation<SimulationNode>> | null>(null);
   const nodeMapRef = useRef<Map<string, SimulationNode>>(new Map());
   const isRunningRef = useRef(false);
+  const currentNodesRef = useRef(nodes);
+  const currentEdgesRef = useRef(edges);
 
-  // 초기 레이아웃 - graphKey가 변경될 때만 실행
   useEffect(() => {
-    if (nodes.length === 0) return;
+    currentNodesRef.current = nodes;
+  }, [nodes]);
 
-    const isBig = nodes.length >= 500;
+  useEffect(() => {
+    currentEdgesRef.current = edges;
+  }, [edges]);
 
-    // 초기 위치 설정 (원형 분포)
-    const angleStep = (2 * Math.PI) / nodes.length;
-    const radius = Math.max(300, nodes.length * 15);
+  const hasNodes = nodes.length > 0;
 
-    const simNodes: SimulationNode[] = nodes.map((node, i) => ({
-      id: node.id,
-      x: node.position.x || Math.cos(angleStep * i) * radius + (Math.random() - 0.5) * 100,
-      y: node.position.y || Math.sin(angleStep * i) * radius + (Math.random() - 0.5) * 100,
-      vx: 0,
-      vy: 0,
-      data: node.data,
-    }));
+  useEffect(() => {
+    const currentNodes = currentNodesRef.current;
+    const currentEdges = currentEdgesRef.current;
 
-    nodeMapRef.current = new Map(simNodes.map((n) => [n.id, n]));
+    if (currentNodes.length === 0) {
+      return;
+    }
 
-    const simEdges: SimulationEdge[] = edges.map((edge) => ({
+    const isBig = currentNodes.length >= 500;
+    const preserveCurrentPositions = hasSpreadPositions(currentNodes);
+
+    const simNodes: SimulationNode[] = currentNodes.map((node, index) => {
+      const seeded = createSeedPosition(index, currentNodes.length);
+      const x =
+        preserveCurrentPositions && isFinitePosition(node.position.x)
+          ? node.position.x
+          : seeded.x;
+      const y =
+        preserveCurrentPositions && isFinitePosition(node.position.y)
+          ? node.position.y
+          : seeded.y;
+
+      return {
+        id: node.id,
+        x,
+        y,
+        vx: 0,
+        vy: 0,
+        data: node.data,
+      };
+    });
+
+    nodeMapRef.current = new Map(simNodes.map((node) => [node.id, node]));
+
+    const simEdges: SimulationEdge[] = currentEdges.map((edge) => ({
       source: edge.source,
       target: edge.target,
     }));
 
-    // 물리 시뮬레이션
     const simulation = forceSimulation(simNodes)
       .force(
         "charge",
         forceManyBody()
-          .strength(isBig ? -600 : -1000)  // 강한 반발력
-          .distanceMax(2000)
+          .strength(isBig ? -220 : -380)
+          .distanceMin(18)
+          .distanceMax(isBig ? 440 : 560)
       )
       .force(
         "link",
         forceLink(simEdges)
-          .id((n) => n.id)
-          .distance((link) => {
-            const s = getLinkNode(link.source);
-            const t = getLinkNode(link.target);
-            if (!s || !t) return 250;
-            // 두 노드의 충돌 반경 합 + 여유
-            return getCollisionRadius(s) + getCollisionRadius(t) + 80;
-          })
-          .strength(0.2)
+          .id((node) => node.id)
+          .distance(() => (isBig ? 52 : 64))
+          .strength(isBig ? 0.16 : 0.22)
       )
       .force(
         "collide",
         forceCollide<SimulationNode>()
-          .radius((n) => getCollisionRadius(n))
-          .strength(1)  // 최대 충돌 강도
-          .iterations(3)
+          .radius((node) => getCollisionRadius(node))
+          .strength(0.85)
+          .iterations(isBig ? 2 : 4)
       )
       .force("center", forceCenter(0, 0))
-      .alpha(1)
-      .alphaDecay(0.02)
-      .velocityDecay(0.4);
+      .alpha(0.72)
+      .alphaDecay(isBig ? 0.04 : 0.032)
+      .velocityDecay(0.42);
 
     simulationRef.current = simulation;
     isRunningRef.current = true;
 
-    // 초기 레이아웃 수렴
-    simulation.tick(isBig ? 80 : 150);
+    simulation.tick(isBig ? 70 : 110);
 
-    // 초기 위치 적용
     setNodes((current) =>
       current.map((node) => {
         const simNode = nodeMapRef.current.get(node.id);
-        if (!simNode) return node;
+
+        if (!simNode) {
+          return node;
+        }
+
         return {
           ...node,
           position: { x: simNode.x, y: simNode.y },
@@ -145,14 +192,19 @@ export function useGraphSimulation({
       })
     );
 
-    // 지속적 업데이트
     simulation.on("tick", () => {
-      if (!isRunningRef.current) return;
-      
+      if (!isRunningRef.current) {
+        return;
+      }
+
       setNodes((current) =>
         current.map((node) => {
           const simNode = nodeMapRef.current.get(node.id);
-          if (!simNode) return node;
+
+          if (!simNode) {
+            return node;
+          }
+
           return {
             ...node,
             position: { x: simNode.x, y: simNode.y },
@@ -166,35 +218,49 @@ export function useGraphSimulation({
       simulation.stop();
       simulationRef.current = null;
     };
-  }, [graphKey, setNodes]);
+  }, [graphKey, setNodes, hasNodes]);
 
-  // 드래그 처리 - nodes가 변경될 때 실행
   useEffect(() => {
     const simulation = simulationRef.current;
-    if (!simulation) return;
+
+    if (!simulation) {
+      return;
+    }
 
     let hasDraggedNode = false;
+    let isDragging = false;
 
     for (const node of nodes) {
       const simNode = nodeMapRef.current.get(node.id);
-      if (!simNode) continue;
+
+      if (!simNode) {
+        continue;
+      }
 
       if (node.dragging) {
-        // 드래그 중인 노드는 마우스 위치로 즉시 이동
         simNode.fx = node.position.x;
         simNode.fy = node.position.y;
         hasDraggedNode = true;
-      } else if (simNode.fx !== null || simNode.fy !== null) {
-        // 드래그 종료 시 물리법칙 적용 재개
+        isDragging = true;
+        continue;
+      }
+
+      if (simNode.fx !== null || simNode.fy !== null) {
         simNode.fx = null;
         simNode.fy = null;
         hasDraggedNode = true;
       }
     }
 
-    // 드래그 중일 때만 시뮬레이션 재시작
     if (hasDraggedNode) {
-      simulation.alpha(0.3).restart();
+      simulation.alpha(isDragging ? 0.22 : 0.12);
+      simulation.alphaTarget(isDragging ? 0.08 : 0.03).restart();
+
+      if (!isDragging) {
+        window.setTimeout(() => {
+          simulation.alphaTarget(0);
+        }, 180);
+      }
     }
   }, [nodes]);
 }

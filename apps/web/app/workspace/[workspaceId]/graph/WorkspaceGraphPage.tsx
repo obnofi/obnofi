@@ -7,5 +7,9 @@ interface WorkspaceGraphPageProps {
 }
 
 export function WorkspaceGraphPage({ workspaceId }: WorkspaceGraphPageProps) {
-  return <GraphView workspaceId={workspaceId} />;
+  return (
+    <div data-testid="workspace-graph-page" className="flex h-full flex-col">
+      <GraphView workspaceId={workspaceId} />
+    </div>
+  );
 }
