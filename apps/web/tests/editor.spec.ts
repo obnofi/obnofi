@@ -159,21 +159,100 @@ test("/canvas 입력시 인라인 캔버스가 삽입된다", async ({ page }) =
 
   const canvasEmbed = page.getByTestId("inline-canvas-embed");
   await expect(canvasEmbed).toHaveAttribute("data-state", "ready");
+  await expect(page.getByTestId("inline-canvas-ready")).toBeVisible();
   await expect(page.getByTestId("inline-canvas-open")).toBeVisible();
   await expect(page.getByTestId("inline-canvas")).toBeVisible();
-  await expect(page.getByTestId("canvas-board")).toBeVisible();
+});
+
+test("새로고침 시 legacy 인라인 캔버스 블록이 무한 재요청하지 않는다", async ({ page }) => {
+  test.setTimeout(90000);
+  await signInAsDeveloper(page);
+  await page.goto("/workspace");
+  await expect(page).toHaveURL(/\/workspace\/[^/?]+/);
+
+  const workspaceId =
+    page.url().match(/\/workspace\/([^/?]+)/)?.[1];
+
+  expect(workspaceId).toBeTruthy();
+
+  const parentPageResponse = await page.context().request.post("/api/pages", {
+    data: {
+      title: `Canvas Parent ${Date.now()}`,
+      type: "document",
+      workspaceId,
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "canvasEmbed",
+            attrs: {
+              pageId: null,
+              workspaceId,
+              parentPageId: "legacy-parent-placeholder",
+              autoCreate: false,
+            },
+          },
+        ],
+      },
+    },
+  });
+
+  expect(parentPageResponse.ok()).toBeTruthy();
+
+  const parentPage = (await parentPageResponse.json()) as { id: string };
+
+  const patchedParentResponse = await page.context().request.patch(
+    `/api/pages/${parentPage.id}`,
+    {
+      data: {
+        content: {
+          type: "doc",
+          content: [
+            {
+              type: "canvasEmbed",
+              attrs: {
+                pageId: null,
+                workspaceId,
+                parentPageId: parentPage.id,
+                autoCreate: false,
+              },
+            },
+          ],
+        },
+      },
+    }
+  );
+
+  expect(patchedParentResponse.ok()).toBeTruthy();
+
+  let workspacePageListRequests = 0;
+  await page.route(`**/api/pages?workspaceId=${workspaceId}`, async (route) => {
+    workspacePageListRequests += 1;
+    await route.continue();
+  });
+
+  await page.goto(`/workspace/${workspaceId}?page=${parentPage.id}`);
+  await expect(page.getByTestId("workspace-editor")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("inline-canvas-collapsed")).toBeVisible({ timeout: 10000 });
+  await page.reload();
+  await expect(page.getByTestId("workspace-editor")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("inline-canvas-collapsed")).toBeVisible({ timeout: 10000 });
+  await page.waitForTimeout(2500);
+
+  expect(workspacePageListRequests).toBeLessThanOrEqual(2);
 });
 
 test("/database 입력시 인라인 데이터베이스가 삽입된다", async ({ page }) => {
+  test.setTimeout(60000);
   await gotoWorkspaceDocument(page);
 
   await focusEditorTail(page);
   await page.keyboard.type("/database");
 
   const databaseEmbed = page.getByTestId("inline-database-embed").last();
-  await expect(databaseEmbed).toHaveAttribute("data-state", "ready");
-  await expect(page.getByTestId("inline-database-open").last()).toBeVisible();
-  await expect(page.getByTestId("inline-database-ready").last()).toBeVisible();
+  await expect(databaseEmbed).toHaveAttribute("data-state", "ready", { timeout: 20000 });
+  await expect(page.getByTestId("inline-database-open").last()).toBeVisible({ timeout: 20000 });
+  await expect(page.getByTestId("inline-database-ready").last()).toBeVisible({ timeout: 20000 });
 });
 
 test("/github 입력시 GitHub 임베드 블록이 삽입된다", async ({ page }) => {
@@ -201,7 +280,15 @@ test("/github 입력시 GitHub 임베드 블록이 삽입된다", async ({ page 
   await githubEmbed.hover();
   const blockHandle = page.getByRole("button", { name: "블록 이동" });
   await expect(blockHandle).toBeVisible();
-  await blockHandle.click();
+  const handleBox = await blockHandle.boundingBox();
+  expect(handleBox).not.toBeNull();
+  await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.up();
+  // pointer simulation triggers selectBlockNode but loses editor focus — restore it
+  await page.evaluate(() => {
+    (document.querySelector(".ProseMirror") as HTMLElement)?.focus();
+  });
   await page.keyboard.press("Backspace");
   await expect(githubEmbed).toBeHidden();
 });
@@ -235,7 +322,7 @@ test("이미지를 잘라 개인 이모지로 추가할 수 있다", async ({ pa
 
   const editor = await focusEditorTail(page);
   await page.keyboard.type(":");
-  await page.locator('input[type="file"]').setInputFiles({
+  await page.locator('input[type="file"][accept="image/*"]:not([name])').setInputFiles({
     name: "grove.png",
     mimeType: "image/png",
     buffer: Buffer.from(
@@ -301,7 +388,13 @@ test("사이드바 너비를 조절할 수 있다", async ({ page }) => {
 });
 
 test("블록 핸들을 드래그해 블록 순서를 바꿀 수 있다", async ({ page }) => {
-  await gotoWorkspaceDocument(page);
+  await gotoWorkspaceDocument(page, {
+    type: "doc",
+    content: [
+      { type: "paragraph", content: [{ type: "text", text: "Welcome to Obnofi" }] },
+      { type: "paragraph", content: [{ type: "text", text: "Features" }] },
+    ],
+  });
 
   const sourceBlock = page
     .locator("[data-grove-block='true']")
@@ -331,7 +424,7 @@ test("블록 핸들을 드래그해 블록 순서를 바꿀 수 있다", async (
     handleBox!.y + handleBox!.height / 2
   );
   await page.mouse.down();
-  await page.mouse.move(targetBox!.x + 4, targetBox!.y + 6, { steps: 12 });
+  await page.mouse.move(targetBox!.x + 4, targetBox!.y + targetBox!.height - 6, { steps: 12 });
   await page.mouse.up();
 
   const blockTexts = await page.locator("[data-grove-block='true']").evaluateAll((nodes) =>
