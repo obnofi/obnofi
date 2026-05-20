@@ -85,17 +85,26 @@ export function GroveSideTab({ workspaceId }: { workspaceId: string }) {
         setRowPropertyValues(nextPage?.propertyValues ?? []);
 
         if (nextPage?.parentDatabaseId) {
+          const cachedDatabasePage = Object.values(
+            useGroveCatalogStore.getState().grovePages
+          ).find(
+            (grovePage) => grovePage.database.id === nextPage.parentDatabaseId
+          );
+
+          if (cachedDatabasePage) {
+            setDatabase(cachedDatabasePage.database);
+            return;
+          }
+
           const databaseResponse = await fetch(
-            `/api/databases/${nextPage.parentDatabaseId}`
+            `/api/databases/${nextPage.parentDatabaseId}?view=schema`
           );
           if (!isActive || !databaseResponse.ok) {
             return;
           }
 
           const nextDatabase = (await databaseResponse.json()) as Database;
-          const nextRow = nextDatabase.rows.find((row) => row.id === nextPage.id);
           setDatabase(nextDatabase);
-          setRowPropertyValues(nextRow?.propertyValues ?? []);
         }
       })
       .finally(() => {
@@ -188,12 +197,11 @@ export function GroveSideTab({ workspaceId }: { workspaceId: string }) {
         patchGroveCellValue(database.pageId, page.id, propertyId, savedValue);
       }
     } catch {
-      const databaseResponse = await fetch(`/api/databases/${database.id}`);
-      if (databaseResponse.ok) {
-        const nextDatabase = (await databaseResponse.json()) as Database;
-        const nextRow = nextDatabase.rows.find((row) => row.id === page.id);
-        setDatabase(nextDatabase);
-        setRowPropertyValues(nextRow?.propertyValues ?? []);
+      const pageResponse = await fetch(`/api/pages/${page.id}`);
+      if (pageResponse.ok) {
+        const nextPage = (await pageResponse.json()) as Page;
+        setPage(nextPage);
+        setRowPropertyValues(nextPage.propertyValues ?? []);
       }
     }
   };

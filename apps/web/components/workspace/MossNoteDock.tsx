@@ -219,7 +219,7 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
 
   const patchMossNote = useCallback(
     async (mossNoteId: string, patch: Partial<MossNote>) => {
-      const previousMossNotes = mossNotesRef.current;
+      const previousNote = mossNotesRef.current.find((n) => n.id === mossNoteId);
 
       applyMossNotes((current) =>
         current.map((mossNote) =>
@@ -249,11 +249,22 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
         const updatedMossNote = await response.json();
         applyMossNotes((current) =>
           current.map((mossNote) =>
-            mossNote.id === mossNoteId ? updatedMossNote : mossNote
+            mossNote.id === mossNoteId
+              ? { ...mossNote, updatedAt: updatedMossNote.updatedAt }
+              : mossNote
           )
         );
       } catch (patchError) {
-        applyMossNotes(() => previousMossNotes);
+        if (previousNote) {
+          const revertPatch = Object.fromEntries(
+            Object.keys(patch).map((k) => [k, (previousNote as Record<string, unknown>)[k]])
+          ) as Partial<MossNote>;
+          applyMossNotes((current) =>
+            current.map((mossNote) =>
+              mossNote.id === mossNoteId ? { ...mossNote, ...revertPatch } : mossNote
+            )
+          );
+        }
         setError(getMossNoteError(patchError));
       }
     },
@@ -468,6 +479,7 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
             return (
               <article
                 key={mossNote.id}
+                data-testid={`moss-note-${mossNote.id}`}
                 className={`pointer-events-auto absolute rounded-md p-3 text-sm shadow-lg ${
                   isEditing ? "" : "cursor-grab active:cursor-grabbing"
                 } ${colorClass(mossNote.color)} ${
