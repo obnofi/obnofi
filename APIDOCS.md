@@ -829,6 +829,12 @@ MossNote를 삭제합니다.
 
 데이터베이스 상세를 조회합니다.
 
+쿼리 파라미터:
+
+| 파라미터 | 설명 |
+|---|---|
+| `view=schema` | row 목록 없이 `properties`, `views`, `pageId`만 반환합니다. row 상세 UI에서 스키마만 필요할 때 사용합니다. |
+
 포함 항목:
 
 - `properties` 오름차순

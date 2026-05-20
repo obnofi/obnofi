@@ -60,7 +60,10 @@ export async function GET(
 
     const page = await prisma.page.findUnique({
       where: { id: pageId },
-      select: PAGE_DETAIL_SELECT,
+      select: {
+        ...PAGE_DETAIL_SELECT,
+        propertyValues: true,
+      },
     });
 
     if (!page) {

@@ -158,6 +158,7 @@ export type PrismaPageRow = {
   updatedAt: Date;
   database?: { id: string } | null;
   yjsDocument?: { updatedAt: Date } | null;
+  propertyValues?: PrismaPropertyValueRow[];
 };
 
 type PrismaPropertyRow = {
@@ -243,6 +244,7 @@ export function toPage(p: PrismaPageRow): Page {
     sharePassword: p.sharePassword ?? null,
     databaseId: p.database?.id ?? null,
     parentDatabaseId: p.parentDatabaseId ?? null,
+    propertyValues: p.propertyValues?.map(toPropertyValue),
     collaborationEnabled: p.collaborationEnabled ?? false,
     lineIndicatorEnabled: p.lineIndicatorEnabled ?? false,
   };

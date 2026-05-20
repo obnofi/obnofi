@@ -1,13 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
-import { PAGE_SELECT_WITH_PROPERTY_VALUES, toDatabase } from "@/lib/prisma-transforms";
+import {
+  PAGE_SELECT_WITH_PROPERTY_VALUES,
+  toDatabase,
+  toProperty,
+  toView,
+} from "@/lib/prisma-transforms";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ databaseId: string }> }
 ) {
   try {
     const { databaseId } = await params;
+    const view = request.nextUrl.searchParams.get("view");
+
+    if (view === "schema") {
+      const database = await prisma.database.findUnique({
+        where: { id: databaseId },
+        include: {
+          properties: { orderBy: { order: "asc" } },
+          views: { orderBy: { order: "asc" } },
+        },
+      });
+
+      if (!database) {
+        return NextResponse.json({ error: "Database not found" }, { status: 404 });
+      }
+
+      const properties = database.properties.map(toProperty);
+      return NextResponse.json({
+        id: database.id,
+        pageId: database.pageId,
+        properties,
+        columns: properties,
+        rows: [],
+        views: database.views.map(toView),
+      });
+    }
 
     const database = await prisma.database.findUnique({
       where: { id: databaseId },
