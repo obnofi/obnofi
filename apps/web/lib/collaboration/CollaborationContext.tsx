@@ -45,6 +45,7 @@ interface CollaborationContextValue {
   provider: WebsocketProvider | null;
   isSynced: boolean;
   pageType: "document" | "canvas" | "database" | null;
+  awarenessCount: number;
 }
 
 const defaultDocumentContext: CollaborationContextValue = {
@@ -52,6 +53,7 @@ const defaultDocumentContext: CollaborationContextValue = {
   provider: null,
   isSynced: false,
   pageType: null,
+  awarenessCount: 0,
 };
 
 const CollaborationContext = createContext<CollaborationContextValue>({
@@ -94,8 +96,27 @@ export function CollaborationProvider({
   const { data: session } = useSession();
   const [collaborators, setCollaborators] = useState<CollaborationUser[]>([]);
   const [isSynced, setIsSynced] = useState(false);
-  const currentUserPresenceId =
-    session?.user.id ?? session?.user.email ?? null;
+  const [awarenessCount, setAwarenessCount] = useState(0);
+  const localPresenceUser = useMemo(() => {
+    if (!session?.user) {
+      return null;
+    }
+
+    const name = session.user.name ?? session.user.email ?? "Anonymous";
+    const seed = session.user.email ?? session.user.id ?? name;
+    const color = userColor(seed);
+    const image =
+      typeof session.user.image === "string" && session.user.image.length > 0
+        ? session.user.image
+        : pickProfileImagePreset(seed);
+
+    return {
+      id: session.user.id ?? session.user.email ?? seed,
+      name,
+      color,
+      image,
+    };
+  }, [session]);
 
   // active=false인 페이지(문서 타입이 아님 / 공유편집 비활성)는 ydoc·provider를 만들지 않는다.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -106,10 +127,13 @@ export function CollaborationProvider({
     const wsUrl = resolveCollaborationServerUrl();
     return new WebsocketProvider(wsUrl, "ws", ydoc, {
       connect: false,
-      params: { docId: pageId },
+      params: {
+        docId: pageId,
+        userId: session?.user?.id ?? "",
+      },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ydoc, pageId]);
+  }, [ydoc, pageId, session?.user?.id]);
 
   // React 18 strict mode의 mount→cleanup→re-mount 더블 사이클에서
   // 같은 ydoc/provider 인스턴스가 destroy된 후 재사용되어 doc.update 핸들러가 사라지는
@@ -126,6 +150,7 @@ export function CollaborationProvider({
     if (!provider || !ydoc) {
       setCollaborators([]);
       setIsSynced(false);
+      setAwarenessCount(0);
       return;
     }
 
@@ -157,6 +182,7 @@ export function CollaborationProvider({
       provider.awareness.setLocalState(null);
       setCollaborators([]);
       setIsSynced(false);
+      setAwarenessCount(0);
       const timer = setTimeout(() => {
         provider.disconnect();
         provider.destroy();
@@ -192,34 +218,38 @@ export function CollaborationProvider({
   }, [provider]);
 
   useEffect(() => {
-    if (!provider || !session?.user) return;
-    const name = session.user.name ?? session.user.email ?? "Anonymous";
-    const seed = session.user.email ?? session.user.id ?? name;
-    const color = userColor(seed);
-    // session.user.image이 비어있으면 (구 토큰·DB 직접 수정 등으로 stale인 경우) seed 기반
-    // preset URL로 폴백한다. 그래야 awareness로 broadcast되는 image가 항상 유효한 URL이고,
-    // 다른 클라이언트가 받아 렌더할 때도 빈 아바타가 안 뜬다.
-    const image =
-      typeof session.user.image === "string" && session.user.image.length > 0
-        ? session.user.image
-        : pickProfileImagePreset(seed);
-    provider.awareness.setLocalStateField("user", {
-      id: session.user.id ?? session.user.email ?? seed,
-      name,
-      color,
-      image,
-    });
-  }, [provider, session]);
+    if (!provider || !localPresenceUser) return;
+
+    const syncPresenceUser = () => {
+      const currentState =
+        (provider.awareness.getLocalState() as Record<string, unknown> | null) ?? {};
+      provider.awareness.setLocalState({
+        ...currentState,
+        user: localPresenceUser,
+      });
+    };
+
+    syncPresenceUser();
+    provider.on("sync", syncPresenceUser);
+    provider.on("status", syncPresenceUser);
+
+    return () => {
+      provider.off("sync", syncPresenceUser);
+      provider.off("status", syncPresenceUser);
+    };
+  }, [localPresenceUser, provider]);
 
   useEffect(() => {
     if (!provider) {
       setCollaborators([]);
+      setAwarenessCount(0);
       return;
     }
 
     const update = () => {
       const states = provider.awareness.getStates();
       const localId = provider.awareness.clientID;
+      setAwarenessCount(states.size);
       const users: CollaborationUser[] = [];
       states.forEach((state, clientId) => {
         const presenceUser = state.user as
@@ -230,16 +260,12 @@ export function CollaborationProvider({
           return;
         }
 
-        const presenceId =
-          typeof presenceUser.id === "string" ? presenceUser.id : null;
-
-        if (presenceId && currentUserPresenceId && presenceId === currentUserPresenceId) {
-          return;
-        }
-
         users.push({
           clientId,
-          id: presenceId ?? undefined,
+          id:
+            typeof presenceUser.id === "string"
+              ? presenceUser.id
+              : undefined,
           name:
             typeof presenceUser.name === "string"
               ? presenceUser.name
@@ -260,11 +286,11 @@ export function CollaborationProvider({
     provider.awareness.on("change", update);
     update();
     return () => provider.awareness.off("change", update);
-  }, [currentUserPresenceId, provider]);
+  }, [provider]);
 
   const value = useMemo(
-    () => ({ ydoc, provider, isSynced, pageType }),
-    [ydoc, provider, isSynced, pageType]
+    () => ({ ydoc, provider, isSynced, pageType, awarenessCount }),
+    [ydoc, provider, isSynced, pageType, awarenessCount]
   );
 
   return (
