@@ -86,20 +86,25 @@ export const authOptions: NextAuthOptions = {
     // 임시 개발용: credentials 로그인
     CredentialsProvider({
       name: "Development",
-      credentials: {},
-      async authorize() {
+      credentials: {
+        username: { label: "Username", type: "text" },
+      },
+      async authorize(credentials) {
         // Credentials provider는 adapter와 함께 써도 Account 레코드를 생성하지 않으므로
         // User를 직접 upsert한다.
+        const username = credentials?.username?.trim() || "dev1";
+        const userId = `dev-user-${username}`;
+        const email = `${username}@obnofi.com`;
         const user = await prisma.user.upsert({
-          where: { email: "dev@obnofi.com" },
+          where: { email },
           update: {
-            image: pickProfileImagePreset("dev-user-1"),
+            image: pickProfileImagePreset(userId),
           },
           create: {
-            id: "dev-user-1",
-            name: "Developer",
-            email: "dev@obnofi.com",
-            image: pickProfileImagePreset("dev-user-1"),
+            id: userId,
+            name: username === "dev1" ? "Developer" : `Dev ${username}`,
+            email,
+            image: pickProfileImagePreset(userId),
           },
         });
         return user;
