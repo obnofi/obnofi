@@ -30,6 +30,31 @@ fastify.register(async (fastify) => {
         socket.close()
       })
   })
+
+  fastify.get('/ws/:docId', { websocket: true }, (socket, req) => {
+    const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
+    const docId =
+      typeof (req.params as { docId?: unknown } | undefined)?.docId === 'string'
+        ? (req.params as { docId: string }).docId
+        : url.searchParams.get('docId') ?? 'default'
+    const userId = url.searchParams.get('userId')
+    const cookieHeader = req.headers.cookie ?? null
+
+    checkPageAccess(docId, cookieHeader, userId)
+      .then((allowed) => {
+        if (!allowed) {
+          fastify.log.warn({ docId, userId, hasCookie: Boolean(cookieHeader) }, 'collaboration access denied')
+          socket.close(4403, 'Forbidden')
+          return
+        }
+        fastify.log.info({ docId, userId }, 'collaboration access granted')
+        return setupConnection(socket as unknown as WebSocket, docId)
+      })
+      .catch((err) => {
+        fastify.log.error(err)
+        socket.close()
+      })
+  })
 })
 
 fastify.listen({ port: 3001, host: '0.0.0.0' }).catch((err) => {
