@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback, startTransition } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, startTransition, type RefObject } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { Editor as TiptapEditor } from "@tiptap/react";
@@ -19,11 +19,14 @@ import { useUIStore } from "@/store/useUIStore";
 import { GrovePageCanopy } from "@/components/workspace/GrovePageCanopy";
 import { PageTitleBlock } from "@/components/workspace/PageTitleBlock";
 import { TableOfContents } from "@/components/workspace/TableOfContents";
-import { CollaborationProvider } from "@/lib/collaboration/CollaborationContext";
 import { CollaborationAvatars } from "@/components/workspace/CollaborationAvatars";
 import { SaveStatusIndicator } from "@/components/workspace/SaveStatusIndicator";
 import { ImportFromUrlControl } from "@/components/workspace/ImportFromUrlControl";
 import { GroveInsertionToolbar } from "@/components/toolbar/GroveInsertionToolbar";
+import {
+  CollaborationProvider,
+  useCollaboration,
+} from "@/lib/collaboration/CollaborationContext";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import type { MossNoteDockHandle } from "@/components/workspace/MossNoteDock";
@@ -76,6 +79,26 @@ interface WorkspacePageInnerProps {
   pageId: string;
 }
 
+interface CollaborativeEditorSurfaceProps {
+  pageId: string;
+  workspaceId: string;
+  content: object | null;
+  bodyFontSizePt: number;
+  headingFontSizes: Page["headingFontSizes"];
+  highlightColors: Page["highlightColors"];
+  pageUpdatedAt: string;
+  yjsUpdatedAt: string | null;
+  lineIndicatorEnabled: boolean;
+  onUpdate: (content: object) => void;
+  onEdit: () => void;
+  onContentContainerReady: (node: HTMLDivElement | null) => void;
+  onEditorReady: (editor: TiptapEditor | null) => void;
+  interimTranscript: string;
+  isSpeechListening: boolean;
+  mossNoteDockRef: RefObject<MossNoteDockHandle | null>;
+  mossNoteSurfaceRef: RefObject<HTMLDivElement | null>;
+}
+
 const typeIcons: Record<PageType, React.ReactNode> = {
   document: <FileText className="w-4 h-4" />,
   canvas: <Palette className="w-4 h-4" />,
@@ -122,6 +145,37 @@ export function WorkspacePage({ workspaceId, initialPages }: WorkspacePageProps)
   }
 
   return <WorkspacePageInner workspaceId={workspaceId} pageId={urlPageId} />;
+}
+
+function CollaborativeEditorSurface(props: CollaborativeEditorSurfaceProps) {
+  const { ydoc, provider, localUserId } = useCollaboration();
+  const editorModeKey =
+    ydoc && provider ? `collab:${localUserId ?? "anonymous"}` : "local";
+
+  return (
+    <Editor
+      key={`${props.pageId}:${editorModeKey}`}
+      content={props.content}
+      bodyFontSizePt={props.bodyFontSizePt}
+      headingFontSizes={props.headingFontSizes}
+      highlightColors={props.highlightColors}
+      pageUpdatedAt={props.pageUpdatedAt}
+      yjsUpdatedAt={props.yjsUpdatedAt}
+      editable={true}
+      onUpdate={props.onUpdate}
+      onEdit={props.onEdit}
+      placeholder="Type something..."
+      workspaceId={props.workspaceId}
+      pageId={props.pageId}
+      lineIndicatorEnabled={props.lineIndicatorEnabled}
+      onContentContainerReady={props.onContentContainerReady}
+      onEditorReady={props.onEditorReady}
+      interimTranscript={props.interimTranscript}
+      isSpeechListening={props.isSpeechListening}
+      mossNoteDockRef={props.mossNoteDockRef}
+      mossNoteSurfaceRef={props.mossNoteSurfaceRef}
+    />
+  );
 }
 
 function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
@@ -498,20 +552,17 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
                     <Loader2 className="h-7 w-7 animate-spin text-[var(--color-accent)]" />
                   </div>
                 ) : (
-                  <Editor
-                    key={pageId}
+                  <CollaborativeEditorSurface
+                    pageId={pageId}
+                    workspaceId={workspaceId}
                     content={activePage.content}
                     bodyFontSizePt={activePage.bodyFontSizePt}
                     headingFontSizes={activePage.headingFontSizes}
                     highlightColors={activePage.highlightColors}
                     pageUpdatedAt={activePage.updatedAt}
                     yjsUpdatedAt={activePage.yjsUpdatedAt}
-                    editable={true}
                     onUpdate={handleEditorUpdate}
                     onEdit={scheduleSave}
-                    placeholder="Type something..."
-                    workspaceId={workspaceId}
-                    pageId={pageId}
                     lineIndicatorEnabled={activePage.lineIndicatorEnabled}
                     onContentContainerReady={setGroveContentElement}
                     onEditorReady={(editor) => {
