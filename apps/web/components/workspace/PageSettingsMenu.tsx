@@ -402,7 +402,7 @@ export function PageSettingsMenu({
                     {collaborationEnabled
                       ? activeCollaborators.length > 0
                         ? `${activeCollaborators.length}명 편집 중`
-                        : "초대받은 사용자만 편집 가능"
+                        : "링크를 받은 로그인 사용자가 함께 편집할 수 있음"
                       : "비활성화됨"}
                   </p>
                 </div>

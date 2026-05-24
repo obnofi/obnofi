@@ -1,6 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  HEADING_SELECTOR,
+  slugifyHeading,
+  getHeadingLevel,
+  getScrollParent,
+  findHeadingElement,
+  getVisibleHeadingElements,
+  headingsMatch,
+} from "@/lib/tocUtils";
 
 export interface TOCHeading {
   id: string;
@@ -12,84 +21,6 @@ interface UseTOCResult {
   activeHeadingId: string | null;
   headings: TOCHeading[];
   scrollToHeading: (headingId: string) => void;
-}
-
-const HEADING_SELECTOR = "h1, h2, h3";
-
-function slugifyHeading(text: string) {
-  const slug = text
-    .trim()
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^\p{Letter}\p{Number}\s-]/gu, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-
-  return slug || "section";
-}
-
-function getHeadingLevel(element: Element): 1 | 2 | 3 | null {
-  if (element.tagName === "H1") return 1;
-  if (element.tagName === "H2") return 2;
-  if (element.tagName === "H3") return 3;
-  return null;
-}
-
-function getScrollParent(element: HTMLElement | null) {
-  if (!element) {
-    return null;
-  }
-
-  let current = element.parentElement;
-
-  while (current) {
-    const styles = window.getComputedStyle(current);
-    const overflowY = styles.overflowY;
-    if (
-      (overflowY === "auto" || overflowY === "scroll") &&
-      current.scrollHeight > current.clientHeight
-    ) {
-      return current;
-    }
-    current = current.parentElement;
-  }
-
-  return null;
-}
-
-function findHeadingElement(container: HTMLElement, headingId: string) {
-  const scopedElement = container.querySelector<HTMLElement>(
-    `#${CSS.escape(headingId)}`
-  );
-
-  if (scopedElement) {
-    return scopedElement;
-  }
-
-  const documentElement = document.getElementById(headingId);
-  return documentElement instanceof HTMLElement ? documentElement : null;
-}
-
-function getVisibleHeadingElements(container: HTMLElement) {
-  return Array.from(container.querySelectorAll<HTMLElement>(HEADING_SELECTOR)).filter(
-    (element) => Boolean(getHeadingLevel(element) && element.textContent?.trim())
-  );
-}
-
-function headingsMatch(a: TOCHeading[], b: TOCHeading[]) {
-  if (a.length !== b.length) {
-    return false;
-  }
-
-  return a.every((heading, index) => {
-    const nextHeading = b[index];
-    return (
-      heading.id === nextHeading.id &&
-      heading.level === nextHeading.level &&
-      heading.text === nextHeading.text
-    );
-  });
 }
 
 export function useTOC(container: HTMLElement | null): UseTOCResult {
@@ -114,9 +45,7 @@ export function useTOC(container: HTMLElement | null): UseTOCResult {
         const level = getHeadingLevel(element);
         const text = element.textContent?.trim() ?? "";
 
-        if (!level || !text) {
-          return [];
-        }
+        if (!level || !text) return [];
 
         if (!element.id) {
           const baseId = slugifyHeading(text);
@@ -130,15 +59,12 @@ export function useTOC(container: HTMLElement | null): UseTOCResult {
       });
 
       setHeadings((currentHeadings) =>
-        headingsMatch(currentHeadings, nextHeadings)
-          ? currentHeadings
-          : nextHeadings
+        headingsMatch(currentHeadings, nextHeadings) ? currentHeadings : nextHeadings
       );
       setActiveHeadingId((currentId) => {
         if (nextHeadings.length === 0) {
           return currentId === null ? currentId : null;
         }
-
         return nextHeadings.some((heading) => heading.id === currentId)
           ? currentId
           : nextHeadings[0].id;
@@ -148,10 +74,7 @@ export function useTOC(container: HTMLElement | null): UseTOCResult {
     collectHeadings();
 
     const scheduleCollectHeadings = () => {
-      if (frameRef.current !== null) {
-        return;
-      }
-
+      if (frameRef.current !== null) return;
       frameRef.current = window.requestAnimationFrame(() => {
         frameRef.current = null;
         collectHeadings();
@@ -221,14 +144,8 @@ export function useTOC(container: HTMLElement | null): UseTOCResult {
     updateActiveHeading();
 
     const intersectionObserver = new IntersectionObserver(
-      () => {
-        updateActiveHeading();
-      },
-      {
-        root,
-        rootMargin: "-96px 0px -65% 0px",
-        threshold: [0, 1],
-      }
+      () => { updateActiveHeading(); },
+      { root, rootMargin: "-96px 0px -65% 0px", threshold: [0, 1] }
     );
 
     headingElements.forEach((element) => {
@@ -242,21 +159,14 @@ export function useTOC(container: HTMLElement | null): UseTOCResult {
 
   const scrollToHeading = useMemo(() => {
     return (headingId: string) => {
-      if (!container) {
-        return;
-      }
+      if (!container) return;
 
-      const headingIndex = headings.findIndex(
-        (heading) => heading.id === headingId
-      );
+      const headingIndex = headings.findIndex((heading) => heading.id === headingId);
       const headingElement =
         findHeadingElement(container, headingId) ??
-        (headingIndex >= 0
-          ? getVisibleHeadingElements(container)[headingIndex] ?? null
-          : null);
-      if (!headingElement) {
-        return;
-      }
+        (headingIndex >= 0 ? getVisibleHeadingElements(container)[headingIndex] ?? null : null);
+
+      if (!headingElement) return;
 
       if (!headingElement.id) {
         headingElement.id = headingId;
@@ -268,22 +178,15 @@ export function useTOC(container: HTMLElement | null): UseTOCResult {
       if (scrollParent) {
         const parentRect = scrollParent.getBoundingClientRect();
         const headingRect = headingElement.getBoundingClientRect();
-        const nextTop =
-          headingRect.top - parentRect.top + scrollParent.scrollTop - scrollOffset;
+        const nextTop = headingRect.top - parentRect.top + scrollParent.scrollTop - scrollOffset;
 
-        scrollParent.scrollTo({
-          top: Math.max(0, nextTop),
-          behavior: "smooth",
-        });
+        scrollParent.scrollTo({ top: Math.max(0, nextTop), behavior: "smooth" });
         setActiveHeadingId(headingId);
         return;
       }
 
       window.scrollTo({
-        top: Math.max(
-          0,
-          headingElement.getBoundingClientRect().top + window.scrollY - scrollOffset
-        ),
+        top: Math.max(0, headingElement.getBoundingClientRect().top + window.scrollY - scrollOffset),
         behavior: "smooth",
       });
       setActiveHeadingId(headingId);
@@ -291,11 +194,7 @@ export function useTOC(container: HTMLElement | null): UseTOCResult {
   }, [container, headings]);
 
   return useMemo(
-    () => ({
-      activeHeadingId,
-      headings,
-      scrollToHeading,
-    }),
+    () => ({ activeHeadingId, headings, scrollToHeading }),
     [activeHeadingId, headings, scrollToHeading]
   );
 }

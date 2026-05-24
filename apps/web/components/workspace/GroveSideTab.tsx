@@ -1,35 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CalendarDays, ChevronRight, Maximize2, Minimize2, Tag, X } from "lucide-react";
+import { ChevronRight, Maximize2, Minimize2, X } from "lucide-react";
 import { DatabasePageCard } from "@/components/database/DatabasePageCard";
-import { PropertyCell } from "@/components/database/PropertyCell";
 import { Editor } from "@/components/editor/Editor";
 import { CollaborationProvider } from "@/lib/collaboration/CollaborationContext";
-import { patchGroveCell } from "@/lib/groveCatalogApi";
-import { useGroveCatalogStore } from "@/store/useGroveCatalogStore";
-import { usePageStore } from "@/store/pageStore";
 import { useUIStore } from "@/store/useUIStore";
 import { PageTitleBlock } from "@/components/workspace/PageTitleBlock";
-import type { Database, Page, Property, PropertyValue, PropertyValueData } from "@obnofi/types";
-
-interface SideTabTask {
-  id: string;
-  name: string;
-  status: string;
-  tags?: string[];
-  date?: string;
-  startDate?: string;
-  endDate?: string;
-  description?: string;
-  coverUrl?: string;
-}
-
-interface AncestorPage {
-  id: string;
-  title: string;
-  icon?: string | null;
-}
+import { GroveRowProperties } from "@/components/workspace/GroveRowProperties";
+import { TaskSideTabContent } from "@/components/workspace/TaskSideTabContent";
+import { useGroveSideTabPage } from "@/hooks/useGroveSideTabPage";
 
 const emptyDoc = {
   type: "doc",
@@ -40,171 +19,22 @@ export function GroveSideTab({ workspaceId }: { workspaceId: string }) {
   const { groveSideTab, closeGroveSideTab, toggleGroveSideTabFullscreen } =
     useUIStore();
   const openGrovePageSideTab = useUIStore((state) => state.openGrovePageSideTab);
-  const updatePage = usePageStore((state) => state.updatePage);
-  const patchGroveCellValue = useGroveCatalogStore(
-    (state) => state.patchGroveCellValue
-  );
-  const [page, setPage] = useState<Page | null>(null);
-  const [database, setDatabase] = useState<Database | null>(null);
-  const [rowPropertyValues, setRowPropertyValues] = useState<PropertyValue[]>([]);
-  const [isLoadingPage, setIsLoadingPage] = useState(false);
-  const [ancestors, setAncestors] = useState<AncestorPage[]>([]);
 
   const content = groveSideTab.content;
   const pageId = content?.kind === "page" ? content.pageId : null;
   const activeWorkspaceId =
     content?.kind === "page" ? content.workspaceId ?? workspaceId : workspaceId;
 
-  useEffect(() => {
-    if (!groveSideTab.isOpen || !pageId) {
-      setPage(null);
-      setDatabase(null);
-      setRowPropertyValues([]);
-      return;
-    }
-
-    let isActive = true;
-    setIsLoadingPage(true);
-
-    // Fetch page and ancestors in parallel
-    Promise.all([
-      fetch(`/api/pages/${pageId}`),
-      fetch(`/api/pages/${pageId}/ancestors`),
-    ])
-      .then(async ([pageResponse, ancestorsResponse]) => {
-        if (!isActive) {
-          return;
-        }
-
-        const nextPage = pageResponse.ok ? ((await pageResponse.json()) as Page | null) : null;
-        const ancestorsData = ancestorsResponse.ok ? ((await ancestorsResponse.json()) as AncestorPage[]) : [];
-
-        setPage(nextPage);
-        setAncestors(ancestorsData);
-        setDatabase(null);
-        setRowPropertyValues(nextPage?.propertyValues ?? []);
-
-        if (nextPage?.parentDatabaseId) {
-          const cachedDatabasePage = Object.values(
-            useGroveCatalogStore.getState().grovePages
-          ).find(
-            (grovePage) => grovePage.database.id === nextPage.parentDatabaseId
-          );
-
-          if (cachedDatabasePage) {
-            setDatabase(cachedDatabasePage.database);
-            return;
-          }
-
-          const databaseResponse = await fetch(
-            `/api/databases/${nextPage.parentDatabaseId}?view=schema`
-          );
-          if (!isActive || !databaseResponse.ok) {
-            return;
-          }
-
-          const nextDatabase = (await databaseResponse.json()) as Database;
-          setDatabase(nextDatabase);
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoadingPage(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [groveSideTab.isOpen, pageId]);
-
-  const handlePageTitleChange = async (title: string) => {
-    if (!page) {
-      return;
-    }
-
-    setPage({ ...page, title });
-    await updatePage(page.id, { title });
-    const latestPage = usePageStore.getState().pages.find((item) => item.id === page.id);
-    setPage(latestPage ?? { ...page, title });
-  };
-
-  const handlePageContentUpdate = async (nextContent: object) => {
-    if (!page) {
-      return;
-    }
-
-    await fetch(`/api/pages/${page.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: nextContent }),
-    });
-  };
-
-  const handlePropertyValueChange = async (
-    propertyId: string,
-    value: PropertyValueData
-  ) => {
-    if (!page || !database) {
-      return;
-    }
-
-    const optimisticValue: PropertyValue = {
-      id: `side-tab:${page.id}:${propertyId}`,
-      pageId: page.id,
-      propertyId,
-      columnId: propertyId,
-      value,
-    };
-
-    setRowPropertyValues((current) => {
-      const existingIndex = current.findIndex(
-        (propertyValue) =>
-          propertyValue.propertyId === propertyId ||
-          propertyValue.columnId === propertyId
-      );
-
-      if (existingIndex === -1) {
-        return [...current, optimisticValue];
-      }
-
-      return current.map((propertyValue, index) =>
-        index === existingIndex
-          ? { ...propertyValue, value }
-          : propertyValue
-      );
-    });
-    patchGroveCellValue(database.pageId, page.id, propertyId, value);
-
-    try {
-      const savedValue = await patchGroveCell(page.id, propertyId, value);
-      if (savedValue) {
-        setRowPropertyValues((current) => {
-          const existingIndex = current.findIndex(
-            (propertyValue) =>
-              propertyValue.propertyId === propertyId ||
-              propertyValue.columnId === propertyId
-          );
-
-          if (existingIndex === -1) {
-            return [...current, savedValue];
-          }
-
-          return current.map((propertyValue, index) =>
-            index === existingIndex ? savedValue : propertyValue
-          );
-        });
-        patchGroveCellValue(database.pageId, page.id, propertyId, savedValue);
-      }
-    } catch {
-      const pageResponse = await fetch(`/api/pages/${page.id}`);
-      if (pageResponse.ok) {
-        const nextPage = (await pageResponse.json()) as Page;
-        setPage(nextPage);
-        setRowPropertyValues(nextPage.propertyValues ?? []);
-      }
-    }
-  };
+  const {
+    page,
+    database,
+    rowPropertyValues,
+    isLoadingPage,
+    ancestors,
+    handlePageTitleChange,
+    handlePageContentUpdate,
+    handlePropertyValueChange,
+  } = useGroveSideTabPage(pageId, groveSideTab.isOpen);
 
   if (!groveSideTab.isOpen || !content) {
     return null;
@@ -276,7 +106,6 @@ export function GroveSideTab({ workspaceId }: { workspaceId: string }) {
                 </div>
               ) : page ? (
                 <>
-                  {/* Breadcrumb */}
                   {ancestors.length > 0 && (
                     <nav className="mb-4 flex flex-wrap items-center gap-1 text-sm">
                       {ancestors.map((ancestor) => (
@@ -355,153 +184,6 @@ export function GroveSideTab({ workspaceId }: { workspaceId: string }) {
           )}
         </div>
       </aside>
-    </div>
-  );
-}
-
-function GroveRowProperties({
-  properties,
-  values,
-  onChange,
-}: {
-  properties: Property[];
-  values: PropertyValue[];
-  onChange: (propertyId: string, value: PropertyValueData) => void;
-}) {
-  if (properties.length === 0) {
-    return null;
-  }
-
-  const getValue = (propertyId: string) =>
-    values.find(
-      (propertyValue) =>
-        propertyValue.propertyId === propertyId ||
-        propertyValue.columnId === propertyId
-    )?.value;
-
-  return (
-    <section className="mb-8">
-      <div className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-[var(--color-text-secondary)]">
-        속성
-      </div>
-      <div>
-        {properties.map((property) => (
-          <div
-            key={property.id}
-            className="grid grid-cols-[140px_minmax(0,1fr)] items-center gap-3 py-2"
-          >
-            <div className="truncate text-sm text-[var(--color-text-secondary)]">
-              {property.name}
-            </div>
-            <div className="min-w-0">
-              <PropertyCell
-                property={property}
-                value={getValue(property.id)}
-                options={property.options ?? []}
-                onChange={(value) => onChange(property.id, value)}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function TaskSideTabContent({ task }: { task: SideTabTask }) {
-  const [draftTask, setDraftTask] = useState(task);
-
-  useEffect(() => {
-    setDraftTask(task);
-  }, [task]);
-
-  return (
-    <div className="mx-auto max-w-3xl">
-      {draftTask.coverUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={draftTask.coverUrl}
-          alt={draftTask.name}
-          className="mb-6 h-48 w-full rounded-2xl object-cover"
-        />
-      ) : null}
-      <input
-        name="task-name"
-        type="text"
-        value={draftTask.name}
-        onChange={(event) =>
-          setDraftTask((current) => ({ ...current, name: event.target.value }))
-        }
-        className="mb-6 w-full border-none bg-transparent text-[34px] font-bold text-[var(--color-text-primary)] outline-none"
-      />
-      <div className="grid gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-sm">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[var(--color-text-secondary)]">Status</span>
-          <select
-            name="task-status"
-            value={draftTask.status}
-            onChange={(event) =>
-              setDraftTask((current) => ({
-                ...current,
-                status: event.target.value,
-              }))
-            }
-            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1 text-xs font-medium text-[var(--color-text-primary)] outline-none"
-          >
-            <option>To Do</option>
-            <option>In Progress</option>
-            <option>Done</option>
-          </select>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="inline-flex items-center gap-2 text-[var(--color-text-secondary)]">
-            <CalendarDays className="h-4 w-4" />
-            Date
-          </span>
-          <input
-            name="task-date"
-            type="date"
-            value={draftTask.date ?? ""}
-            onChange={(event) =>
-              setDraftTask((current) => ({
-                ...current,
-                date: event.target.value,
-                startDate: event.target.value,
-                endDate: event.target.value,
-              }))
-            }
-            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1 text-xs text-[var(--color-text-primary)] outline-none"
-          />
-        </div>
-        <div className="flex items-start justify-between gap-3">
-          <span className="inline-flex items-center gap-2 text-[var(--color-text-secondary)]">
-            <Tag className="h-4 w-4" />
-            Tags
-          </span>
-          <div className="flex flex-wrap justify-end gap-1.5">
-            {(draftTask.tags ?? []).map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-xs text-[var(--color-text-secondary)]"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-      <textarea
-        name="task-description"
-        value={draftTask.description ?? ""}
-        onChange={(event) =>
-          setDraftTask((current) => ({
-            ...current,
-            description: event.target.value,
-          }))
-        }
-        placeholder="Task 상세 내용을 입력하세요..."
-        className="mt-6 min-h-48 w-full resize-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] p-4 text-sm leading-6 text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-placeholder)]"
-      />
     </div>
   );
 }

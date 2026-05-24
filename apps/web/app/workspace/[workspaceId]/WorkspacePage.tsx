@@ -1,69 +1,35 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback, startTransition, type RefObject } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { Editor as TiptapEditor } from "@tiptap/react";
-import {
-  ChevronRight,
-  Plus,
-  FileText,
-  Palette,
-  Sparkles,
-  Loader2,
-  Database,
-} from "lucide-react";
 import { usePageStore } from "@/store/pageStore";
 import { Page, PageType } from "@obnofi/types";
 import { useUIStore } from "@/store/useUIStore";
-import { GrovePageCanopy } from "@/components/workspace/GrovePageCanopy";
-import { PageTitleBlock } from "@/components/workspace/PageTitleBlock";
-import { TableOfContents } from "@/components/workspace/TableOfContents";
-import { CollaborationAvatars } from "@/components/workspace/CollaborationAvatars";
-import { SaveStatusIndicator } from "@/components/workspace/SaveStatusIndicator";
-import { ImportFromUrlControl } from "@/components/workspace/ImportFromUrlControl";
-import { GroveInsertionToolbar } from "@/components/toolbar/GroveInsertionToolbar";
 import {
   CollaborationProvider,
-  useCollaboration,
 } from "@/lib/collaboration/CollaborationContext";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useWorkspacePageHandlers } from "@/hooks/useWorkspacePageHandlers";
 import type { MossNoteDockHandle } from "@/components/workspace/MossNoteDock";
-import {
-  creatablePageLabels,
-  creatablePageTypes,
-  createPageTitles,
-} from "@/lib/pageCreation";
-import { exportPageAsHtml, exportPageAsPdf } from "@/lib/exportPage";
-import type { PageExportFormat } from "@/components/workspace/PageSettingsMenu";
+import { WorkspacePageHeader } from "@/components/workspace/WorkspacePageHeader";
+import { WorkspacePageContent } from "./WorkspacePageContent";
 
-// Dynamically import heavy components
-const Editor = dynamic(() => import("@/components/editor/Editor").then(mod => mod.Editor), {
-  loading: () => <div className="flex h-[200px] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[var(--color-accent)]" /></div>,
-  ssr: false
-});
+const DatabaseViewModal = dynamic(
+  () =>
+    import("@/components/database/DatabaseViewModal").then(
+      (mod) => mod.DatabaseViewModal
+    ),
+  { ssr: false }
+);
 
-const PageSettingsMenu = dynamic(() => import("@/components/workspace/PageSettingsMenu").then(mod => mod.PageSettingsMenu), {
-  ssr: false
-});
-
-const ClearingBoard = dynamic(() => import("@/components/canvas/ClearingBoard").then(mod => mod.ClearingBoard), {
-  loading: () => <div className="flex h-full items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[var(--color-accent)]" /></div>,
-  ssr: false
-});
-
-const DatabaseWorkspace = dynamic(() => import("@/components/database/DatabaseWorkspace").then(mod => mod.DatabaseWorkspace), {
-  loading: () => <div className="flex h-full items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[var(--color-accent)]" /></div>
-});
-
-const DatabaseViewModal = dynamic(() => import("@/components/database/DatabaseViewModal").then(mod => mod.DatabaseViewModal), {
-  ssr: false
-});
-
-const GroveSideTab = dynamic(() => import("@/components/workspace/GroveSideTab").then(mod => mod.GroveSideTab), {
-  ssr: false
-});
+const GroveSideTab = dynamic(
+  () =>
+    import("@/components/workspace/GroveSideTab").then((mod) => mod.GroveSideTab),
+  { ssr: false }
+);
 
 // env var는 개발 환경에서 전역 비활성화용으로만 사용 — 프로덕션에서는 페이지별 collaborationEnabled 필드로 제어
 const COLLABORATION_GLOBALLY_DISABLED =
@@ -78,32 +44,6 @@ interface WorkspacePageInnerProps {
   workspaceId: string;
   pageId: string;
 }
-
-interface CollaborativeEditorSurfaceProps {
-  pageId: string;
-  workspaceId: string;
-  content: object | null;
-  bodyFontSizePt: number;
-  headingFontSizes: Page["headingFontSizes"];
-  highlightColors: Page["highlightColors"];
-  pageUpdatedAt: string;
-  yjsUpdatedAt: string | null;
-  lineIndicatorEnabled: boolean;
-  onUpdate: (content: object) => void;
-  onEdit: () => void;
-  onContentContainerReady: (node: HTMLDivElement | null) => void;
-  onEditorReady: (editor: TiptapEditor | null) => void;
-  interimTranscript: string;
-  isSpeechListening: boolean;
-  mossNoteDockRef: RefObject<MossNoteDockHandle | null>;
-  mossNoteSurfaceRef: RefObject<HTMLDivElement | null>;
-}
-
-const typeIcons: Record<PageType, React.ReactNode> = {
-  document: <FileText className="w-4 h-4" />,
-  canvas: <Palette className="w-4 h-4" />,
-  database: <Database className="w-4 h-4" />,
-};
 
 // pageId는 URL search param에서 읽는다. server component(page.tsx)는 searchParams를
 // 받지 않으므로 페이지 클릭 시 SSR이 재실행되지 않고, 본문 fetch만 클라이언트에서 일어난다.
@@ -147,44 +87,10 @@ export function WorkspacePage({ workspaceId, initialPages }: WorkspacePageProps)
   return <WorkspacePageInner workspaceId={workspaceId} pageId={urlPageId} />;
 }
 
-function CollaborativeEditorSurface(props: CollaborativeEditorSurfaceProps) {
-  const { ydoc, provider, localUserId } = useCollaboration();
-  const editorModeKey =
-    ydoc && provider ? `collab:${localUserId ?? "anonymous"}` : "local";
-
-  return (
-    <Editor
-      key={`${props.pageId}:${editorModeKey}`}
-      content={props.content}
-      bodyFontSizePt={props.bodyFontSizePt}
-      headingFontSizes={props.headingFontSizes}
-      highlightColors={props.highlightColors}
-      pageUpdatedAt={props.pageUpdatedAt}
-      yjsUpdatedAt={props.yjsUpdatedAt}
-      editable={true}
-      onUpdate={props.onUpdate}
-      onEdit={props.onEdit}
-      placeholder="Type something..."
-      workspaceId={props.workspaceId}
-      pageId={props.pageId}
-      lineIndicatorEnabled={props.lineIndicatorEnabled}
-      onContentContainerReady={props.onContentContainerReady}
-      onEditorReady={props.onEditorReady}
-      interimTranscript={props.interimTranscript}
-      isSpeechListening={props.isSpeechListening}
-      mossNoteDockRef={props.mossNoteDockRef}
-      mossNoteSurfaceRef={props.mossNoteSurfaceRef}
-    />
-  );
-}
-
 function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
-  const router = useRouter();
   const {
     currentPage,
     fetchPage,
-    updatePage,
-    createPage,
     setCurrentPage,
     getPageTrail,
     error,
@@ -196,7 +102,9 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
 
   const [title, setTitle] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [toolbarEditor, setToolbarEditor] = useState<TiptapEditor | null>(null);
+  const [pendingChildType, setPendingChildType] = useState<PageType | null>(null);
+  const [groveContentElement, setGroveContentElement] = useState<HTMLDivElement | null>(null);
+
   const editorInstanceRef = useRef<TiptapEditor | null>(null);
   const grovePageSurfaceRef = useRef<HTMLDivElement | null>(null);
   const mossNoteDockRef = useRef<MossNoteDockHandle | null>(null);
@@ -226,12 +134,17 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
     debounceMs: 5000,
     intervalMs: 45000,
     onSaved: (content) => {
-      // 저장 성공 후 pageStore도 최신 상태로 갱신
       setCurrentPage((page) => (page ? { ...page, content } : page));
     },
   });
-  const [pendingChildType, setPendingChildType] = useState<PageType | null>(null);
-  const [groveContentElement, setGroveContentElement] = useState<HTMLDivElement | null>(null);
+
+  const handlers = useWorkspacePageHandlers({
+    pageId,
+    workspaceId,
+    editorInstanceRef,
+    groveContentElement,
+    titleSaveTimerRef,
+  });
 
   useEffect(() => {
     closeDatabaseModal();
@@ -240,8 +153,9 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
 
   useEffect(() => {
     return () => {
-      if (titleSaveTimerRef.current) {
-        clearTimeout(titleSaveTimerRef.current);
+      const titleSaveTimer = titleSaveTimerRef.current;
+      if (titleSaveTimer) {
+        clearTimeout(titleSaveTimer);
       }
     };
   }, []);
@@ -252,9 +166,7 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
     fetchPage(pageId).finally(() => {
       if (!cancelled) setIsLoading(false);
     });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [pageId, fetchPage]);
 
   const activePage = currentPage?.id === pageId ? currentPage : null;
@@ -267,103 +179,12 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
     }
   }, [activePage]);
 
-  const handleTitleChange = (newTitle: string) => {
-    const updatedAt = new Date().toISOString();
-
-    setTitle(newTitle);
-    setCurrentPage((page) =>
-      page ? { ...page, title: newTitle, updatedAt } : page
-    );
-
-    if (titleSaveTimerRef.current) {
-      clearTimeout(titleSaveTimerRef.current);
-    }
-
-    titleSaveTimerRef.current = setTimeout(() => {
-      void updatePage(pageId, { title: newTitle });
-      titleSaveTimerRef.current = null;
-    }, 1200);
-  };
-
-  const handlePageChromeUpdate = async (input: Partial<Pick<Page, "icon" | "coverImage">>) => {
-    await updatePage(pageId, input);
-  };
-
-  const handleHeadingFontSizesChange = useCallback((headingFontSizes: Page["headingFontSizes"]) => {
-    setCurrentPage((page) => (page ? { ...page, headingFontSizes } : page));
-  }, [setCurrentPage]);
-
-  const handleHighlightColorsChange = useCallback((highlightColors: Page["highlightColors"]) => {
-    setCurrentPage((page) => (page ? { ...page, highlightColors } : page));
-  }, [setCurrentPage]);
-
-  const handleCollaborationEnabledChange = useCallback(async (enabled: boolean) => {
-    setCurrentPage((page) => (page ? { ...page, collaborationEnabled: enabled } : page));
-    await updatePage(pageId, { collaborationEnabled: enabled });
-  }, [pageId, updatePage, setCurrentPage]);
-
-  const handleLineIndicatorEnabledChange = useCallback(async (enabled: boolean) => {
-    setCurrentPage((page) => (page ? { ...page, lineIndicatorEnabled: enabled } : page));
-    await updatePage(pageId, { lineIndicatorEnabled: enabled });
-  }, [pageId, updatePage, setCurrentPage]);
-
-  const handleSelectPage = (selectedPageId: string) => {
-    if (selectedPageId === pageId) {
-      return;
-    }
-
-    startTransition(() => {
-      router.push(`/workspace/${workspaceId}?page=${selectedPageId}`);
-    });
-  };
-
-  const handleExportPage = useCallback(
-    (format: PageExportFormat) => {
-      if (!currentPage || currentPage.type !== "document") return;
-      const params = {
-        editor: editorInstanceRef.current,
-        contentElement: groveContentElement,
-        page: {
-          title: currentPage.title,
-          icon: currentPage.icon,
-          coverImage: currentPage.coverImage,
-          type: currentPage.type,
-        },
-      };
-      if (format === "pdf") exportPageAsPdf(params);
-      else exportPageAsHtml(params);
-    },
-    [currentPage, groveContentElement]
-  );
-
-  const handleCreateChildPage = async (type: PageType) => {
-    setPendingChildType(type);
-
-    const newPage = await createPage({
-      title: createPageTitles[type],
-      type,
-      parentId: pageId,
-      workspaceId,
-    });
-
-    setPendingChildType(null);
-
-    if (newPage) {
-      router.push(`/workspace/${workspaceId}?page=${newPage.id}`);
-    }
-  };
-
   const pageTrail = useMemo(() => {
-    if (!pageId) {
-      return [];
-    }
-
+    if (!pageId) return [];
     const trail = getPageTrail(pageId);
-
     if (activePage) {
       return trail.map((page) => (page.id === activePage.id ? activePage : page));
     }
-
     return trail;
   }, [activePage, getPageTrail, pageId]);
 
@@ -383,7 +204,8 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
     );
   }
 
-  const collabActive = !COLLABORATION_GLOBALLY_DISABLED && activePage.collaborationEnabled;
+  const collabActive =
+    !COLLABORATION_GLOBALLY_DISABLED && activePage.collaborationEnabled;
 
   return (
     <CollaborationProvider
@@ -392,228 +214,51 @@ function WorkspacePageInner({ workspaceId, pageId }: WorkspacePageInnerProps) {
       active={collabActive}
       pageType={activePage.type}
     >
-      {/* Top Bar */}
-      <header className="h-12 border-b border-[var(--color-border)] flex items-center justify-between px-4 shrink-0 bg-[var(--color-background)]">
-        <div className="flex min-w-0 items-center gap-1 text-[14px]">
-          {pageTrail.map((page, index) => {
-            const isCurrent = page.id === activePage.id;
+      <WorkspacePageHeader
+        pageTrail={pageTrail}
+        activePage={activePage}
+        workspaceId={workspaceId}
+        pageId={pageId}
+        collabActive={collabActive}
+        onSaveRetry={() => void save()}
+        onSelectPage={handlers.handleSelectPage}
+        onShareUpdate={handlers.handleShareUpdate}
+        onHeadingFontSizesChange={handlers.handleHeadingFontSizesChange}
+        onHighlightColorsChange={handlers.handleHighlightColorsChange}
+        onCollaborationEnabledChange={handlers.handleCollaborationEnabledChange}
+        onLineIndicatorEnabledChange={handlers.handleLineIndicatorEnabledChange}
+        onExport={activePage.type === "document" ? handlers.handleExportPage : undefined}
+      />
 
-            return (
-              <span key={page.id} className="flex min-w-0 items-center gap-1">
-                {index > 0 ? (
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-placeholder)]" />
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isCurrent) {
-                      handleSelectPage(page.id);
-                    }
-                  }}
-                  disabled={isCurrent}
-                  className={`inline-flex min-w-0 max-w-[180px] items-center gap-1.5 rounded px-1.5 py-1 transition ${
-                    isCurrent
-                      ? "cursor-default text-[var(--color-text-primary)]"
-                      : "text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
-                  }`}
-                  title={page.title || "Untitled"}
-                >
-                  <span className="shrink-0 text-[var(--color-text-secondary)]">
-                    {page.icon ? <span>{page.icon}</span> : typeIcons[page.type]}
-                  </span>
-                  <span className="truncate">{page.title || "Untitled"}</span>
-                </button>
-              </span>
-            );
-          })}
-        </div>
-        <div className="flex items-center gap-2">
-          <SaveStatusIndicator onRetry={() => void save()} />
-          {collabActive ? <CollaborationAvatars /> : null}
-          <button className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]">
-            <Sparkles className="h-4 w-4" />
-          </button>
-          <PageSettingsMenu
-            pageId={pageId}
-            workspaceId={workspaceId}
-            pageType={activePage.type}
-            headingFontSizes={activePage.headingFontSizes}
-            highlightColors={activePage.highlightColors}
-            isPublic={activePage.isPublic}
-            shareId={activePage.shareId}
-            collaborationEnabled={activePage.collaborationEnabled}
-            lineIndicatorEnabled={activePage.lineIndicatorEnabled}
-            onShareUpdate={(isPublic, shareId) => {
-              setCurrentPage((page) =>
-                page ? { ...page, isPublic, shareId } : page
-              );
-            }}
-            onHeadingFontSizesChange={handleHeadingFontSizesChange}
-            onHighlightColorsChange={handleHighlightColorsChange}
-            onCollaborationEnabledChange={handleCollaborationEnabledChange}
-            onLineIndicatorEnabledChange={handleLineIndicatorEnabledChange}
-            onExport={
-              activePage.type === "document" ? handleExportPage : undefined
-            }
-          />
-        </div>
-      </header>
+      <WorkspacePageContent
+        activePage={activePage}
+        pageId={pageId}
+        workspaceId={workspaceId}
+        title={title}
+        isLoading={isLoading}
+        pendingChildType={pendingChildType}
+        grovePageSurfaceRef={grovePageSurfaceRef}
+        mossNoteDockRef={mossNoteDockRef}
+        groveContentElement={groveContentElement}
+        interimTranscript={interimTranscript}
+        isListening={isListening}
+        isSpeechSupported={isSpeechSupported}
+        scheduleSave={scheduleSave}
+        onTitleChange={(newTitle) => {
+          setTitle(newTitle);
+          handlers.handleTitleChange(newTitle);
+        }}
+        onPageChromeUpdate={handlers.handlePageChromeUpdate}
+        onCreateChildPage={(type) => {
+          setPendingChildType(type);
+          void handlers.handleCreateChildPage(type).then(() => setPendingChildType(null));
+        }}
+        onGroveContentReady={setGroveContentElement}
+        onEditorReady={(editor) => { editorInstanceRef.current = editor; }}
+        onEditorUpdate={handleEditorUpdate}
+        onToggleSpeech={isListening ? stopSpeech : startSpeech}
+      />
 
-      {/* Content */}
-      <div className="relative flex-1 overflow-hidden bg-[var(--color-background)]">
-        {activePage.type === "document" && (
-          <>
-            <div
-              ref={grovePageSurfaceRef}
-              data-testid="grove-page-surface"
-              className="relative h-full overflow-y-auto"
-            >
-              {activePage.coverImage ? (
-                <div className="w-full px-0 pt-0">
-                  <GrovePageCanopy
-                    page={activePage}
-                    onUpdate={handlePageChromeUpdate}
-                    hideControls={true}
-                  />
-                </div>
-              ) : null}
-
-              <div className="max-w-4xl mx-auto px-12 pb-28 pt-8">
-                {!activePage.coverImage ? (
-                  <GrovePageCanopy
-                    page={activePage}
-                    onUpdate={handlePageChromeUpdate}
-                  />
-                ) : (
-                  <GrovePageCanopy
-                    page={activePage}
-                    onUpdate={handlePageChromeUpdate}
-                    hideCover={true}
-                  />
-                )}
-
-                <PageTitleBlock
-                  value={title}
-                  onChange={(nextTitle) => void handleTitleChange(nextTitle)}
-                  placeholder="Untitled"
-                  size="page"
-                  testId="workspace-page-title"
-                />
-
-                {/* Mobile Add Buttons */}
-                <div className="mb-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 sm:hidden">
-                  <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
-                    <Plus className="h-3.5 w-3.5" />Add to doc
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {creatablePageTypes.map((type) => {
-                      const icon =
-                        type === "document" ? (
-                          <FileText className="h-4 w-4" />
-                        ) : type === "canvas" ? (
-                          <Palette className="h-4 w-4" />
-                        ) : (
-                          <Database className="h-4 w-4" />
-                        );
-                      const isPending = pendingChildType === type;
-                      return (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => void handleCreateChildPage(type)}
-                          disabled={pendingChildType !== null}
-                          className="flex min-h-24 flex-col items-start justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-left transition hover:border-[#2E7D45] hover:bg-[var(--color-accent-subtle)] disabled:cursor-wait disabled:opacity-60"
-                        >
-                          <div className="flex w-full items-center justify-between text-[#2E7D45]">
-                            <span className="rounded-lg bg-[#E8F3EC] p-2">{icon}</span>
-                            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                          </div>
-                          <div>
-                            <div className="text-sm font-semibold text-[var(--color-text-primary)]">
-                              {creatablePageLabels[type]}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-2">
-                    <ImportFromUrlControl
-                      workspaceId={workspaceId}
-                      parentId={pageId}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-hover)]"
-                    />
-                  </div>
-                </div>
-
-                {/* Editor */}
-                {isLoading && activePage.content === null ? (
-                  <div className="flex min-h-[240px] items-center justify-center">
-                    <Loader2 className="h-7 w-7 animate-spin text-[var(--color-accent)]" />
-                  </div>
-                ) : (
-                  <CollaborativeEditorSurface
-                    pageId={pageId}
-                    workspaceId={workspaceId}
-                    content={activePage.content}
-                    bodyFontSizePt={activePage.bodyFontSizePt}
-                    headingFontSizes={activePage.headingFontSizes}
-                    highlightColors={activePage.highlightColors}
-                    pageUpdatedAt={activePage.updatedAt}
-                    yjsUpdatedAt={activePage.yjsUpdatedAt}
-                    onUpdate={handleEditorUpdate}
-                    onEdit={scheduleSave}
-                    lineIndicatorEnabled={activePage.lineIndicatorEnabled}
-                    onContentContainerReady={setGroveContentElement}
-                    onEditorReady={(editor) => {
-                      editorInstanceRef.current = editor;
-                      setToolbarEditor(editor);
-                    }}
-                    interimTranscript={interimTranscript}
-                    isSpeechListening={isListening}
-                    mossNoteDockRef={mossNoteDockRef}
-                    mossNoteSurfaceRef={grovePageSurfaceRef}
-                  />
-                )}
-              </div>
-              <TableOfContents container={groveContentElement} />
-            </div>
-            <GroveInsertionToolbar
-              editor={toolbarEditor}
-              isListening={isListening}
-              isSpeechSupported={isSpeechSupported}
-              onToggleSpeech={isListening ? stopSpeech : startSpeech}
-              onToggleMossNote={() => mossNoteDockRef.current?.togglePlacement()}
-            />
-          </>
-        )}
-
-        {activePage.type === "canvas" && (
-          <div className="h-full">
-            <ClearingBoard
-              embedded={true}
-              roomSlug={activePage.id}
-              title={activePage.title || "Jungle Clearing"}
-              onTitleChange={handleTitleChange}
-            />
-          </div>
-        )}
-
-        {activePage.type === "database" && (
-          <>
-            <DatabaseWorkspace
-              pageId={pageId}
-              workspaceId={workspaceId}
-              mossNoteDockRef={mossNoteDockRef}
-            />
-            <GroveInsertionToolbar
-              onToggleMossNote={() => mossNoteDockRef.current?.togglePlacement()}
-            />
-          </>
-        )}
-      </div>
-
-      {/* Database View Modal - available on all pages */}
       {isDatabaseModalOpen && <DatabaseViewModal />}
       {isGroveSideTabOpen && <GroveSideTab workspaceId={workspaceId} />}
     </CollaborationProvider>

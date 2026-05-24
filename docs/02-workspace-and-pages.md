@@ -23,6 +23,13 @@
 - `apps/web/app/api/pages/route.ts`
 - `apps/web/app/api/pages/[pageId]/route.ts`
 
+## GroveSideTab 파일 구조
+
+- `apps/web/components/workspace/GroveSideTab.tsx` — 패널 셸 + 레이아웃
+- `apps/web/hooks/useGroveSideTabPage.ts` — 페이지·데이터베이스·조상 데이터 페칭 + 핸들러
+- `apps/web/components/workspace/GroveRowProperties.tsx` — 데이터베이스 row 속성 표시
+- `apps/web/components/workspace/TaskSideTabContent.tsx` — Task 사이드탭 콘텐츠
+
 ## 현재 동작
 
 ### 워크스페이스 진입
