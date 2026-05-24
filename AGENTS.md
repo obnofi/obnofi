@@ -164,6 +164,11 @@ Filters, sorts, groupBy, column widths, and visible properties are all in `View.
 | Graph view | `components/graph/`, `lib/graph/` |
 | Canvas | `components/canvas/` |
 | Speech-to-text (Parrot / 앵무새) | `hooks/useSpeechRecognition.ts`, `components/editor/SpeechRecognitionButton.tsx` |
+| Slash command data/types | `lib/editor/slashCommandTypes.ts`, `lib/editor/slashCommandItemsCore.ts`, `lib/editor/slashCommandItemsExtended.ts` |
+| Block drag/drop | `lib/editor/blockDragHandlers.ts`, `lib/editor/blockUtils.ts`, `lib/editor/blockActionsPlugin.ts` |
+| Editor insertion blocks | `components/editor/blocks/` |
+| Page export (HTML/PDF) | `lib/exportPage.ts` (facade), `lib/export/htmlTemplate.ts`, `lib/export/domUtils.ts` |
+| GroveSideTab data | `hooks/useGroveSideTabPage.ts` |
 
 ---
 

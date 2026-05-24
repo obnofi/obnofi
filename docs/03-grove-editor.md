@@ -20,7 +20,34 @@
 - `apps/web/hooks/useAutoSave.ts`
 - `apps/web/components/editor/extensions/*`
 - `apps/web/lib/normalizeTiptapDocument.ts`
-- `apps/web/lib/exportPage.ts`
+- `apps/web/lib/exportPage.ts` — 퍼블릭 API 파사드. 내부 구현은 `lib/export/` 참조
+- `apps/web/lib/export/htmlTemplate.ts` — HTML/PDF 템플릿 + `buildPrintableHtml()`
+- `apps/web/lib/export/domUtils.ts` — DOM 클론/정규화 유틸리티
+
+## 에디터 Extension 파일 구조
+
+### SlashCommandExtension
+- `apps/web/components/editor/extensions/SlashCommandExtension.ts` — TipTap Extension 정의 (thin wrapper)
+- `apps/web/lib/editor/slashCommandData.ts` — 카테고리·검색 함수 (`getSlashCommandItems`, `CATEGORIES`, `isVisibleSlashCommandItem`)
+- `apps/web/lib/editor/slashCommandTypes.ts` — `SlashCommandItem`, `SlashCommandCategory` 타입
+- `apps/web/lib/editor/slashCommandItems.ts` — 전체 커맨드 배열 (core + extended 합산)
+- `apps/web/lib/editor/slashCommandItemsCore.ts` — 기본·미디어·코드·데이터베이스 커맨드
+- `apps/web/lib/editor/slashCommandItemsExtended.ts` — 캔버스·개발자·고급·임베드·인라인 커맨드
+
+### BlockActionsExtension
+- `apps/web/components/editor/extensions/BlockActionsExtension.tsx` — Extension 정의 + re-export
+- `apps/web/lib/editor/blockActionsPlugin.ts` — `createBlockActionsPlugin()` ProseMirror 플러그인
+- `apps/web/lib/editor/blockUtils.ts` — 블록 탐색·조작 유틸리티 (`findBlockById`, `resolveDropPos` 등)
+- `apps/web/lib/editor/blockDragHandlers.ts` — `startBlockDrag`, `updateBlockDrag`, `applyBlockDrag`, `endBlockDrag`
+
+### GroveInsertionBlocks
+- `apps/web/components/editor/extensions/GroveInsertionBlocks.tsx` — re-export 인덱스
+- `apps/web/components/editor/blocks/GroveTableBlock.tsx`
+- `apps/web/components/editor/blocks/FileDropBlock.tsx`
+- `apps/web/components/editor/blocks/LinkEmbedBlock.tsx`
+- `apps/web/components/editor/blocks/GitHubEmbedBlock.tsx`
+- `apps/web/components/editor/blocks/WebClipBlock.tsx`
+- `apps/web/lib/editor/githubEmbedUtils.ts` — GitHub URL 파싱 유틸리티
 
 ## 현재 동작
 

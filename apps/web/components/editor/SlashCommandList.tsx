@@ -1,304 +1,39 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import type { Editor } from "@tiptap/react";
-import { useRouter } from "next/navigation";
 import {
-  Type,
-  Heading1,
-  Heading2,
-  Heading3,
-  Heading4,
-  Heading5,
-  Heading6,
-  List,
-  ListOrdered,
-  CheckSquare,
-  ChevronRight,
-  Quote,
-  Minus,
-  AlertCircle,
-  Table,
-  BookOpen,
-  Image,
-  Video,
-  Music,
-  Paperclip,
-  Bookmark,
-  Code2,
-  GitBranch,
-  Table2,
-  Kanban,
-  LayoutGrid,
-  LayoutList,
-  Calendar,
-  GanttChart,
-  PenTool,
-  Database,
-  Network,
-  Zap,
-  GitGraph,
-  GitPullRequest,
-  ChevronDown,
-  Sigma,
-  Square,
-  Link,
-  LayoutTemplate,
-  Globe,
-  HardDrive,
-  MessageSquare,
-  AtSign,
-  FileText,
-  CalendarDays,
-  Smile,
-  BarChart2,
-  Columns2,
-  Columns3,
+  Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6,
+  List, ListOrdered, CheckSquare, ChevronRight, Quote, Minus, AlertCircle,
+  Table, BookOpen, Image, Video, Music, Paperclip, Bookmark, Code2,
+  GitBranch, Table2, Kanban, LayoutGrid, LayoutList, Calendar, GanttChart,
+  PenTool, Database, Network, Zap, GitGraph, GitPullRequest, ChevronDown,
+  Sigma, Square, Link, LayoutTemplate, Globe, HardDrive, MessageSquare,
+  AtSign, FileText, CalendarDays, Smile, BarChart2, Columns2, Columns3,
   ClipboardList,
 } from "lucide-react";
 import type { SlashCommandItem } from "@/components/editor/extensions/SlashCommandExtension";
-import { CATEGORIES } from "@/components/editor/extensions/SlashCommandExtension";
-import { isVisibleSlashCommandItem } from "@/components/editor/extensions/SlashCommandExtension";
-import { usePageStore } from "@/store/pageStore";
+import {
+  buildTree,
+  buildFlat,
+  type CategorySection,
+  type GroupNode,
+} from "@/lib/editor/slashCommandListData";
+import { useSlashCommandSelect } from "@/lib/editor/slashCommandListUtils";
 
 const iconMap: Record<
   string,
   React.ComponentType<{ className?: string; style?: React.CSSProperties }>
 > = {
-  Type,
-  Heading1,
-  Heading2,
-  Heading3,
-  Heading4,
-  Heading5,
-  Heading6,
-  List,
-  ListOrdered,
-  CheckSquare,
-  ChevronRight,
-  Quote,
-  Minus,
-  AlertCircle,
-  Table,
-  BookOpen,
-  Image,
-  Video,
-  Music,
-  Paperclip,
-  Bookmark,
-  Code2,
-  GitBranch,
-  Table2,
-  Kanban,
-  LayoutGrid,
-  LayoutList,
-  Calendar,
-  GanttChart,
-  PenTool,
-  Database,
-  Network,
-  Zap,
-  GitGraph,
-  GitPullRequest,
-  ChevronDown,
-  Sigma,
-  Square,
-  Link,
-  LayoutTemplate,
-  Globe,
-  HardDrive,
-  MessageSquare,
-  AtSign,
-  FileText,
-  CalendarDays,
-  Smile,
-  BarChart2,
-  Columns2,
-  Columns3,
+  Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6,
+  List, ListOrdered, CheckSquare, ChevronRight, Quote, Minus, AlertCircle,
+  Table, BookOpen, Image, Video, Music, Paperclip, Bookmark, Code2,
+  GitBranch, Table2, Kanban, LayoutGrid, LayoutList, Calendar, GanttChart,
+  PenTool, Database, Network, Zap, GitGraph, GitPullRequest, ChevronDown,
+  Sigma, Square, Link, LayoutTemplate, Globe, HardDrive, MessageSquare,
+  AtSign, FileText, CalendarDays, Smile, BarChart2, Columns2, Columns3,
   ClipboardList,
 };
-
-type GroupConfig = {
-  id: string;
-  category: string;
-  title: string;
-  description: string;
-  icon: string;
-  childIds: string[];
-};
-
-const SUBMENU_GROUPS: GroupConfig[] = [
-  {
-    id: "g-headings",
-    category: "basic",
-    title: "제목",
-    description: "1~6 단계 제목",
-    icon: "Heading1",
-    childIds: ["h1", "h2", "h3", "h4", "h5", "h6"],
-  },
-  {
-    id: "g-lists",
-    category: "basic",
-    title: "목록",
-    description: "글머리, 번호, 체크박스",
-    icon: "List",
-    childIds: ["bulletList", "orderedList", "taskList", "toggleList"],
-  },
-  {
-    id: "g-db-views",
-    category: "database",
-    title: "데이터베이스 보기",
-    description: "표, 보드, 갤러리, 캘린더 등",
-    icon: "Table2",
-    childIds: [
-      "dbTable",
-      "dbBoard",
-      "dbGallery",
-      "dbList",
-      "dbCalendar",
-      "dbTimeline",
-    ],
-  },
-  {
-    id: "g-toggle-headings",
-    category: "advanced",
-    title: "토글 제목",
-    description: "접을 수 있는 제목",
-    icon: "ChevronDown",
-    childIds: ["toggleH1", "toggleH2", "toggleH3"],
-  },
-  {
-    id: "g-columns",
-    category: "advanced",
-    title: "열 레이아웃",
-    description: "2열 또는 3열 나란히",
-    icon: "Columns2",
-    childIds: ["columns2", "columns3"],
-  },
-  {
-    id: "g-templates",
-    category: "advanced",
-    title: "템플릿",
-    description: "회의록, 프로젝트, 주간 양식",
-    icon: "LayoutTemplate",
-    childIds: ["template-meeting", "template-project", "template-weekly"],
-  },
-  {
-    id: "g-github",
-    category: "developer",
-    title: "GitHub",
-    description: "Repository, Gist, 이슈, PR",
-    icon: "GitGraph",
-    childIds: ["githubEmbed", "githubGist", "githubIssue"],
-  },
-];
-
-const HIDDEN_ITEM_IDS = new Set(["template"]);
-
-type LeafNode = { kind: "leaf"; item: SlashCommandItem };
-type GroupNode = {
-  kind: "group";
-  group: GroupConfig;
-  children: SlashCommandItem[];
-};
-type TreeNode = LeafNode | GroupNode;
-
-type CategorySection = {
-  id: string;
-  label: string;
-  nodes: TreeNode[];
-};
-
-function showToast(message: string) {
-  const existing = document.getElementById("slash-cmd-toast");
-  if (existing) existing.remove();
-
-  const toast = document.createElement("div");
-  toast.id = "slash-cmd-toast";
-  Object.assign(toast.style, {
-    position: "fixed",
-    bottom: "24px",
-    left: "50%",
-    transform: "translateX(-50%)",
-    background: "#18181b",
-    color: "#fafafa",
-    padding: "8px 16px",
-    borderRadius: "8px",
-    fontSize: "13px",
-    fontWeight: "500",
-    zIndex: "100000",
-    pointerEvents: "none",
-    opacity: "0",
-    transition: "opacity 0.15s ease",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-    whiteSpace: "nowrap",
-  });
-  toast.textContent = message;
-  document.body.appendChild(toast);
-
-  requestAnimationFrame(() => {
-    toast.style.opacity = "1";
-  });
-
-  setTimeout(() => {
-    toast.style.opacity = "0";
-    setTimeout(() => toast.remove(), 200);
-  }, 2200);
-}
-
-function buildTree(items: SlashCommandItem[]): CategorySection[] {
-  const result: CategorySection[] = [];
-  for (const cat of CATEGORIES) {
-    const catItems = items.filter(
-      (it) => it.category === cat.id && !HIDDEN_ITEM_IDS.has(it.id) && isVisibleSlashCommandItem(it)
-    );
-    if (catItems.length === 0) continue;
-
-    const catGroups = SUBMENU_GROUPS.filter((g) => g.category === cat.id);
-    const childToGroup = new Map<string, GroupConfig>();
-    for (const g of catGroups) {
-      for (const cid of g.childIds) childToGroup.set(cid, g);
-    }
-
-    const emitted = new Set<string>();
-    const nodes: TreeNode[] = [];
-    for (const item of catItems) {
-      const group = childToGroup.get(item.id);
-      if (group) {
-        if (!emitted.has(group.id)) {
-          const children = group.childIds
-            .map((cid) => catItems.find((it) => it.id === cid))
-            .filter((x): x is SlashCommandItem => Boolean(x));
-          nodes.push({ kind: "group", group, children });
-          emitted.add(group.id);
-        }
-        continue;
-      }
-      nodes.push({ kind: "leaf", item });
-    }
-
-    if (nodes.length > 0) {
-      result.push({ id: cat.id, label: cat.label, nodes });
-    }
-  }
-  return result;
-}
-
-function buildFlat(items: SlashCommandItem[]): CategorySection[] {
-  const result: CategorySection[] = [];
-  for (const cat of CATEGORIES) {
-    const catItems = items.filter(
-      (it) => it.category === cat.id && !HIDDEN_ITEM_IDS.has(it.id)
-    );
-    if (catItems.length === 0) continue;
-    result.push({
-      id: cat.id,
-      label: cat.label,
-      nodes: catItems.map((item) => ({ kind: "leaf" as const, item })),
-    });
-  }
-  return result;
-}
 
 interface SlashCommandListProps {
   items: SlashCommandItem[];
@@ -324,11 +59,9 @@ export function SlashCommandList({
   onInsertButton,
   onInsertPageLink,
 }: SlashCommandListProps) {
-  const router = useRouter();
-  const { createPage } = usePageStore();
   const isFiltering = query.trim().length > 0;
 
-  const sections = useMemo(
+  const sections: CategorySection[] = useMemo(
     () => (isFiltering ? buildFlat(items) : buildTree(items)),
     [items, isFiltering]
   );
@@ -343,7 +76,18 @@ export function SlashCommandList({
   const subRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const activeRoot = rootNodes[rootIndex];
-  const activeGroup = activeRoot?.kind === "group" ? activeRoot : null;
+  const activeGroup: GroupNode | null =
+    activeRoot?.kind === "group" ? activeRoot : null;
+
+  const handleSelect = useSlashCommandSelect({
+    editor,
+    range,
+    workspaceId,
+    pageId,
+    onLinkDatabase,
+    onInsertButton,
+    onInsertPageLink,
+  });
 
   // Reset selection when items list changes
   useEffect(() => {
@@ -356,145 +100,6 @@ export function SlashCommandList({
   useEffect(() => {
     setSubIndex(0);
   }, [activeGroup?.group.id]);
-
-  const handleSelect = useCallback(
-    (item: SlashCommandItem) => {
-      if (item.isDisabled) {
-        showToast("준비 중입니다 🚧");
-        return;
-      }
-
-      const chain = editor.chain().focus().deleteRange(range);
-
-      switch (item.id) {
-        case "text":
-          chain.setParagraph().run();
-          break;
-        case "h1":
-          chain.setHeading({ level: 1 }).run();
-          break;
-        case "h2":
-          chain.setHeading({ level: 2 }).run();
-          break;
-        case "h3":
-          chain.setHeading({ level: 3 }).run();
-          break;
-        case "h4":
-          chain.setHeading({ level: 4 }).run();
-          break;
-        case "h5":
-          chain.setHeading({ level: 5 }).run();
-          break;
-        case "h6":
-          chain.setHeading({ level: 6 }).run();
-          break;
-        case "bulletList":
-          chain.toggleBulletList().run();
-          break;
-        case "orderedList":
-          chain.toggleOrderedList().run();
-          break;
-        case "taskList":
-          (chain as typeof chain & { toggleTaskList: () => typeof chain })
-            .toggleTaskList()
-            .run();
-          break;
-        case "blockquote":
-          chain.toggleBlockquote().run();
-          break;
-        case "divider":
-          chain.setHorizontalRule().run();
-          break;
-        case "codeBlock":
-          (chain as typeof chain & { insertCodeBlock: () => typeof chain })
-            .insertCodeBlock()
-            .run();
-          break;
-        case "dbTable":
-          chain.insertDatabaseEmbed().run();
-          break;
-        case "canvas":
-          chain.insertCanvasEmbed().run();
-          break;
-        case "dbDiagram":
-          (chain as typeof chain & { insertDbDiagram: () => typeof chain })
-            .insertDbDiagram()
-            .run();
-          break;
-        case "githubEmbed":
-        case "githubGist":
-        case "githubIssue":
-          (chain as typeof chain & { insertGitHubEmbedBlock: () => typeof chain })
-            .insertGitHubEmbedBlock()
-            .run();
-          break;
-        case "columns2":
-          chain.insertColumnLayout({ columns: 2 }).run();
-          break;
-        case "columns3":
-          chain.insertColumnLayout({ columns: 3 }).run();
-          break;
-        case "math":
-          chain.insertMathBlock().run();
-          break;
-        case "button":
-          chain.run();
-          onInsertButton?.();
-          return;
-
-        case "linkDatabase":
-          chain.run();
-          onLinkDatabase?.();
-          break;
-        case "pageLink":
-        case "pageMention":
-          chain.run();
-          onInsertPageLink?.();
-          return;
-        case "template-meeting":
-          chain.run();
-          editor.commands.insertContent(
-            `<h1>회의록</h1><p><strong>일시:</strong> </p><p><strong>참석자:</strong> </p><h2>안건</h2><ul><li><p></p></li></ul><h2>메모</h2><p></p><h2>액션 아이템</h2><ul><li><p></p></li></ul>`
-          );
-          break;
-        case "template-project":
-          chain.run();
-          editor.commands.insertContent(
-            `<h1>프로젝트 브리프</h1><h2>개요</h2><p></p><h2>목표</h2><ul><li><p></p></li></ul><h2>범위</h2><p></p><h2>결과물</h2><ul><li><p></p></li></ul><h2>일정</h2><p></p>`
-          );
-          break;
-        case "template-weekly":
-          chain.run();
-          editor.commands.insertContent(
-            `<h1>주간 플래너</h1><h2>이번 주 목표</h2><ul><li><p></p></li></ul><h2>월</h2><p></p><h2>화</h2><p></p><h2>수</h2><p></p><h2>목</h2><p></p><h2>금</h2><p></p><h2>회고</h2><p></p>`
-          );
-          break;
-        case "subPage":
-          chain.run();
-          (async () => {
-            if (!workspaceId || !pageId) return;
-            const newPage = await createPage({
-              title: "새 페이지",
-              type: "document",
-              parentId: pageId,
-              workspaceId,
-            });
-            if (newPage) {
-              editor.commands.insertSubPageEmbed({
-                pageId: newPage.id,
-                workspaceId,
-                parentPageId: pageId,
-              });
-              router.push(`/workspace/${workspaceId}?page=${newPage.id}`);
-            }
-          })();
-          return;
-        default:
-          chain.run();
-      }
-    },
-    [editor, range, workspaceId, pageId, createPage, router, onLinkDatabase, onInsertButton, onInsertPageLink]
-  );
 
   // Keyboard navigation
   useEffect(() => {
@@ -607,9 +212,7 @@ export function SlashCommandList({
               style={{ color: "var(--color-text-secondary)" }}
             />
           ) : null}
-          <span className="flex-1 truncate text-[13px] leading-5">
-            {title}
-          </span>
+          <span className="flex-1 truncate text-[13px] leading-5">{title}</span>
           {isDisabled && (
             <span
               className="flex-shrink-0 text-[9px] uppercase tracking-wide"

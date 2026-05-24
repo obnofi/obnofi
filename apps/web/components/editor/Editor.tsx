@@ -2,54 +2,22 @@
 
 import { useState, useCallback, useRef, useEffect, type CSSProperties, type Ref, type RefObject } from "react";
 import { useEditor, EditorContent, type Editor as TiptapEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
-import Collaboration from "@tiptap/extension-collaboration";
-import { GroveCollaborationCursor } from "@/components/editor/extensions/GroveCollaborationCursor";
-import { LinePresenceExtension } from "@/components/editor/extensions/LinePresenceExtension";
 import { useCollaboration, userColor } from "@/lib/collaboration/CollaborationContext";
 import "tippy.js/dist/tippy.css";
 import { useSession } from "next-auth/react";
-import { DatabaseBlock } from "@/components/editor/extensions/DatabaseBlock";
-import { CanvasBlock } from "@/components/editor/extensions/CanvasBlock";
-import { ButtonBlock } from "@/components/editor/extensions/ButtonBlock";
-import { CodeBlock } from "@/components/editor/extensions/CodeBlock";
-import {
-  ColumnLayoutBlock,
-  GroveColumn,
-} from "@/components/editor/extensions/ColumnLayoutBlock";
-import { LinkedDatabaseBlock } from "@/components/editor/extensions/LinkedDatabaseBlock";
-import { MathBlock } from "@/components/editor/extensions/MathBlock";
-import { SlashCommandExtension } from "@/components/editor/extensions/SlashCommandExtension";
-import {
-  CustomEmojiNode,
-  PersonalEmojiExtension,
-} from "@/components/editor/extensions/PersonalEmojiExtension";
 import { LinkDatabaseModal } from "@/components/editor/extensions/LinkDatabaseModal";
 import { ButtonInsertModal } from "@/components/editor/extensions/ButtonInsertModal";
 import { PageLinkModal } from "@/components/editor/extensions/PageLinkModal";
-import { PageLinkExtension } from "@/components/editor/extensions/PageLinkExtension";
-import { PageLinkMark } from "@/components/editor/extensions/PageMentionExtension";
-import { DbDiagramExtension } from "@/src/components/editor/extensions/DbDiagramExtension";
-import { SubPageBlock } from "@/components/editor/extensions/SubPageBlock";
-import { BlockActionsExtension } from "@/components/editor/extensions/BlockActionsExtension";
 import { BlockActionBar } from "@/components/editor/BlockActionBar";
 import { CollaboratorBlockAvatars } from "@/components/editor/CollaboratorBlockAvatars";
 import { SpeechInputIndicator } from "@/components/editor/SpeechInputIndicator";
 import { TextHighlightToolbar } from "@/components/editor/TextHighlightToolbar";
-import { TextHighlightMark } from "@/components/editor/extensions/TextHighlightMark";
-import { TaskItem, TaskList } from "@/components/editor/extensions/TaskList";
 import {
   MossNoteDock,
   type MossNoteDockHandle,
 } from "@/components/workspace/MossNoteDock";
-import {
-  FileDropBlock,
-  GitHubEmbedBlock,
-  GroveTableBlock,
-  LinkEmbedBlock,
-  WebClipBlock,
-} from "@/components/editor/extensions/GroveInsertionBlocks";
+import { useEditorContentSync } from "@/hooks/useEditorContentSync";
+import { useGroveEditorExtensions } from "@/hooks/useGroveEditorExtensions";
 import type { PageHeadingFontSizes, PageHighlightColor } from "@obnofi/types";
 import type { MossNoteAnchor } from "@/lib/moss-notes";
 
@@ -75,10 +43,6 @@ interface EditorProps {
   isSpeechListening?: boolean;
   mossNoteDockRef?: Ref<MossNoteDockHandle>;
   mossNoteSurfaceRef?: RefObject<HTMLElement>;
-}
-
-function tiptapDocumentsMatch(a: object | null, b: object | null) {
-  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 export function Editor({
@@ -110,10 +74,6 @@ export function Editor({
   const onUpdateRef = useRef(onUpdate);
   const onEditRef = useRef(onEdit);
 
-  // Yjs sync 완료 전 setContent로 인한 가짜 onUpdate 방지
-  const isApplyingInitialContent = useRef(false);
-  const initialContentApplied = useRef(false);
-
   const { data: session } = useSession();
   const { ydoc, provider, isSynced } = useCollaboration();
 
@@ -128,78 +88,28 @@ export function Editor({
   useEffect(() => { onUpdateRef.current = onUpdate; }, [onUpdate]);
   useEffect(() => { onEditRef.current = onEdit; }, [onEdit]);
   useEffect(() => { onEditorReady?.(editorRef.current); }, [onEditorReady]);
+  const isApplyingInitialContent = useRef(false);
 
-  // 협업 문서가 비어 있거나 ws-server가 persisted Yjs를 복원하지 못한 경우,
-  // page content를 먼저 Yjs 문서에 심어 문서가 빈 화면으로 열리지 않게 한다.
-  useEffect(() => {
-    if (!ydoc || initialContentApplied.current) return;
-    const editor = editorRef.current;
-    if (!editor || !content) return;
+  const handleOpenLinkModal = useCallback(() => setIsLinkModalOpen(true), []);
+  const handleOpenButtonModal = useCallback(() => setIsButtonModalOpen(true), []);
+  const handleOpenPageLinkModal = useCallback(() => setIsPageLinkModalOpen(true), []);
 
-    const pageUpdatedAtMs = pageUpdatedAt ? new Date(pageUpdatedAt).getTime() : 0;
-    const yjsUpdatedAtMs = yjsUpdatedAt ? new Date(yjsUpdatedAt).getTime() : 0;
-    const shouldSeedFromPage =
-      !yjsUpdatedAt || pageUpdatedAtMs > yjsUpdatedAtMs;
-
-    if (!shouldSeedFromPage) {
-      return;
-    }
-
-    const editorJson = editor.getJSON() as { content?: Array<{ type?: string; content?: unknown[] }> };
-    const docContent = editorJson.content ?? [];
-    const isEmpty =
-      docContent.length === 0 ||
-      (docContent.length === 1 &&
-        docContent[0]?.type === "paragraph" &&
-        !docContent[0]?.content?.length);
-
-    const dbContent = content as { content?: unknown[] };
-    if (!isEmpty || !dbContent.content?.length) {
-      return;
-    }
-
-    initialContentApplied.current = true;
-    isApplyingInitialContent.current = true;
-    editor.commands.setContent(content);
-    setTimeout(() => { isApplyingInitialContent.current = false; }, 0);
-  }, [content, pageUpdatedAt, ydoc, yjsUpdatedAt]);
-
-  // 협업 모드: sync 완료 후 Yjs 문서가 비어있으면 DB content로 초기화
-  useEffect(() => {
-    if (!isSynced || !ydoc || initialContentApplied.current) return;
-    const editor = editorRef.current;
-    if (!editor || !content) return;
-
-    const editorJson = editor.getJSON();
-    if (tiptapDocumentsMatch(editorJson as object, content)) {
-      initialContentApplied.current = true;
-      return;
-    }
-
-    const docContent = editorJson.content ?? [];
-    const isEmpty =
-      docContent.length === 0 ||
-      (docContent.length === 1 &&
-        docContent[0].type === "paragraph" &&
-        !docContent[0].content?.length);
-
-    const dbContent = content as { content?: unknown[] };
-    const pageUpdatedAtMs = pageUpdatedAt ? new Date(pageUpdatedAt).getTime() : 0;
-    const yjsUpdatedAtMs = yjsUpdatedAt ? new Date(yjsUpdatedAt).getTime() : 0;
-    const shouldRestoreFromPage =
-      pageUpdatedAtMs > yjsUpdatedAtMs ||
-      (isEmpty && dbContent?.content && dbContent.content.length > 0);
-
-    if (shouldRestoreFromPage && dbContent?.content && dbContent.content.length > 0) {
-      initialContentApplied.current = true;
-      isApplyingInitialContent.current = true;
-      editor.commands.setContent(content);
-      setTimeout(() => { isApplyingInitialContent.current = false; }, 0);
-    } else {
-      initialContentApplied.current = true;
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [content, isSynced, pageUpdatedAt, ydoc, yjsUpdatedAt]);
+  const extensions = useGroveEditorExtensions({
+    ydoc,
+    provider,
+    lineIndicatorEnabled,
+    editable,
+    placeholder,
+    workspaceId,
+    pageId,
+    sessionUserName: session?.user?.name ?? undefined,
+    sessionUserEmail: session?.user?.email ?? undefined,
+    sessionUserImage: session?.user?.image ?? null,
+    userColor,
+    onLinkDatabase: handleOpenLinkModal,
+    onInsertButton: handleOpenButtonModal,
+    onInsertPageLink: handleOpenPageLinkModal,
+  });
 
   const handleDatabaseSelect = useCallback(
     (databaseId: string, selectedPageId: string) => {
@@ -215,12 +125,10 @@ export function Editor({
     [workspaceId]
   );
 
-  const handleOpenLinkModal = useCallback(() => setIsLinkModalOpen(true), []);
-  const handleOpenButtonModal = useCallback(() => setIsButtonModalOpen(true), []);
-  const handleOpenPageLinkModal = useCallback(() => setIsPageLinkModalOpen(true), []);
   const handleButtonInsert = useCallback((label: string, url: string) => {
     editorRef.current?.commands.insertButtonBlock({ label, url });
   }, []);
+
   const handlePageLinkInsert = useCallback(
     (selectedPageId: string, selectedPageTitle: string) => {
       editorRef.current?.commands.insertPageLink({
@@ -231,98 +139,28 @@ export function Editor({
     },
     [workspaceId]
   );
+
   const getMossNoteAnchor = useCallback((): MossNoteAnchor => {
     const activeEditor = editorRef.current;
-    if (!activeEditor) {
-      return { kind: "page" };
-    }
-
+    if (!activeEditor) return { kind: "page" };
     const { from, to, empty } = activeEditor.state.selection;
-    if (empty) {
-      return { kind: "page" };
-    }
-
+    if (empty) return { kind: "page" };
     const quote = activeEditor.state.doc.textBetween(from, to, " ").trim();
-    if (!quote) {
-      return { kind: "page" };
-    }
-
+    if (!quote) return { kind: "page" };
     return { kind: "selection", quote, from, to };
   }, []);
+
   const revealMossNoteAnchor = useCallback((anchor: MossNoteAnchor) => {
     const activeEditor = editorRef.current;
-    if (!activeEditor || anchor.kind !== "selection") {
-      return;
-    }
-
+    if (!activeEditor || anchor.kind !== "selection") return;
     const docSize = activeEditor.state.doc.content.size;
     const from = Math.max(1, Math.min(anchor.from ?? 1, docSize));
     const to = Math.max(from, Math.min(anchor.to ?? from, docSize));
-
-    activeEditor
-      .chain()
-      .focus()
-      .setTextSelection({ from, to })
-      .scrollIntoView()
-      .run();
+    activeEditor.chain().focus().setTextSelection({ from, to }).scrollIntoView().run();
   }, []);
 
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure(ydoc ? { undoRedo: false } : {}),
-      Placeholder.configure({ placeholder }),
-      TextHighlightMark,
-      TaskList,
-      TaskItem,
-      ...(ydoc && provider
-        ? [
-            Collaboration.configure({ document: ydoc }),
-            GroveCollaborationCursor.configure({
-              awareness: provider.awareness,
-              user: {
-                name: session?.user?.name ?? "Anonymous",
-                color: userColor(session?.user?.email ?? ""),
-                image: session?.user?.image ?? null,
-              },
-            }),
-            ...(lineIndicatorEnabled
-              ? [
-                  LinePresenceExtension.configure({
-                    awareness: provider.awareness,
-                    localClientId: provider.awareness.clientID,
-                  }),
-                ]
-              : []),
-          ]
-        : []),
-      DatabaseBlock.configure({ workspaceId, pageId }),
-      CanvasBlock.configure({ workspaceId, pageId }),
-      ButtonBlock,
-      CodeBlock,
-      GroveColumn,
-      ColumnLayoutBlock,
-      MathBlock,
-      LinkedDatabaseBlock.configure({ workspaceId, pageId }),
-      GroveTableBlock,
-      FileDropBlock,
-      LinkEmbedBlock,
-      GitHubEmbedBlock,
-      WebClipBlock,
-      CustomEmojiNode,
-      PersonalEmojiExtension,
-      DbDiagramExtension.configure({ workspaceId, pageId }),
-      PageLinkExtension,
-      PageLinkMark.configure({ workspaceId }),
-      SubPageBlock,
-      ...(editable ? [BlockActionsExtension] : []),
-      SlashCommandExtension.configure({
-        workspaceId,
-        pageId,
-        onLinkDatabase: handleOpenLinkModal,
-        onInsertButton: handleOpenButtonModal,
-        onInsertPageLink: handleOpenPageLinkModal,
-      }),
-    ],
+    extensions,
     content: ydoc
       ? undefined
       : content || { type: "doc", content: [{ type: "paragraph" }] },
@@ -344,6 +182,16 @@ export function Editor({
 
   editorRef.current = editor ?? null;
 
+  useEditorContentSync({
+    editor,
+    content,
+    pageUpdatedAt,
+    yjsUpdatedAt,
+    ydoc: ydoc ?? null,
+    isSynced,
+    isApplyingInitialContent,
+  });
+
   useEffect(() => {
     onEditorReady?.(editor ?? null);
     return () => onEditorReady?.(null);
@@ -352,10 +200,7 @@ export function Editor({
   useEffect(() => {
     return () => {
       const shell = editorShellRef.current;
-      if (!shell) {
-        return;
-      }
-
+      if (!shell) return;
       shell
         .querySelectorAll(".collaboration-cursor__caret")
         .forEach((node) => node.remove());
@@ -394,10 +239,7 @@ export function Editor({
           <TextHighlightToolbar editor={editor} colors={highlightColors} />
         ) : null}
         {ydoc && provider ? (
-          <CollaboratorBlockAvatars
-            editor={editor}
-            container={editorShellRef.current}
-          />
+          <CollaboratorBlockAvatars editor={editor} container={editorShellRef.current} />
         ) : null}
         <SpeechInputIndicator
           isListening={isSpeechListening}
