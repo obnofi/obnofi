@@ -2,16 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import type { Editor } from "@tiptap/react";
-import {
-  Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6,
-  List, ListOrdered, CheckSquare, ChevronRight, Quote, Minus, AlertCircle,
-  Table, BookOpen, Image, Video, Music, Paperclip, Bookmark, Code2,
-  GitBranch, Table2, Kanban, LayoutGrid, LayoutList, Calendar, GanttChart,
-  PenTool, Database, Network, Zap, GitGraph, GitPullRequest, ChevronDown,
-  Sigma, Square, Link, LayoutTemplate, Globe, HardDrive, MessageSquare,
-  AtSign, FileText, CalendarDays, Smile, BarChart2, Columns2, Columns3,
-  ClipboardList,
-} from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { SlashCommandItem } from "@/components/editor/extensions/SlashCommandExtension";
 import {
   buildTree,
@@ -20,20 +11,7 @@ import {
   type GroupNode,
 } from "@/lib/editor/slashCommandListData";
 import { useSlashCommandSelect } from "@/lib/editor/slashCommandListUtils";
-
-const iconMap: Record<
-  string,
-  React.ComponentType<{ className?: string; style?: React.CSSProperties }>
-> = {
-  Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6,
-  List, ListOrdered, CheckSquare, ChevronRight, Quote, Minus, AlertCircle,
-  Table, BookOpen, Image, Video, Music, Paperclip, Bookmark, Code2,
-  GitBranch, Table2, Kanban, LayoutGrid, LayoutList, Calendar, GanttChart,
-  PenTool, Database, Network, Zap, GitGraph, GitPullRequest, ChevronDown,
-  Sigma, Square, Link, LayoutTemplate, Globe, HardDrive, MessageSquare,
-  AtSign, FileText, CalendarDays, Smile, BarChart2, Columns2, Columns3,
-  ClipboardList,
-};
+import { SlashCommandRow, shortcutBadge } from "@/components/editor/SlashCommandRow";
 
 interface SlashCommandListProps {
   items: SlashCommandItem[];
@@ -177,65 +155,6 @@ export function SlashCommandList({
 
   if (rootNodes.length === 0) return null;
 
-  const renderRow = (
-    key: string,
-    title: string,
-    iconName: string,
-    isSelected: boolean,
-    isDisabled: boolean,
-    rightAdornment: React.ReactNode,
-    onMouseEnter: () => void,
-    onClick: () => void,
-    refCallback: (el: HTMLButtonElement | null) => void
-  ) => {
-    const Icon = iconMap[iconName];
-    return (
-      <div key={key} className="px-1">
-        <button
-          type="button"
-          ref={refCallback}
-          onMouseEnter={onMouseEnter}
-          onClick={onClick}
-          data-selected={isSelected ? "true" : undefined}
-          style={{
-            background: isSelected ? "var(--color-selected)" : undefined,
-            color: "var(--color-text-primary)",
-          }}
-          className={[
-            "slash-cmd-row w-full flex items-center gap-2 px-2 py-1 rounded-[6px] text-left",
-            isDisabled ? "opacity-50" : "",
-          ].join(" ")}
-        >
-          {Icon ? (
-            <Icon
-              className="flex-shrink-0 w-3.5 h-3.5"
-              style={{ color: "var(--color-text-secondary)" }}
-            />
-          ) : null}
-          <span className="flex-1 truncate text-[13px] leading-5">{title}</span>
-          {isDisabled && (
-            <span
-              className="flex-shrink-0 text-[9px] uppercase tracking-wide"
-              style={{ color: "var(--color-text-placeholder)" }}
-            >
-              준비중
-            </span>
-          )}
-          {rightAdornment}
-        </button>
-      </div>
-    );
-  };
-
-  const shortcutBadge = (text: string) => (
-    <kbd
-      className="flex-shrink-0 text-[10px] font-mono leading-none"
-      style={{ color: "var(--color-text-secondary)" }}
-    >
-      {text}
-    </kbd>
-  );
-
   const panelStyle: React.CSSProperties = {
     background: "var(--color-background)",
     borderColor: "var(--color-border)",
@@ -271,47 +190,49 @@ export function SlashCommandList({
                 const isSelected = idx === rootIndex;
 
                 if (node.kind === "group") {
-                  return renderRow(
-                    node.group.id,
-                    node.group.title,
-                    node.group.icon,
-                    isSelected,
-                    false,
-                    <ChevronRight
-                      className="flex-shrink-0 w-3 h-3"
-                      style={{ color: "var(--color-text-secondary)" }}
-                    />,
-                    () => {
-                      setRootIndex(idx);
-                      setPanel("root");
-                    },
-                    () => {
-                      setRootIndex(idx);
-                      setPanel("sub");
-                      setSubIndex(0);
-                    },
-                    (el) => {
-                      rootRefs.current[idx] = el;
-                    }
+                  return (
+                    <SlashCommandRow
+                      key={node.group.id}
+                      iconName={node.group.icon}
+                      title={node.group.title}
+                      isSelected={isSelected}
+                      isDisabled={false}
+                      rightAdornment={
+                        <ChevronRight
+                          className="flex-shrink-0 w-3 h-3"
+                          style={{ color: "var(--color-text-secondary)" }}
+                        />
+                      }
+                      onMouseEnter={() => {
+                        setRootIndex(idx);
+                        setPanel("root");
+                      }}
+                      onClick={() => {
+                        setRootIndex(idx);
+                        setPanel("sub");
+                        setSubIndex(0);
+                      }}
+                      refCallback={(el) => { rootRefs.current[idx] = el; }}
+                    />
                   );
                 }
 
                 const item = node.item;
-                return renderRow(
-                  item.id,
-                  item.title,
-                  item.icon,
-                  isSelected,
-                  Boolean(item.isDisabled),
-                  item.shortcut ? shortcutBadge(item.shortcut) : null,
-                  () => {
-                    setRootIndex(idx);
-                    setPanel("root");
-                  },
-                  () => handleSelect(item),
-                  (el) => {
-                    rootRefs.current[idx] = el;
-                  }
+                return (
+                  <SlashCommandRow
+                    key={item.id}
+                    iconName={item.icon}
+                    title={item.title}
+                    isSelected={isSelected}
+                    isDisabled={Boolean(item.isDisabled)}
+                    rightAdornment={item.shortcut ? shortcutBadge(item.shortcut) : null}
+                    onMouseEnter={() => {
+                      setRootIndex(idx);
+                      setPanel("root");
+                    }}
+                    onClick={() => handleSelect(item)}
+                    refCallback={(el) => { rootRefs.current[idx] = el; }}
+                  />
                 );
               })}
             </div>
@@ -332,21 +253,21 @@ export function SlashCommandList({
             </div>
             {activeGroup.children.map((child, sIdx) => {
               const isSelected = panel === "sub" && sIdx === subIndex;
-              return renderRow(
-                child.id,
-                child.title,
-                child.icon,
-                isSelected,
-                Boolean(child.isDisabled),
-                child.shortcut ? shortcutBadge(child.shortcut) : null,
-                () => {
-                  setPanel("sub");
-                  setSubIndex(sIdx);
-                },
-                () => handleSelect(child),
-                (el) => {
-                  subRefs.current[sIdx] = el;
-                }
+              return (
+                <SlashCommandRow
+                  key={child.id}
+                  iconName={child.icon}
+                  title={child.title}
+                  isSelected={isSelected}
+                  isDisabled={Boolean(child.isDisabled)}
+                  rightAdornment={child.shortcut ? shortcutBadge(child.shortcut) : null}
+                  onMouseEnter={() => {
+                    setPanel("sub");
+                    setSubIndex(sIdx);
+                  }}
+                  onClick={() => handleSelect(child)}
+                  refCallback={(el) => { subRefs.current[sIdx] = el; }}
+                />
               );
             })}
           </div>

@@ -33,6 +33,7 @@ import {
   LinkEmbedBlock,
   WebClipBlock,
 } from "@/components/editor/extensions/GroveInsertionBlocks";
+import { useJungleCursor } from "@/lib/cursor/jungleCursor";
 import type * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
 
@@ -69,6 +70,8 @@ export function useGroveEditorExtensions({
   onInsertButton,
   onInsertPageLink,
 }: UseGroveEditorExtensionsOptions) {
+  const jungleCursor = useJungleCursor();
+
   return [
     StarterKit.configure(ydoc ? { undoRedo: false } : {}),
     Placeholder.configure({ placeholder }),
@@ -82,8 +85,10 @@ export function useGroveEditorExtensions({
             awareness: provider.awareness,
             user: {
               name: sessionUserName ?? "Anonymous",
-              color: userColor(sessionUserEmail ?? ""),
+              color: jungleCursor.color ?? userColor(sessionUserEmail ?? ""),
               image: sessionUserImage ?? null,
+              cursorColorKey: jungleCursor.colorKey,
+              cursorVariant: jungleCursor.variant,
             },
           }),
           PersistentCursorPresenceExtension.configure({

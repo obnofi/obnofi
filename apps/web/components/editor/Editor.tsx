@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, useMemo, type CSSProperties, type PointerEvent as ReactPointerEvent, type Ref, type RefObject } from "react";
+import { useState, useCallback, useRef, useEffect, type CSSProperties, type Ref, type RefObject } from "react";
 import { useEditor, EditorContent, type Editor as TiptapEditor } from "@tiptap/react";
 import { useCollaboration, userColor } from "@/lib/collaboration/CollaborationContext";
 import "tippy.js/dist/tippy.css";
@@ -12,12 +12,15 @@ import { BlockActionBar } from "@/components/editor/BlockActionBar";
 import { CollaboratorBlockAvatars } from "@/components/editor/CollaboratorBlockAvatars";
 import { SpeechInputIndicator } from "@/components/editor/SpeechInputIndicator";
 import { TextHighlightToolbar } from "@/components/editor/TextHighlightToolbar";
+import { RemotePageCursors } from "@/components/editor/RemotePageCursors";
 import {
   MossNoteDock,
   type MossNoteDockHandle,
 } from "@/components/workspace/MossNoteDock";
 import { useEditorContentSync } from "@/hooks/useEditorContentSync";
 import { useGroveEditorExtensions } from "@/hooks/useGroveEditorExtensions";
+import { usePageCursorTracking } from "@/hooks/usePageCursorTracking";
+import { useJungleCursor } from "@/lib/cursor/jungleCursor";
 import type { PageHeadingFontSizes, PageHighlightColor } from "@obnofi/types";
 import type { MossNoteAnchor } from "@/lib/moss-notes";
 
@@ -73,12 +76,10 @@ export function Editor({
   const editorShellRef = useRef<HTMLDivElement | null>(null);
   const onUpdateRef = useRef(onUpdate);
   const onEditRef = useRef(onEdit);
+  const jungleCursor = useJungleCursor();
 
   const { data: session } = useSession();
   const { ydoc, provider, isSynced, awarenessStates, localUserId, updateCursor } = useCollaboration();
-  const pageCursorFrameRef = useRef<number | null>(null);
-  const pendingPageCursorRef = useRef<{ x: number; y: number } | null>(null);
-  const lastSentPageCursorRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleEditorShellRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -210,84 +211,15 @@ export function Editor({
     };
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (pageCursorFrameRef.current != null) {
-        cancelAnimationFrame(pageCursorFrameRef.current);
-      }
-    };
-  }, []);
-
-  const remotePageCursors = useMemo(
-    () =>
-      awarenessStates.filter(
-        (state) =>
-          state.userId !== localUserId &&
-          state.userCursor?.type === "page" &&
-          state.userCursor?.pageId === pageId &&
-          state.userCursor.canvasPosition
-      ),
-    [awarenessStates, localUserId, pageId]
-  );
-
-  const flushPageCursor = useCallback(() => {
-    pageCursorFrameRef.current = null;
-    const nextPosition = pendingPageCursorRef.current;
-    pendingPageCursorRef.current = null;
-    if (!pageId || !nextPosition) return;
-
-    const rounded = {
-      x: Math.round(nextPosition.x),
-      y: Math.round(nextPosition.y),
-    };
-    const previous = lastSentPageCursorRef.current;
-    if (previous && previous.x === rounded.x && previous.y === rounded.y) {
-      return;
-    }
-
-    lastSentPageCursorRef.current = rounded;
-    updateCursor({
-      type: "page",
-      pageId,
-      canvasPosition: rounded,
-      databaseCell: null,
-    });
-  }, [pageId, updateCursor]);
-
-  const handlePagePointerMove = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
-      if (!ydoc || !provider || !pageId) return;
-      const shell = editorShellRef.current;
-      if (!shell) return;
-
-      const rect = shell.getBoundingClientRect();
-      pendingPageCursorRef.current = {
-        x: Math.max(0, Math.min(event.clientX - rect.left, rect.width)),
-        y: Math.max(0, Math.min(event.clientY - rect.top, rect.height)),
-      };
-
-      if (pageCursorFrameRef.current == null) {
-        pageCursorFrameRef.current = requestAnimationFrame(flushPageCursor);
-      }
-    },
-    [flushPageCursor, pageId, provider, ydoc]
-  );
-
-  const clearPagePointer = useCallback(() => {
-    pendingPageCursorRef.current = null;
-    lastSentPageCursorRef.current = null;
-    if (pageCursorFrameRef.current != null) {
-      cancelAnimationFrame(pageCursorFrameRef.current);
-      pageCursorFrameRef.current = null;
-    }
-    if (!pageId) return;
-    updateCursor({
-      type: "page",
-      pageId,
-      canvasPosition: null,
-      databaseCell: null,
-    });
-  }, [pageId, updateCursor]);
+  const { remotePageCursors, handlePagePointerMove, clearPagePointer } = usePageCursorTracking({
+    ydoc,
+    provider,
+    pageId,
+    localUserId,
+    awarenessStates,
+    updateCursor,
+    editorShellRef,
+  });
 
   if (!editor) return null;
 
@@ -304,6 +236,7 @@ export function Editor({
             "--grove-h3-font-size": `${headingFontSizes.h3}pt`,
             "--grove-h4-font-size": `${headingFontSizes.h4}pt`,
             "--grove-h5-font-size": `${headingFontSizes.h5}pt`,
+            cursor: jungleCursor.cursorCss,
           } as CSSProperties
         }
         className={`editor relative prose max-w-none text-[#111110] dark:prose-invert dark:text-zinc-100 [&:focus-within]:outline-none [&_*]:focus-visible:outline-none ${
@@ -325,44 +258,7 @@ export function Editor({
         {ydoc && provider ? (
           <CollaboratorBlockAvatars editor={editor} container={editorShellRef.current} />
         ) : null}
-        {remotePageCursors.map((state) => {
-          const pointer = state.userCursor?.canvasPosition;
-          if (!pointer) return null;
-
-          return (
-            <div
-              key={state.userId}
-              data-user-cursor={state.userId}
-              className="pointer-events-none absolute z-40"
-              style={{
-                left: pointer.x,
-                top: pointer.y,
-              }}
-            >
-              <svg
-                width="20"
-                height="24"
-                viewBox="0 0 20 24"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M3 2L16 12L10.5 13.5L13.5 21L9.5 22.5L6.5 15L3 18V2Z"
-                  fill={state.color}
-                  stroke="white"
-                  strokeWidth="1.5"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span
-                className="ml-3 mt-1 inline-flex rounded-full px-2 py-1 text-[10px] font-semibold text-white shadow-sm"
-                style={{ backgroundColor: state.color }}
-              >
-                {state.userName}
-              </span>
-            </div>
-          );
-        })}
+        <RemotePageCursors states={remotePageCursors} />
         <SpeechInputIndicator
           isListening={isSpeechListening}
           interimTranscript={interimTranscript}

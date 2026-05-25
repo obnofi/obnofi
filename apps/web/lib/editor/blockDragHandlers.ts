@@ -3,9 +3,9 @@ import type { EditorView } from "@tiptap/pm/view";
 import { blockActionsPluginKey } from "@/components/editor/extensions/blockActionsPluginKey";
 import {
   findBlockById,
-  resolveDropPos,
   type BlockPointerCoords,
 } from "@/lib/editor/blockUtils";
+import { resolveDropPos } from "@/lib/editor/blockDomUtils";
 
 function dispatchBlockActionsMeta(
   view: EditorView,

@@ -6,10 +6,12 @@ import {
 } from "@/components/editor/extensions/blockActionsPluginKey";
 import {
   ensureBlockIds,
-  findHoverableBlock,
   isActionableBlock,
-  isWithinBlockHoverBuffer,
 } from "@/lib/editor/blockUtils";
+import {
+  findHoverableBlock,
+  isWithinBlockHoverBuffer,
+} from "@/lib/editor/blockDomUtils";
 import {
   applyBlockDrag,
   endBlockDrag,
