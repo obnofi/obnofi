@@ -5,6 +5,7 @@ import { flexRender, type Row, type Table } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import { Property, Page, PropertyType, SelectOption } from "@obnofi/types";
 import { useCollaboration } from "@/lib/collaboration/CollaborationContext";
+import { useJungleCursor } from "@/lib/cursor/jungleCursor";
 import { TableHead } from "./TableViewParts";
 
 interface TableViewProps {
@@ -33,11 +34,13 @@ export function TableView({
   compact = false,
 }: TableViewProps) {
   const collaboration = useCollaboration();
-  const awarenessStates = Array.isArray(collaboration.awarenessStates)
-    ? collaboration.awarenessStates
-    : [];
-  const updateCursor = collaboration.updateCursor ?? (() => {});
+  const awarenessStates = useMemo(
+    () => (Array.isArray(collaboration.awarenessStates) ? collaboration.awarenessStates : []),
+    [collaboration.awarenessStates]
+  );
+  const updateCursor = collaboration.updateCursor;
   const localUserId = collaboration.localUserId ?? null;
+  const jungleCursor = useJungleCursor();
 
   const occupiedCells = useMemo(() => {
     const occupied = new Map<string, Array<{ userId: string; userName: string; color: string }>>();
@@ -63,8 +66,14 @@ export function TableView({
   }, [awarenessStates, localUserId, pageId]);
 
   useEffect(() => {
+    if (!updateCursor) {
+      return;
+    }
+
     updateCursor({ type: "database", pageId, canvasPosition: null, databaseCell: null });
-    return () => { updateCursor(null); };
+    return () => {
+      updateCursor(null);
+    };
   }, [pageId, updateCursor]);
 
   const handleRowClick = (event: React.MouseEvent<HTMLTableRowElement>, row: Row<Page>) => {
@@ -83,6 +92,10 @@ export function TableView({
   };
 
   const handleCellEnter = (rowId: string, colId: string) => {
+    if (!updateCursor) {
+      return;
+    }
+
     updateCursor({ type: "database", pageId, canvasPosition: null, databaseCell: { rowId, colId } });
   };
 
@@ -90,11 +103,14 @@ export function TableView({
     if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) {
       return;
     }
+    if (!updateCursor) {
+      return;
+    }
     updateCursor({ type: "database", pageId, canvasPosition: null, databaseCell: null });
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden" style={{ cursor: jungleCursor.cursorCss }}>
       <div className="flex-1 overflow-auto">
         <table className="w-full border-collapse">
           <TableHead

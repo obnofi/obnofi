@@ -8,6 +8,7 @@ import { TableView } from "@/components/database/TableView";
 import { GalleryView } from "@/components/database/views/GalleryView";
 import { BoardView } from "@/components/database/views/BoardView";
 import { CalendarView } from "@/components/database/views/CalendarView";
+import { DatabaseQueryPanel } from "@/components/database/DatabaseQueryPanel";
 
 type GroveSurfaceView = Extract<ViewType, "table" | "gallery" | "board" | "calendar">;
 
@@ -165,86 +166,19 @@ export function DatabaseSurface({
         </div>
 
         {isQueryPanelOpen ? (
-          <div className="mt-3 grid gap-2 md:grid-cols-5">
-            <input
-              name="global-filter"
-              type="search"
-              value={queryState.globalFilter}
-              onChange={(event) => setGlobalFilter(event.target.value)}
-              placeholder="Search Grove Catalog"
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-placeholder)] focus:border-[var(--color-accent)]"
-            />
-            <select
-              name="filter-column"
-              value={queryState.activeFilterColumnId ?? ""}
-              onChange={(event) => setActiveFilterColumn(event.target.value || null)}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)]"
-            >
-              <option value="">Filter column</option>
-              <option value="title">Plant Seed</option>
-              {properties.map((property) => (
-                <option key={property.id} value={property.id}>
-                  {property.name}
-                </option>
-              ))}
-            </select>
-            <input
-              name="filter-value"
-              type="search"
-              value={activeFilterValue}
-              onChange={(event) => setActiveFilterValue(event.target.value)}
-              disabled={!queryState.activeFilterColumnId}
-              placeholder="Contains..."
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-placeholder)] disabled:cursor-not-allowed disabled:opacity-50 focus:border-[var(--color-accent)]"
-            />
-            <select
-              name="sort-column"
-              value={activeSort?.id ?? ""}
-              onChange={(event) =>
-                setSorting(
-                  event.target.value
-                    ? [{ id: event.target.value, desc: activeSort?.desc ?? false }]
-                    : []
-                )
-              }
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)]"
-            >
-              <option value="">Sort column</option>
-              <option value="title">Plant Seed</option>
-              {properties.map((property) => (
-                <option key={property.id} value={property.id}>
-                  {property.name}
-                </option>
-              ))}
-            </select>
-            <div className="flex gap-2">
-              <select
-                name="sort-direction"
-                value={activeSort?.desc ? "desc" : "asc"}
-                onChange={(event) =>
-                  activeSort
-                    ? setSorting([
-                        {
-                          id: activeSort.id,
-                          desc: event.target.value === "desc",
-                        },
-                      ])
-                    : undefined
-                }
-                className="flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)]"
-              >
-                <option value="asc">Ascending</option>
-                <option value="desc">Descending</option>
-              </select>
-              <button
-                type="button"
-                onClick={resetQuery}
-                className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
+          <DatabaseQueryPanel
+            globalFilter={queryState.globalFilter}
+            activeFilterColumnId={queryState.activeFilterColumnId ?? null}
+            activeFilterValue={activeFilterValue}
+            activeSortId={activeSort?.id}
+            activeSortDesc={activeSort?.desc ?? false}
+            columns={properties}
+            onGlobalFilterChange={setGlobalFilter}
+            onFilterColumnChange={setActiveFilterColumn}
+            onFilterValueChange={setActiveFilterValue}
+            onSortChange={(id, desc) => setSorting(id ? [{ id, desc }] : [])}
+            onReset={resetQuery}
+          />
         ) : null}
       </div>
 
