@@ -7,15 +7,13 @@ import {
   Undo2,
 } from "lucide-react";
 import { catmullRomToBezierPath } from "@/lib/pathUtils";
-import type { Tool, CanvasLayer } from "@/lib/canvas/canvasTypes";
+import type { Tool } from "@/lib/canvas/canvasTypes";
 import { PALETTE } from "@/lib/canvas/canvasTypes";
 import {
-  createId,
-  getPointFromEvent,
-  isPointNearLayer,
   normalizeLegacyContent,
   renderShape,
 } from "@/lib/canvas/canvasUtils";
+import { useCanvasDrawing } from "@/hooks/useCanvasDrawing";
 
 interface CanvasProps {
   content: object | null;
@@ -25,13 +23,21 @@ interface CanvasProps {
 
 export function Canvas({ content, onUpdate, compact = false }: CanvasProps) {
   const boardRef = useRef<HTMLDivElement>(null);
-  const [layers, setLayers] = useState<CanvasLayer[]>([]);
   const [tool, setTool] = useState<Tool>("brush");
   const [color, setColor] = useState("#2E7D45");
   const [size, setSize] = useState(4);
-  const [activeLayer, setActiveLayer] = useState<CanvasLayer | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [history, setHistory] = useState<CanvasLayer[][]>([]);
+
+  const {
+    layers,
+    setLayers,
+    activeLayer,
+    history,
+    handlePointerDown,
+    handlePointerMove,
+    finishDrawing,
+    handleClear,
+    handleUndo,
+  } = useCanvasDrawing(boardRef, onUpdate);
 
   useEffect(() => {
     const normalized = normalizeLegacyContent(content);
@@ -43,143 +49,6 @@ export function Canvas({ content, onUpdate, compact = false }: CanvasProps) {
       setTool("brush");
     }
   }, [compact]);
-
-  const persistLayers = (nextLayers: CanvasLayer[]) => {
-    setLayers(nextLayers);
-    onUpdate?.({
-      version: 2,
-      layers: nextLayers,
-    });
-  };
-
-  const pushHistory = () => {
-    setHistory((current) => [...current.slice(-29), layers]);
-  };
-
-  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    const point = getPointFromEvent(event, boardRef.current);
-    if (!point) {
-      return;
-    }
-
-    if (tool === "select") {
-      return;
-    }
-
-    event.currentTarget.setPointerCapture(event.pointerId);
-
-    if (tool === "eraser") {
-      pushHistory();
-      setIsDrawing(true);
-      setLayers((current) =>
-        current.filter((layer) => !isPointNearLayer(layer, point))
-      );
-      return;
-    }
-
-    pushHistory();
-    setIsDrawing(true);
-
-    if (tool === "brush") {
-      setActiveLayer({
-        id: createId("stroke"),
-        kind: "stroke",
-        points: [point],
-        color,
-        size,
-      });
-      return;
-    }
-
-    setActiveLayer({
-      id: createId("shape"),
-      kind: "shape",
-      shape: tool === "line" ? "line" : tool === "rect" ? "rect" : "ellipse",
-      start: point,
-      end: point,
-      color,
-      size,
-    });
-  };
-
-  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    const point = getPointFromEvent(event, boardRef.current);
-    if (!point || !isDrawing) {
-      return;
-    }
-
-    if (tool === "eraser") {
-      setLayers((current) =>
-        current.filter((layer) => !isPointNearLayer(layer, point))
-      );
-      return;
-    }
-
-    setActiveLayer((current) => {
-      if (!current) {
-        return current;
-      }
-
-      if (current.kind === "stroke") {
-        return {
-          ...current,
-          points: [...current.points, point],
-        };
-      }
-
-      return {
-        ...current,
-        end: point,
-      };
-    });
-  };
-
-  const finishDrawing = () => {
-    if (!isDrawing) {
-      return;
-    }
-
-    setIsDrawing(false);
-
-    if (tool === "eraser") {
-      onUpdate?.({ version: 2, layers });
-      return;
-    }
-
-    if (!activeLayer) {
-      return;
-    }
-
-    if (activeLayer.kind === "stroke" && activeLayer.points.length < 2) {
-      setActiveLayer(null);
-      return;
-    }
-
-    const nextLayers = [...layers, activeLayer];
-    setActiveLayer(null);
-    persistLayers(nextLayers);
-  };
-
-  const handleClear = () => {
-    if (layers.length === 0) {
-      return;
-    }
-
-    pushHistory();
-    persistLayers([]);
-  };
-
-  const handleUndo = () => {
-    setHistory((current) => {
-      const previous = current[current.length - 1];
-      if (!previous) {
-        return current;
-      }
-
-      persistLayers(previous);
-      return current.slice(0, -1);
-    });
-  };
 
   const renderedLayers = useMemo(() => {
     return activeLayer ? [...layers, activeLayer] : layers;
@@ -193,10 +62,10 @@ export function Canvas({ content, onUpdate, compact = false }: CanvasProps) {
         className={`relative flex-1 overflow-hidden ${
           tool === "select" ? "cursor-default" : "cursor-crosshair"
         }`}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={finishDrawing}
-        onPointerLeave={finishDrawing}
+        onPointerDown={(e) => handlePointerDown(e, tool, color, size)}
+        onPointerMove={(e) => handlePointerMove(e, tool)}
+        onPointerUp={() => finishDrawing(tool)}
+        onPointerLeave={() => finishDrawing(tool)}
       >
         <div className="absolute left-3 right-3 top-3 z-10 flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-200 bg-white/92 px-3 py-3 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/92">
           <div className="flex items-center gap-2">

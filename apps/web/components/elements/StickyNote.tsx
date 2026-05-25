@@ -2,133 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
-import {
-  createBrowserSupabaseClient,
-  isSupabaseConfigured,
-} from "@/lib/supabase";
-import {
-  type StickyNoteColor,
-  type StickyNoteItem,
-  useElementStore,
-} from "@/store/useElementStore";
-
-const STICKY_NOTE_COLORS: Record<
-  StickyNoteColor,
-  { surface: string; border: string; text: string; badge: string }
-> = {
-  yellow: {
-    surface: "#FFF1A8",
-    border: "#E8D56A",
-    text: "#4D4113",
-    badge: "#F3E17B",
-  },
-  pink: {
-    surface: "#FFD9E6",
-    border: "#F1ABC0",
-    text: "#5B2A3C",
-    badge: "#F8C3D5",
-  },
-  green: {
-    surface: "#DDF2D8",
-    border: "#A6D39A",
-    text: "#1F4522",
-    badge: "#CBE8C4",
-  },
-  blue: {
-    surface: "#DDF1FF",
-    border: "#A8CFE8",
-    text: "#1C4660",
-    badge: "#C8E5FA",
-  },
-  purple: {
-    surface: "#E9DDFE",
-    border: "#C9B1EF",
-    text: "#43305F",
-    badge: "#DCCDFA",
-  },
-  orange: {
-    surface: "#FFE0C2",
-    border: "#F0B984",
-    text: "#5D3A15",
-    badge: "#F9CFAB",
-  },
-  gray: {
-    surface: "#ECECEC",
-    border: "#CFCFCF",
-    text: "#3C3C3C",
-    badge: "#DADADA",
-  },
-  white: {
-    surface: "#FFFFFF",
-    border: "#D7D7D7",
-    text: "#2F2F2F",
-    badge: "#F3F3F3",
-  },
-};
-
-const COLOR_ORDER: StickyNoteColor[] = [
-  "yellow",
-  "pink",
-  "green",
-  "blue",
-  "purple",
-  "orange",
-  "gray",
-  "white",
-];
+import { type StickyNoteItem, useElementStore } from "@/store/useElementStore";
+import { STICKY_NOTE_COLORS, COLOR_ORDER } from "@/lib/canvas/stickyNoteColors";
+import { persistStickyNote, removeStickyNoteFromSupabase } from "@/lib/canvas/stickyNoteUtils";
 
 const MIN_STICKY_HEIGHT = 180;
-
-async function persistStickyNote(
-  stickyNote: StickyNoteItem,
-  patch?: Partial<StickyNoteItem>
-) {
-  if (!stickyNote.roomId || !isSupabaseConfigured()) {
-    return;
-  }
-
-  const nextStickyNote = {
-    ...stickyNote,
-    ...patch,
-  };
-
-  const supabase = createBrowserSupabaseClient();
-  await supabase.from("elements").upsert(
-    {
-      id: nextStickyNote.id,
-      room_id: nextStickyNote.roomId,
-      type: "sticky",
-      x: nextStickyNote.x,
-      y: nextStickyNote.y,
-      width: nextStickyNote.width,
-      height: nextStickyNote.height,
-      rotation: 0,
-      z_index: 1,
-      created_by: nextStickyNote.createdBy,
-      style: {
-        color: nextStickyNote.color,
-        opacity: 1,
-      },
-      content: {
-        kind: "sticky",
-        text: nextStickyNote.content,
-        tone: nextStickyNote.color,
-      },
-      created_at: nextStickyNote.createdAt,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "id" }
-  );
-}
-
-async function removeStickyNoteFromSupabase(stickyNote: StickyNoteItem) {
-  if (!stickyNote.roomId || !isSupabaseConfigured()) {
-    return;
-  }
-
-  const supabase = createBrowserSupabaseClient();
-  await supabase.from("elements").delete().eq("id", stickyNote.id);
-}
 
 export function StickyNote({
   stickyNote,
@@ -160,9 +38,7 @@ export function StickyNote({
   }, [stickyNote.content, isEditing]);
 
   useEffect(() => {
-    if (!isEditing || !contentRef.current) {
-      return;
-    }
+    if (!isEditing || !contentRef.current) return;
 
     contentRef.current.focus();
     document.getSelection()?.selectAllChildren(contentRef.current);
@@ -170,15 +46,10 @@ export function StickyNote({
   }, [isEditing]);
 
   const syncHeight = () => {
-    if (!contentRef.current) {
-      return;
-    }
+    if (!contentRef.current) return;
 
     contentRef.current.style.height = "0px";
-    const nextHeight = Math.max(
-      MIN_STICKY_HEIGHT,
-      contentRef.current.scrollHeight + 58
-    );
+    const nextHeight = Math.max(MIN_STICKY_HEIGHT, contentRef.current.scrollHeight + 58);
     contentRef.current.style.height = "auto";
 
     if (nextHeight !== stickyNote.height) {
@@ -191,51 +62,42 @@ export function StickyNote({
     const normalizedContent = draftRef.current.trimEnd();
     if (normalizedContent !== stickyNote.content) {
       updateStickyNote(stickyNote.id, { content: normalizedContent });
-      void persistStickyNote(stickyNote, {
-        content: normalizedContent,
-        height: stickyNote.height,
-      });
+      void persistStickyNote(stickyNote, { content: normalizedContent, height: stickyNote.height });
     }
     setIsEditing(false);
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (isEditing || event.button !== 0) {
-      return;
-    }
+    if (isEditing || event.button !== 0) return;
 
     event.stopPropagation();
-    const currentTargetRect = event.currentTarget.getBoundingClientRect();
+    const rect = event.currentTarget.getBoundingClientRect();
     dragStateRef.current = {
       pointerId: event.pointerId,
-      offsetX: (event.clientX - currentTargetRect.left) / scale,
-      offsetY: (event.clientY - currentTargetRect.top) / scale,
+      offsetX: (event.clientX - rect.left) / scale,
+      offsetY: (event.clientY - rect.top) / scale,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const dragState = dragStateRef.current;
-    if (!dragState || dragState.pointerId !== event.pointerId) {
-      return;
-    }
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
 
     event.stopPropagation();
     const parentRect = event.currentTarget.parentElement?.getBoundingClientRect();
-    if (!parentRect) {
-      return;
-    }
+    if (!parentRect) return;
 
-    const nextX = (event.clientX - parentRect.left) / scale - dragState.offsetX;
-    const nextY = (event.clientY - parentRect.top) / scale - dragState.offsetY;
-    moveStickyNote(stickyNote.id, nextX, nextY);
+    moveStickyNote(
+      stickyNote.id,
+      (event.clientX - parentRect.left) / scale - dragState.offsetX,
+      (event.clientY - parentRect.top) / scale - dragState.offsetY
+    );
   };
 
   const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     const dragState = dragStateRef.current;
-    if (!dragState || dragState.pointerId !== event.pointerId) {
-      return;
-    }
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
 
     dragStateRef.current = null;
     event.currentTarget.releasePointerCapture(event.pointerId);
@@ -245,16 +107,8 @@ export function StickyNote({
   return (
     <div
       className="group absolute select-none"
-      style={{
-        left: stickyNote.x,
-        top: stickyNote.y,
-        width: stickyNote.width,
-        height: stickyNote.height,
-      }}
-      onDoubleClick={(event) => {
-        event.stopPropagation();
-        setIsEditing(true);
-      }}
+      style={{ left: stickyNote.x, top: stickyNote.y, width: stickyNote.width, height: stickyNote.height }}
+      onDoubleClick={(event) => { event.stopPropagation(); setIsEditing(true); }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -270,9 +124,7 @@ export function StickyNote({
       >
         <button
           className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full opacity-0 transition hover:scale-105 group-hover:opacity-100"
-          style={{
-            backgroundColor: colorToken.badge,
-          }}
+          style={{ backgroundColor: colorToken.badge }}
           type="button"
           onClick={() => {
             deleteStickyNote(stickyNote.id);
@@ -293,10 +145,7 @@ export function StickyNote({
               style={{
                 backgroundColor: STICKY_NOTE_COLORS[color].surface,
                 borderColor: STICKY_NOTE_COLORS[color].border,
-                boxShadow:
-                  stickyNote.color === color
-                    ? `0 0 0 2px ${colorToken.border}`
-                    : undefined,
+                boxShadow: stickyNote.color === color ? `0 0 0 2px ${colorToken.border}` : undefined,
               }}
               type="button"
               onClick={(event) => {
@@ -318,11 +167,7 @@ export function StickyNote({
             draftRef.current = event.currentTarget.textContent ?? "";
             syncHeight();
           }}
-          onPointerDown={(event) => {
-            if (isEditing) {
-              event.stopPropagation();
-            }
-          }}
+          onPointerDown={(event) => { if (isEditing) event.stopPropagation(); }}
         >
           {stickyNote.content}
         </div>
