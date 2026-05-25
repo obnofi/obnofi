@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { SessionProvider } from "@/components/auth/SessionProvider";
+import { JungleCursorSync } from "@/components/cursor/JungleCursorSync";
 
 export const metadata: Metadata = {
   title: "Obnofi",
@@ -54,7 +55,10 @@ export default function RootLayout({
         </Script>
       </head>
       <body className="min-h-full flex flex-col">
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <JungleCursorSync />
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );
