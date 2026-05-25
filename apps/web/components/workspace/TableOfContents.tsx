@@ -34,7 +34,7 @@ export function TableOfContents({ container }: TableOfContentsProps) {
                   className={`block w-full truncate rounded-md py-1 text-left text-[12px] leading-5 transition ${indentClasses[heading.level]} ${
                     isActive
                       ? "font-semibold text-[var(--color-text-primary)]"
-                      : "font-normal text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
+                      : "font-pointing text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
                   }`}
                   title={heading.text}
                 >
