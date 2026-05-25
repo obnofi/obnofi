@@ -83,6 +83,12 @@
 - [ ] Operation transformation
 - [ ] Awareness (cursors)
 
+현재 구현 메모:
+- 문서 공동 편집은 Yjs + awareness로 동작한다.
+- 커서 awareness는 `user`, `cursor`(텍스트 caret/selection), `userCursor`(page/canvas/database 포인터)로 분리되어 있다.
+- 클라이언트 세션은 4색 협업 커서 팔레트 중 하나를 랜덤 고정 선택한다.
+- 문서에서는 같은 사용자에 대해 텍스트 caret와 페이지 포인터를 동시에 렌더링하지 않는다.
+
 ### Comments
 - [ ] Comment data model
 - [ ] Thread system

@@ -590,6 +590,7 @@ MossNote를 삭제합니다.
 - `document`는 기본 TipTap 문서 본문이 생성됩니다.
 - `document`는 기본적으로 `collaborationEnabled=true`, `lineIndicatorEnabled=false` 입니다.
 - `collaborationEnabled`, `lineIndicatorEnabled`는 문서 페이지 생성 시에만 반영됩니다.
+- `collaborationEnabled=true`인 문서는 Yjs awareness 기반 커서/포인터 상태를 사용합니다.
 - `database`는 Page 생성과 함께 Database, 기본 Property들, 기본 `Table` View까지 트랜잭션으로 생성됩니다.
 
 성공 응답:
@@ -663,6 +664,8 @@ MossNote를 삭제합니다.
 - `highlightColors`는 페이지 형광펜 팔레트이며 비어 있지 않은 배열이어야 합니다.
 - 허용 색상은 `yellow | green | blue | purple | pink | red | orange` 입니다.
 - `collaborationEnabled`는 문서 공동 편집의 기본 커서 기반 모드를 켜고 끕니다.
+- 공동 편집 커서 색상은 서버 저장값이 아니라 각 클라이언트 세션이 랜덤으로 고정 선택합니다.
+- 공동 편집 문서에서는 텍스트 caret awareness와 페이지 포인터 awareness를 함께 사용하되, 같은 사용자에 대해서는 중복 포인터를 렌더링하지 않습니다.
 - `lineIndicatorEnabled`는 문서에서 라인 기반 점유 표시를 추가로 켜고 끕니다.
 
 성공 응답:

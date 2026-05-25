@@ -697,6 +697,11 @@ interface UserCursor {
   lastSeen: Timestamp;
 }
 
+interface CursorAppearance {
+  colorKey: 'green' | 'leafy' | 'blue' | 'pink';
+  variant: 'pointing' | 'highlighting' | 'fucku';
+}
+
 // WebSocket message types
 interface CollabMessage {
   type: 'operation' | 'cursor' | 'presence' | 'awareness';
@@ -902,7 +907,28 @@ interface WebSocketAPI {
   'leave': { pageId: ID };
   'operation': { operation: BlockOperation };
   'cursor': { cursor: UserCursor };
-  'awareness': { state: unknown };
+  'awareness': {
+    state: {
+      user?: {
+        id: ID;
+        name: string;
+        color: string;
+        image?: string | null;
+        cursorColorKey?: CursorAppearance['colorKey'];
+        cursorVariant?: CursorAppearance['variant'];
+      };
+      cursor?: {
+        anchor?: unknown;
+        head?: unknown;
+      } | null;
+      userCursor?: {
+        type: 'page' | 'canvas' | 'database';
+        pageId: ID;
+        canvasPosition: { x: number; y: number } | null;
+        databaseCell: { rowId: ID; colId: ID } | null;
+      } | null;
+    };
+  };
   
   // Server -> Client
   'user_joined': { user: UserInfo };
@@ -911,6 +937,12 @@ interface WebSocketAPI {
   'cursor': { userId: ID; cursor: UserCursor };
   'awareness': { states: Map<ID, unknown> };
 }
+
+// Current document collaboration behavior
+// - Local browser cursor variant is global within the web app while the page is active.
+// - Each client session pins one random cursor color from the collaboration palette.
+// - Text caret awareness and page-pointer awareness can coexist in transport state,
+//   but the UI must suppress the page pointer when the same user already has a text caret.
 ```
 
 ---

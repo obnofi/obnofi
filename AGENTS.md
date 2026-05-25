@@ -156,19 +156,46 @@ Filters, sorts, groupBy, column widths, and visible properties are all in `View.
 | Task type | Start here |
 |---|---|
 | Page editing, workspace UX | `app/workspace/`, `components/editor/`, `components/sidebar/`, `store/` |
+| Workspace sidebar | `components/workspace/WorkspaceSidebar.tsx`, `hooks/useSidebarSearch.ts`, `hooks/useSidebarDrag.ts`, `hooks/useSidebarNavigation.ts`, `hooks/usePageSettings.ts`, `hooks/useWorkspaceSidebar.ts` |
+| Page settings menu | `components/workspace/PageSettingsMenu.tsx` |
 | Database or views | `components/database/`, `lib/database/`, `app/api/databases/`, `server/prisma/schema.prisma` |
+| Database table accessors | `lib/database/tableAccessors.ts` |
+| Database property meta/values | `lib/database/propertyMeta.ts`, `lib/database/propertyValues.ts`, `lib/database/selectOptions.ts` |
+| Database view utils | `lib/databaseViewUtils.ts`, `components/database/DatabaseViewTable.tsx`, `components/database/DatabaseViewGrid.tsx` |
+| Database query panel | `components/database/DatabaseQueryPanel.tsx` |
 | Collaboration / realtime | `server/src/ws/`, `lib/collaboration/` |
+| Realtime sync utils | `lib/realtime/timerUtils.ts`, `lib/realtime/presenceUtils.ts`, `lib/realtime/channelUtils.ts` |
+| Collaboration awareness | `lib/collaboration/useCollaborationAwareness.ts`, `lib/collaboration/wsUrl.ts` |
+| Collaboration provider lifecycle | `lib/collaboration/useProviderConnection.ts`, `lib/collaboration/usePresenceSync.ts` |
 | Crawlers / scheduled jobs | `server/src/jobs/`, `server/src/jobs/crawlers/` |
 | AI prompting / orchestration | `ai/`, `app/api/ai/generate/route.ts` |
 | Public sharing | `app/share/`, `components/share/` |
 | Graph view | `components/graph/`, `lib/graph/` |
-| Canvas | `components/canvas/` |
+| Graph layout/data | `lib/graph/graphLayout.ts`, `lib/graph/graphDataUtils.ts`, `components/graph/useGraphPages.ts`, `components/graph/useGraphFlowNodes.ts` |
+| Canvas (Clearing) | `components/canvas/`, `lib/canvas/` |
+| Canvas board hooks | `hooks/useClearingBoardState.ts`, `hooks/useClearingSync.ts`, `hooks/useClearingBootstrap.ts`, `hooks/useClearingPersistence.ts`, `hooks/useClearingPointerHandlers.ts`, `hooks/useClearingDragHandlers.ts`, `hooks/useClearingActions.ts`, `hooks/useClearingKeyboard.ts` |
+| Canvas drawing (simple canvas) | `hooks/useCanvasDrawing.ts` |
+| Canvas utilities | `lib/canvas/clearingBoardUtils.ts`, `lib/canvas/clearingBoardElementBuilders.ts`, `lib/canvas/clearingBoardSupabase.ts`, `lib/canvas/clearingBoardTypes.ts` |
+| Sticky note (canvas) | `components/elements/StickyNote.tsx`, `lib/canvas/stickyNoteColors.ts`, `lib/canvas/stickyNoteUtils.ts`, `lib/canvas/stickyToolUtils.ts` |
+| Clearing toolbar | `components/toolbar/ClearingToolbar.tsx`, `components/toolbar/ClearingToolbarParts.tsx`, `lib/editor/clearingToolbarConstants.ts` |
 | Speech-to-text (Parrot / 앵무새) | `hooks/useSpeechRecognition.ts`, `components/editor/SpeechRecognitionButton.tsx` |
 | Slash command data/types | `lib/editor/slashCommandTypes.ts`, `lib/editor/slashCommandItemsCore.ts`, `lib/editor/slashCommandItemsExtended.ts` |
-| Block drag/drop | `lib/editor/blockDragHandlers.ts`, `lib/editor/blockUtils.ts`, `lib/editor/blockActionsPlugin.ts` |
+| Block drag/drop | `lib/editor/blockDragHandlers.ts`, `lib/editor/blockUtils.ts`, `lib/editor/blockDomUtils.ts`, `lib/editor/blockActionsPlugin.ts` |
+| Column layout block | `components/editor/blocks/ColumnLayoutBlock.tsx`, `lib/editor/columnBlockDragPlugin.ts` |
 | Editor insertion blocks | `components/editor/blocks/` |
+| Editor hooks | `hooks/useEditorContentSync.ts`, `hooks/useGroveEditorExtensions.ts`, `hooks/useCanvasPageState.ts`, `hooks/usePageCursorTracking.ts`, `hooks/useDatabaseBlockData.ts` |
+| Insertion toolbar | `components/toolbar/GroveInsertionToolbar.tsx`, `components/toolbar/LinkEmbedModal.tsx` |
 | Page export (HTML/PDF) | `lib/exportPage.ts` (facade), `lib/export/htmlTemplate.ts`, `lib/export/domUtils.ts` |
 | GroveSideTab data | `hooks/useGroveSideTabPage.ts` |
+| MossNote dock | `components/workspace/MossNoteDock.tsx`, `hooks/useMossNotes.ts`, `components/workspace/MossNoteCard.tsx` |
+| WorkspacePage handlers | `hooks/useWorkspacePageHandlers.ts`, `app/workspace/[workspaceId]/WorkspacePageContent.tsx` |
+| Markdown → Tiptap | `lib/markdownToTiptap.ts`, `lib/markdown/patterns.ts`, `lib/markdown/inlineParsers.ts`, `lib/markdown/blockParsers.ts` |
+| Page store utils | `lib/page/pageUtils.ts`, `lib/page/pageFetch.ts` |
+| Prisma selects | `lib/prisma/selects.ts` |
+| API route helpers | `lib/api/pageUpdateValidation.ts`, `lib/api/pageDeleteUtils.ts` |
+| Emoji picker | `components/editor/PersonalEmojiList.tsx`, `lib/editor/emojiData.ts`, `components/editor/EmojiCropEditor.tsx`, `components/editor/EmojiPickerGrid.tsx` |
+| Landing page | `components/landing/LandingPage.tsx`, `components/landing/LandingSections.tsx`, `components/landing/LandingMockups.tsx` |
+| TOC utils | `lib/tocUtils.ts` |
 
 ---
 
