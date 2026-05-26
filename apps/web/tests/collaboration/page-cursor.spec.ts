@@ -147,3 +147,75 @@ test("document cursor: userA mouse movement shows figjam-like pointer in userB v
     await contextB.close();
   }
 });
+
+test("document collaborator reload does not duplicate existing text", async ({
+  browser,
+}) => {
+  test.setTimeout(120000);
+
+  const contextA = await browser.newContext({ baseURL: "http://localhost:3000" });
+  const pageA = await contextA.newPage();
+  const workspaceId = await getWorkspaceId(pageA, "dev1");
+
+  const contextB = await browser.newContext({ baseURL: "http://localhost:3000" });
+  const pageB = await contextB.newPage();
+  await signInAs(pageB, "dev2");
+
+  const { id: docPageId } = await createCollabPage(
+    pageA,
+    workspaceId,
+    "document",
+    `Reload Guard ${Date.now()}`,
+    ["dev2"]
+  );
+
+  await pageA.goto(`/workspace/${workspaceId}?page=${docPageId}`);
+  await pageA.waitForSelector('[data-testid="workspace-editor"]', { timeout: 15000 });
+
+  await pageB.goto(`/workspace/${workspaceId}?page=${docPageId}`);
+  await pageB.waitForSelector('[data-testid="workspace-editor"]', { timeout: 15000 });
+
+  try {
+    const seedText = `shared grove seed ${Date.now()}`;
+    const editorA = pageA.getByTestId("workspace-editor-input");
+    await editorA.locator("p").last().click();
+    await pageA.keyboard.type(seedText);
+
+    const editorB = pageB.getByTestId("workspace-editor-input");
+    await expect(editorB).toContainText(seedText);
+
+    await pageA.context().request.patch(`/api/pages/${docPageId}`, {
+      data: {
+        content: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: seedText }],
+            },
+          ],
+        },
+      },
+    });
+
+    await pageB.reload();
+    await pageB.waitForSelector('[data-testid="workspace-editor"]', { timeout: 15000 });
+
+    await expect
+      .poll(async () => {
+        const text = (await editorB.textContent()) ?? "";
+        return text.split(seedText).length - 1;
+      })
+      .toBe(1);
+
+    await expect
+      .poll(async () => {
+        const text = (await editorA.textContent()) ?? "";
+        return text.split(seedText).length - 1;
+      })
+      .toBe(1);
+  } finally {
+    await contextA.close();
+    await contextB.close();
+  }
+});
