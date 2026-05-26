@@ -7,6 +7,7 @@ export type JungleCursorColorKey = "green" | "leafy" | "blue" | "pink";
 
 const CURSOR_COLOR_STORAGE_KEY = "obnofi:jungle-cursor-color";
 const CURSOR_SCALE = 0.45;
+const CURSOR_SIZE_REDUCTION_PX = 5;
 const CURSOR_METRICS: Record<
   JungleCursorVariant,
   { width: number; height: number; hotspotX: number; hotspotY: number }
@@ -16,10 +17,10 @@ const CURSOR_METRICS: Record<
   fucku: { width: 39, height: 52, hotspotX: 4, hotspotY: 2 },
 };
 const CURSOR_COLORS: Record<JungleCursorColorKey, string> = {
-  green: "#2E7D45",
-  leafy: "#448361",
-  blue: "#337EA9",
-  pink: "#C14C8A",
+  green: "#2B593F",
+  leafy: "#B4B567",
+  blue: "#3B9CBD",
+  pink: "#EC6983",
 };
 const CURSOR_COLOR_KEYS = Object.keys(CURSOR_COLORS) as JungleCursorColorKey[];
 const scaledCursorCssCache = new Map<string, string>();
@@ -138,14 +139,31 @@ export function getJungleCursorColorValue(colorKey: JungleCursorColorKey): strin
   return CURSOR_COLORS[colorKey];
 }
 
+export function resolveJungleCursorColor(
+  colorKey: JungleCursorColorKey | undefined,
+  fallbackColor?: string
+): string {
+  if (colorKey) {
+    return getJungleCursorColorValue(colorKey);
+  }
+
+  return fallbackColor ?? CURSOR_COLORS.green;
+}
+
 export function getJungleCursorRenderMetrics(variant: JungleCursorVariant) {
   const metrics = CURSOR_METRICS[variant];
+  const scaledWidth = Math.round(metrics.width * CURSOR_SCALE);
+  const scaledHeight = Math.round(metrics.height * CURSOR_SCALE);
+  const width = Math.max(1, scaledWidth - CURSOR_SIZE_REDUCTION_PX);
+  const height = Math.max(1, scaledHeight - CURSOR_SIZE_REDUCTION_PX);
+  const widthRatio = width / scaledWidth;
+  const heightRatio = height / scaledHeight;
 
   return {
-    width: Math.round(metrics.width * CURSOR_SCALE),
-    height: Math.round(metrics.height * CURSOR_SCALE),
-    hotspotX: Math.round(metrics.hotspotX * CURSOR_SCALE),
-    hotspotY: Math.round(metrics.hotspotY * CURSOR_SCALE),
+    width,
+    height,
+    hotspotX: Math.max(0, Math.round(metrics.hotspotX * CURSOR_SCALE * widthRatio)),
+    hotspotY: Math.max(0, Math.round(metrics.hotspotY * CURSOR_SCALE * heightRatio)),
   } as const;
 }
 
@@ -199,9 +217,10 @@ async function ensureScaledCursorCss(
     return;
   }
 
+  const metrics = getJungleCursorRenderMetrics(variant);
   const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(image.naturalWidth * CURSOR_SCALE));
-  canvas.height = Math.max(1, Math.round(image.naturalHeight * CURSOR_SCALE));
+  canvas.width = metrics.width;
+  canvas.height = metrics.height;
 
   const context = canvas.getContext("2d");
   if (!context) {
@@ -211,8 +230,6 @@ async function ensureScaledCursorCss(
   context.imageSmoothingEnabled = true;
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-  const metrics = getJungleCursorRenderMetrics(variant);
   const cssValue = `url("${canvas.toDataURL("image/png")}") ${metrics.hotspotX} ${metrics.hotspotY}, auto`;
   scaledCursorCssCache.set(cacheKey, cssValue);
 

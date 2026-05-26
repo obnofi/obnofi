@@ -2,6 +2,7 @@
 
 import {
   getJungleCursorAssetPath,
+  resolveJungleCursorColor,
   getJungleCursorRenderMetrics,
   type JungleCursorColorKey,
   type JungleCursorVariant,
@@ -27,6 +28,7 @@ export function JungleRemoteCursor({
   y,
 }: JungleRemoteCursorProps) {
   const metrics = getJungleCursorRenderMetrics(variant);
+  const displayColor = resolveJungleCursorColor(colorKey, color);
 
   return (
     <div
@@ -47,7 +49,7 @@ export function JungleRemoteCursor({
       />
       <span
         className="mt-1 inline-flex max-w-[180px] rounded-[9px] border border-white px-2 py-1 text-[11px] font-bold leading-none text-white shadow-sm"
-        style={{ backgroundColor: color }}
+        style={{ backgroundColor: displayColor }}
       >
         {userName}
       </span>

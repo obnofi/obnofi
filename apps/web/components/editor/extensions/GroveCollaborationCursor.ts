@@ -4,6 +4,7 @@ import type { Awareness } from "y-protocols/awareness";
 import {
   getJungleCursorAssetPath,
   getJungleCursorRenderMetrics,
+  resolveJungleCursorColor,
 } from "@/lib/cursor/jungleCursor";
 
 export interface GroveCollaborationCursorOptions {
@@ -43,9 +44,12 @@ export const GroveCollaborationCursor =
             cursorVariant?: "pointing" | "highlighting" | "fucku";
           }) => {
             const name = cursorUser?.name ?? user.name;
-            const color = cursorUser?.color ?? user.color;
             const cursorColorKey = cursorUser?.cursorColorKey ?? user.cursorColorKey ?? "green";
             const cursorVariant = cursorUser?.cursorVariant ?? user.cursorVariant ?? "pointing";
+            const color = resolveJungleCursorColor(
+              cursorColorKey,
+              cursorUser?.color ?? user.color
+            );
             const metrics = getJungleCursorRenderMetrics(cursorVariant);
 
             const caret = document.createElement("span");

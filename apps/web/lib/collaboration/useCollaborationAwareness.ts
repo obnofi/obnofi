@@ -5,6 +5,7 @@ import type {
   JungleCursorColorKey,
   JungleCursorVariant,
 } from "@/lib/cursor/jungleCursor";
+import { resolveJungleCursorColor } from "@/lib/cursor/jungleCursor";
 
 export interface CollaborationUser {
   clientId: number;
@@ -68,8 +69,6 @@ export function useCollaborationAwareness(provider: WebsocketProvider | null): {
           typeof presenceUser?.id === "string" ? presenceUser.id : null;
         const awarenessUserName =
           typeof presenceUser?.name === "string" ? presenceUser.name : "User";
-        const awarenessColor =
-          typeof presenceUser?.color === "string" ? presenceUser.color : "#888";
         const awarenessImage =
           typeof presenceUser?.image === "string" ? presenceUser.image : null;
         const awarenessCursorColorKey =
@@ -80,6 +79,10 @@ export function useCollaborationAwareness(provider: WebsocketProvider | null): {
           typeof presenceUser?.cursorVariant === "string"
             ? (presenceUser.cursorVariant as JungleCursorVariant)
             : undefined;
+        const awarenessColor = resolveJungleCursorColor(
+          awarenessCursorColorKey,
+          typeof presenceUser?.color === "string" ? presenceUser.color : "#888"
+        );
 
         if (awarenessUserId) {
           nextAwarenessStates.push({
