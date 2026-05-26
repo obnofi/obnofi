@@ -17,9 +17,8 @@ interface UseEditorContentSyncOptions {
 }
 
 /**
- * Handles seeding TipTap/Yjs content from the database page content on
- * initial mount — covering both the pre-sync window and the post-sync
- * reconciliation step.
+ * Handles one-time reconciliation between persisted page content and the
+ * collaborative Yjs document after the provider finishes syncing.
  *
  * Returns refs that extension code can read to know whether a setContent
  * call is in-flight (used to suppress spurious onUpdate callbacks).
@@ -35,44 +34,10 @@ export function useEditorContentSync({
 }: UseEditorContentSyncOptions) {
   const initialContentApplied = useRef(false);
 
-  // 협업 문서가 비어 있거나 ws-server가 persisted Yjs를 복원하지 못한 경우,
-  // page content를 먼저 Yjs 문서에 심어 문서가 빈 화면으로 열리지 않게 한다.
-  useEffect(() => {
-    if (!ydoc || initialContentApplied.current) return;
-    if (!editor || !content) return;
-
-    const pageUpdatedAtMs = pageUpdatedAt ? new Date(pageUpdatedAt).getTime() : 0;
-    const yjsUpdatedAtMs = yjsUpdatedAt ? new Date(yjsUpdatedAt).getTime() : 0;
-    const shouldSeedFromPage = !yjsUpdatedAt || pageUpdatedAtMs > yjsUpdatedAtMs;
-
-    if (!shouldSeedFromPage) {
-      return;
-    }
-
-    const editorJson = editor.getJSON() as {
-      content?: Array<{ type?: string; content?: unknown[] }>;
-    };
-    const docContent = editorJson.content ?? [];
-    const isEmpty =
-      docContent.length === 0 ||
-      (docContent.length === 1 &&
-        docContent[0]?.type === "paragraph" &&
-        !docContent[0]?.content?.length);
-
-    const dbContent = content as { content?: unknown[] };
-    if (!isEmpty || !dbContent.content?.length) {
-      return;
-    }
-
-    initialContentApplied.current = true;
-    isApplyingInitialContent.current = true;
-    editor.commands.setContent(content);
-    setTimeout(() => {
-      isApplyingInitialContent.current = false;
-    }, 0);
-  }, [content, editor, pageUpdatedAt, ydoc, yjsUpdatedAt, isApplyingInitialContent]);
-
-  // 협업 모드: sync 완료 후 Yjs 문서가 비어있으면 DB content로 초기화
+  // 협업 모드에서는 sync 전에 Yjs에 page content를 선주입하지 않는다.
+  // 서버 persisted state가 뒤늦게 도착하면 같은 내용이 CRDT에서 별도 삽입으로 합쳐져
+  // 새로고침 후 텍스트가 반복되는 문제가 생길 수 있다.
+  // 따라서 sync 완료 뒤 현재 Yjs 문서 상태를 보고 한 번만 reconciliation 한다.
   useEffect(() => {
     if (!isSynced || !ydoc || initialContentApplied.current) return;
     if (!editor || !content) return;
@@ -91,13 +56,12 @@ export function useEditorContentSync({
         !docContent[0].content?.length);
 
     const dbContent = content as { content?: unknown[] };
-    const pageUpdatedAtMs = pageUpdatedAt ? new Date(pageUpdatedAt).getTime() : 0;
-    const yjsUpdatedAtMs = yjsUpdatedAt ? new Date(yjsUpdatedAt).getTime() : 0;
-    const shouldRestoreFromPage =
-      pageUpdatedAtMs > yjsUpdatedAtMs ||
-      (isEmpty && dbContent?.content && dbContent.content.length > 0);
+    // 협업 모드에서는 비어 있지 않은 Yjs 문서를 DB content로 다시 덮어쓰지 않는다.
+    // persisted Yjs가 이미 내용을 갖고 있는데 setContent를 한 번 더 태우면
+    // 새로고침 시 동일 문장이 아래에 중복 삽입되는 경우가 있다.
+    const shouldRestoreFromPage = isEmpty && dbContent?.content && dbContent.content.length > 0;
 
-    if (shouldRestoreFromPage && dbContent?.content && dbContent.content.length > 0) {
+    if (shouldRestoreFromPage) {
       initialContentApplied.current = true;
       isApplyingInitialContent.current = true;
       editor.commands.setContent(content);
@@ -108,5 +72,5 @@ export function useEditorContentSync({
       initialContentApplied.current = true;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [content, editor, isSynced, pageUpdatedAt, ydoc, yjsUpdatedAt, isApplyingInitialContent]);
+  }, [content, editor, isSynced, ydoc, isApplyingInitialContent]);
 }
