@@ -9,9 +9,10 @@ type WorkspaceSettingsShape = {
 
 export async function GET(
   _request: Request,
-  { params }: { params: { workspaceId: string } }
+  { params }: { params: Promise<{ workspaceId: string }> }
 ) {
   const userId = await getSessionUserId();
+  const { workspaceId } = await params;
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,7 +20,7 @@ export async function GET(
 
   const membership = await prisma.workspaceMember.findFirst({
     where: {
-      workspaceId: params.workspaceId,
+      workspaceId,
       userId,
     },
     select: {
