@@ -1,4 +1,4 @@
-export type ElementKind = "sticky" | "shape" | "text" | "image" | "embed" | "path" | "connector" | "section";
+export type ElementKind = "sticky" | "shape" | "text" | "vine" | "image" | "embed" | "path" | "connector" | "section";
 export type PresenceColor = "ink" | "fern" | "mist" | "sun" | "rose" | "sky";
 export type StickyTone = "sun" | "rose" | "sky";
 export type ShapeKind = "rectangle" | "ellipse" | "diamond" | "triangle";
@@ -61,6 +61,17 @@ export type TextElement = BaseElement<
     fontSize: number;
     align: "left" | "center" | "right";
     weight: 400 | 500 | 600 | 700;
+  }
+>;
+
+export type VineElement = BaseElement<
+  "vine",
+  {
+    kind: "vine";
+    text: string;
+    fontSize: number;
+    weight: 500 | 600 | 700;
+    fill: PresenceColor | string;
   }
 >;
 
@@ -130,6 +141,7 @@ export type Element =
   | StickyElement
   | ShapeElement
   | TextElement
+  | VineElement
   | ImageElement
   | EmbedElement
   | PathElement

@@ -10,6 +10,7 @@
 |---|---|
 | `Canopy` | Page cover image / page hero image |
 | `MossNote` | Sticky memo attached to a Grove page, database page, or selected text |
+| `Vine` | Mind map node inside a Clearing board |
 
 ---
 
