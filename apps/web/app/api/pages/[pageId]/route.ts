@@ -103,13 +103,16 @@ export async function DELETE(
   try {
     const { pageId } = await params;
 
-    await prisma.$transaction(async (tx) => {
-      const rootPage = await tx.page.findUnique({ where: { id: pageId }, select: { id: true } });
-      if (!rootPage) return;
+    await prisma.$transaction(
+      async (tx) => {
+        const rootPage = await tx.page.findUnique({ where: { id: pageId }, select: { id: true } });
+        if (!rootPage) return;
 
-      const { pageIds, databaseIds } = await collectPageSubtreeIds(tx, pageId);
-      await cascadeDeletePages(tx, pageIds, databaseIds);
-    });
+        const { pageIds, databaseIds } = await collectPageSubtreeIds(tx, pageId);
+        await cascadeDeletePages(tx, pageIds, databaseIds);
+      },
+      { maxWait: 15000, timeout: 30000 }
+    );
 
     return NextResponse.json({ success: true });
   } catch (e) {
