@@ -170,13 +170,13 @@ export function useGraphSimulation({
       )
       .force("center", forceCenter(0, 0))
       .alpha(0.72)
-      .alphaDecay(isBig ? 0.04 : 0.032)
-      .velocityDecay(0.42);
+      .alphaDecay(isBig ? 0.07 : 0.05)
+      .velocityDecay(0.55);
 
     simulationRef.current = simulation;
     isRunningRef.current = true;
 
-    simulation.tick(isBig ? 70 : 110);
+    simulation.tick(isBig ? 130 : 250);
 
     setNodes((current) =>
       current.map((node) => {
@@ -254,9 +254,9 @@ export function useGraphSimulation({
     draggingIdsRef.current = nowDragging;
 
     if (startedDragging) {
-      simulation.alphaTarget(0.15).restart();
+      simulation.alphaTarget(0.1).restart();
     } else if (stoppedDragging) {
-      simulation.alphaTarget(0);
+      simulation.alphaTarget(0).alpha(0.04);
     }
   }, [nodes]);
 }

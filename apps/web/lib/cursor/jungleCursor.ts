@@ -34,6 +34,7 @@ type JungleCursorState = {
 
 let initialized = false;
 let pressedKeys = new Set<string>();
+let forcedVariant: JungleCursorVariant | null = null;
 let state: JungleCursorState = buildState("green", "pointing");
 const listeners = new Set<() => void>();
 
@@ -70,6 +71,10 @@ function readStoredColorKey(): JungleCursorColorKey {
 }
 
 function getNextVariant(): JungleCursorVariant {
+  if (forcedVariant) {
+    return forcedVariant;
+  }
+
   if (pressedKeys.has("h")) {
     return "fucku";
   }
@@ -102,6 +107,14 @@ function syncState(nextVariant = getNextVariant()) {
 }
 
 function handleKeyDown(event: KeyboardEvent) {
+  const active = document.activeElement as HTMLElement | null;
+  if (
+    active?.tagName === "INPUT" ||
+    active?.tagName === "TEXTAREA" ||
+    active?.getAttribute("contenteditable") === "true"
+  ) {
+    return;
+  }
   pressedKeys.add(normalizeKey(event.key));
   syncState();
 }
@@ -137,6 +150,11 @@ function ensureInitialized() {
 
 export function getJungleCursorColorValue(colorKey: JungleCursorColorKey): string {
   return CURSOR_COLORS[colorKey];
+}
+
+export function setJungleCursorVariant(variant: JungleCursorVariant | null) {
+  forcedVariant = variant;
+  syncState();
 }
 
 export function resolveJungleCursorColor(
