@@ -8,7 +8,6 @@ interface MossNoteCardProps {
   mossNote: MossNote;
   isEditing: boolean;
   editingBody: string;
-  surface: HTMLElement | null;
   onRevealAnchor?: (anchor: MossNoteAnchor) => void;
   onEditingBodyChange: (body: string) => void;
   onSaveEditing: () => void;
@@ -38,9 +37,9 @@ export function MossNoteCard({
   };
 
   const handleCardPointerDown = (event: React.PointerEvent<HTMLElement>) => {
+    event.stopPropagation();
     if (isEditing || isInteractiveTarget(event.target)) return;
     event.preventDefault();
-    event.stopPropagation();
     onPointerDown(event, mossNote.id, mossNote.position);
   };
 
@@ -48,7 +47,7 @@ export function MossNoteCard({
     <article
       key={mossNote.id}
       data-testid={`moss-note-${mossNote.id}`}
-      className={`pointer-events-auto absolute rounded-md p-3 text-sm shadow-lg ${
+      className={`moss-note-card pointer-events-auto absolute z-30 rounded-md p-3 text-sm shadow-lg outline-none ${
         isEditing ? "" : "cursor-grab active:cursor-grabbing"
       } ${colorClass(mossNote.color)} ${
         mossNote.resolved ? "opacity-55" : ""
@@ -64,6 +63,7 @@ export function MossNoteCard({
         event.stopPropagation();
         onContextMenu(event, mossNote.id);
       }}
+      onFocus={(event) => event.stopPropagation()}
       onPointerDown={handleCardPointerDown}
     >
       <div
@@ -110,7 +110,7 @@ export function MossNoteCard({
           onClick={() => {
             onStartEditing(mossNote.id, mossNote.body === DEFAULT_BODY ? "" : mossNote.body);
           }}
-          className="block w-full whitespace-pre-wrap text-left leading-5 text-[var(--color-text-primary)]"
+          className="block w-full whitespace-pre-wrap text-left leading-5 text-[var(--color-text-primary)] outline-none focus-visible:outline-none"
         >
           {mossNote.body}
         </button>

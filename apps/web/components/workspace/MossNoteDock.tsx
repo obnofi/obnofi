@@ -42,6 +42,7 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
   ref
 ) {
   const [surface, setSurface] = useState<HTMLElement | null>(null);
+  const [surfaceScroll, setSurfaceScroll] = useState({ left: 0, top: 0 });
   const [color] = useState<MossNoteColor>("sun");
   const [isPlacing, setIsPlacing] = useState(false);
   const [ghostPoint, setGhostPoint] = useState<{ x: number; y: number } | null>(null);
@@ -97,6 +98,23 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
   useEffect(() => {
     setSurface(surfaceRef.current);
   }, [surfaceRef]);
+
+  useEffect(() => {
+    if (!surface) return;
+
+    const syncScroll = () => {
+      setSurfaceScroll({
+        left: surface.scrollLeft,
+        top: surface.scrollTop,
+      });
+    };
+
+    syncScroll();
+    surface.addEventListener("scroll", syncScroll);
+    return () => {
+      surface.removeEventListener("scroll", syncScroll);
+    };
+  }, [surface]);
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -176,16 +194,28 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
     });
   };
 
-  const layer = surface
+  const placingLayer = surface && isPlacing
     ? createPortal(
         <div
-          className={`absolute inset-0 z-30 ${isPlacing ? "cursor-copy" : "pointer-events-none"}`}
+          className="absolute inset-0 z-30 cursor-copy"
           onPointerDown={(event) => {
-            if (!isPlacing || !surface) return;
+            if (!surface) return;
             event.preventDefault();
             event.stopPropagation();
             const position = clientPointToSurfacePosition(surface, event.clientX, event.clientY);
             void createMossNoteAt(position);
+          }}
+        />,
+        surface
+      )
+    : null;
+
+  const noteLayer = surface
+    ? createPortal(
+        <div
+          className="pointer-events-none absolute inset-0 z-30"
+          style={{
+            transform: `translate(${-surfaceScroll.left}px, ${-surfaceScroll.top}px)`,
           }}
         >
           {mossNotes.map((mossNote) => (
@@ -194,7 +224,6 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
               mossNote={mossNote}
               isEditing={editingId === mossNote.id}
               editingBody={editingBody}
-              surface={surface}
               onRevealAnchor={onRevealAnchor}
               onEditingBodyChange={setEditingBody}
               onSaveEditing={saveEditing}
@@ -213,7 +242,8 @@ export const MossNoteDock = forwardRef<MossNoteDockHandle, MossNoteDockProps>(fu
 
   return (
     <>
-      {layer}
+      {placingLayer}
+      {noteLayer}
 
       {isPlacing && ghostPoint ? (
         <div
