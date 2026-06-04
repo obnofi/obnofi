@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Settings, Plus, Orbit } from "lucide-react";
+import { Search, Settings, Plus, Orbit, Trees } from "lucide-react";
 import { ImportFromUrlControl } from "@/components/workspace/ImportFromUrlControl";
 import { AntGlyph } from "@/components/icons/AntGlyph";
 import { typeIcons } from "@/components/workspace/sidebarConstants";
@@ -52,6 +52,12 @@ export function SidebarQuickActions({
         label="Crawler"
         icon={<AntGlyph className="h-4 w-4 shrink-0 text-[var(--color-text-secondary)]" />}
       />
+      <Link
+        href={`/workspace/${workspaceId}/forest`}
+        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] text-[13px]"
+      >
+        <Trees className="w-4 h-4" />Forest
+      </Link>
       <div className="relative">
         <button
           onClick={onToggleNewPageMenu}

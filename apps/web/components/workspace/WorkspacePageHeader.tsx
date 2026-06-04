@@ -2,7 +2,7 @@
 
 import { startTransition } from "react";
 import dynamic from "next/dynamic";
-import { ChevronRight, FileText, Palette, Database, Sparkles } from "lucide-react";
+import { ChevronRight, FileText, Palette, Database } from "lucide-react";
 import type { Page, PageType } from "@obnofi/types";
 import { CollaborationAvatars } from "@/components/workspace/CollaborationAvatars";
 import { SaveStatusIndicator } from "@/components/workspace/SaveStatusIndicator";
@@ -89,9 +89,6 @@ export function WorkspacePageHeader({
       <div className="flex items-center gap-2">
         <SaveStatusIndicator onRetry={onSaveRetry} />
         {collabActive ? <CollaborationAvatars /> : null}
-        <button className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]">
-          <Sparkles className="h-4 w-4" />
-        </button>
         <PageSettingsMenu
           pageId={pageId}
           workspaceId={workspaceId}
