@@ -273,8 +273,9 @@ test("/database 입력시 인라인 데이터베이스가 삽입된다", async (
 
   const databaseEmbed = page.getByTestId("inline-database-embed").last();
   await expect(databaseEmbed).toHaveAttribute("data-state", "ready", { timeout: 20000 });
-  await expect(page.getByTestId("inline-database-open").last()).toBeVisible({ timeout: 20000 });
   await expect(page.getByTestId("inline-database-ready").last()).toBeVisible({ timeout: 20000 });
+  await expect(page.getByTestId("inline-database-select")).toHaveCount(0);
+  await expect(databaseEmbed.getByRole("button", { name: "Open" })).toHaveCount(0);
 });
 
 test("/github 입력시 GitHub 임베드 블록이 삽입된다", async ({ page }) => {

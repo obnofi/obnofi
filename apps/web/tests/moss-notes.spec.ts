@@ -14,7 +14,7 @@ async function signInAsDeveloper(page: Page) {
   });
 }
 
-async function gotoWorkspaceDocument(page: Page) {
+async function gotoWorkspaceDocument(page: Page, content?: object) {
   await signInAsDeveloper(page);
   await page.goto("/workspace");
   await expect(page).toHaveURL(/\/workspace\/[^/?]+/, { timeout: 15000 });
@@ -27,7 +27,7 @@ async function gotoWorkspaceDocument(page: Page) {
       title: `Playwright MossNote Page ${Date.now()}`,
       type: "document",
       workspaceId,
-      content: { type: "doc", content: [{ type: "paragraph" }] },
+      content: content ?? { type: "doc", content: [{ type: "paragraph" }] },
     },
   });
 
@@ -227,4 +227,44 @@ test("메모지 삭제 — 서버 응답 전 즉시 제거", async ({ page }) =>
 
   // Unblock server
   deleteResolve?.();
+});
+
+test("메모지 위치 — 페이지 스크롤을 따라 함께 이동", async ({ page }) => {
+  const longContent = {
+    type: "doc",
+    content: Array.from({ length: 48 }, (_, index) => ({
+      type: "paragraph",
+      content: [
+        {
+          type: "text",
+          text: `스크롤 테스트 문단 ${index + 1} `.repeat(8),
+        },
+      ],
+    })),
+  };
+
+  await gotoWorkspaceDocument(page, longContent);
+
+  const surface = page.getByTestId("grove-page-surface");
+  await surface.evaluate((node) => {
+    node.scrollTop = 400;
+    node.dispatchEvent(new Event("scroll"));
+  });
+
+  const note = await placeMossNote(page, 300, 260);
+  const before = await note.boundingBox();
+  expect(before).not.toBeNull();
+
+  await surface.evaluate((node) => {
+    node.scrollTop = 200;
+    node.dispatchEvent(new Event("scroll"));
+  });
+  await page.waitForTimeout(100);
+
+  const after = await note.boundingBox();
+  expect(after).not.toBeNull();
+
+  const deltaY = (after?.y ?? 0) - (before?.y ?? 0);
+  expect(deltaY).toBeGreaterThan(140);
+  expect(deltaY).toBeLessThan(260);
 });
