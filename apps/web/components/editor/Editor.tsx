@@ -13,6 +13,7 @@ import { CollaboratorBlockAvatars } from "@/components/editor/CollaboratorBlockA
 import { SpeechInputIndicator } from "@/components/editor/SpeechInputIndicator";
 import { TextHighlightToolbar } from "@/components/editor/TextHighlightToolbar";
 import { RemotePageCursors } from "@/components/editor/RemotePageCursors";
+import { SlashCommandBroadcast } from "@/components/editor/SlashCommandBroadcast";
 import {
   MossNoteDock,
   type MossNoteDockHandle,
@@ -83,6 +84,7 @@ export function Editor({
 
   const { data: session } = useSession();
   const { ydoc, provider, isSynced, awarenessStates, localUserId, updateCursor } = useCollaboration();
+  const localClientId = provider?.awareness.clientID ?? null;
 
   const handleEditorShellRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -101,6 +103,17 @@ export function Editor({
   const handleOpenButtonModal = useCallback(() => setIsButtonModalOpen(true), []);
   const handleOpenPageLinkModal = useCallback(() => setIsPageLinkModalOpen(true), []);
 
+  const handleSlashCommandChange = useCallback(
+    (query: string | null) => {
+      if (!provider) return;
+      provider.awareness.setLocalStateField(
+        "slashCommand",
+        query !== null ? { query } : null
+      );
+    },
+    [provider]
+  );
+
   const extensions = useGroveEditorExtensions({
     ydoc,
     provider,
@@ -116,6 +129,7 @@ export function Editor({
     onLinkDatabase: handleOpenLinkModal,
     onInsertButton: handleOpenButtonModal,
     onInsertPageLink: handleOpenPageLinkModal,
+    onSlashCommandChange: provider ? handleSlashCommandChange : undefined,
   });
 
   const handleDatabaseSelect = useCallback(
@@ -262,6 +276,12 @@ export function Editor({
           <CollaboratorBlockAvatars editor={editor} container={editorShellRef.current} />
         ) : null}
         <RemotePageCursors states={remotePageCursors} />
+        {ydoc && provider ? (
+          <SlashCommandBroadcast
+            awarenessStates={awarenessStates}
+            localClientId={localClientId}
+          />
+        ) : null}
         <SpeechInputIndicator
           isListening={isSpeechListening}
           interimTranscript={interimTranscript}

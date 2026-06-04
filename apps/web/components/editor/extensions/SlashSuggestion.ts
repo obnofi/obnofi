@@ -13,7 +13,8 @@ export function createSlashSuggestion(
   pageId?: string,
   onLinkDatabase?: () => void,
   onInsertButton?: () => void,
-  onInsertPageLink?: () => void
+  onInsertPageLink?: () => void,
+  onSlashCommandChange?: (query: string | null) => void
 ) {
   return () => {
     let component: ReactRenderer | null = null;
@@ -21,6 +22,7 @@ export function createSlashSuggestion(
 
     return {
       onStart: (props: SuggestionProps<SlashCommandItem>) => {
+        onSlashCommandChange?.("");
         component = new ReactRenderer(SlashCommandList, {
           props: {
             items: props.items,
@@ -64,6 +66,7 @@ export function createSlashSuggestion(
       },
 
       onUpdate: (props: SuggestionProps<SlashCommandItem>) => {
+        onSlashCommandChange?.(props.query);
         component?.updateProps({
           items: props.items,
           command: props.command,
@@ -98,6 +101,7 @@ export function createSlashSuggestion(
       },
 
       onExit: () => {
+        onSlashCommandChange?.(null);
         popup?.destroy();
         component?.destroy();
         popup = null;

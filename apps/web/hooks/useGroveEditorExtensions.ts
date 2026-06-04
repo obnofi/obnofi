@@ -38,7 +38,7 @@ import { useJungleCursor } from "@/lib/cursor/jungleCursor";
 import type * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
 
-interface UseGroveEditorExtensionsOptions {
+interface GroveEditorExtensionsOptions {
   ydoc: Y.Doc | null | undefined;
   provider: WebsocketProvider | null | undefined;
   lineIndicatorEnabled: boolean;
@@ -53,9 +53,18 @@ interface UseGroveEditorExtensionsOptions {
   onLinkDatabase: () => void;
   onInsertButton: () => void;
   onInsertPageLink: () => void;
+  onSlashCommandChange?: (query: string | null) => void;
+  codeBlockExtension?: typeof CodeBlock;
+  collaborationUser?: {
+    name: string;
+    color: string;
+    image: string | null;
+    cursorColorKey?: string | null;
+    cursorVariant?: string | null;
+  };
 }
 
-export function useGroveEditorExtensions({
+export function createGroveEditorExtensions({
   ydoc,
   provider,
   lineIndicatorEnabled,
@@ -70,9 +79,10 @@ export function useGroveEditorExtensions({
   onLinkDatabase,
   onInsertButton,
   onInsertPageLink,
-}: UseGroveEditorExtensionsOptions) {
-  const jungleCursor = useJungleCursor();
-
+  onSlashCommandChange,
+  codeBlockExtension = CodeBlock,
+  collaborationUser,
+}: GroveEditorExtensionsOptions) {
   return [
     StarterKit.configure(ydoc ? { undoRedo: false } : {}),
     Placeholder.configure({ placeholder }),
@@ -84,12 +94,10 @@ export function useGroveEditorExtensions({
           Collaboration.configure({ document: ydoc }),
           GroveCollaborationCursor.configure({
             awareness: provider.awareness,
-            user: {
+            user: collaborationUser ?? {
               name: sessionUserName ?? "Anonymous",
-              color: jungleCursor.color ?? userColor(sessionUserEmail ?? ""),
+              color: userColor(sessionUserEmail ?? ""),
               image: sessionUserImage ?? null,
-              cursorColorKey: jungleCursor.colorKey,
-              cursorVariant: jungleCursor.variant,
             },
           }),
           PersistentCursorPresenceExtension.configure({
@@ -108,7 +116,7 @@ export function useGroveEditorExtensions({
     DatabaseBlock.configure({ workspaceId, pageId }),
     CanvasBlock.configure({ workspaceId, pageId }),
     ButtonBlock,
-    CodeBlock,
+    codeBlockExtension,
     GroveColumn,
     ColumnLayoutBlock,
     MathBlock,
@@ -126,12 +134,32 @@ export function useGroveEditorExtensions({
     PageLinkMark.configure({ workspaceId }),
     SubPageBlock,
     ...(editable ? [BlockActionsExtension] : []),
-    SlashCommandExtension.configure({
-      workspaceId,
-      pageId,
-      onLinkDatabase,
-      onInsertButton,
-      onInsertPageLink: onInsertPageLink,
-    }),
+    ...(editable
+      ? [
+          SlashCommandExtension.configure({
+            workspaceId,
+            pageId,
+            onLinkDatabase,
+            onInsertButton,
+            onInsertPageLink: onInsertPageLink,
+            onSlashCommandChange,
+          }),
+        ]
+      : []),
   ];
+}
+
+export function useGroveEditorExtensions(options: GroveEditorExtensionsOptions) {
+  const jungleCursor = useJungleCursor();
+
+  return createGroveEditorExtensions({
+    ...options,
+    collaborationUser: {
+      name: options.sessionUserName ?? "Anonymous",
+      color: jungleCursor.color ?? options.userColor(options.sessionUserEmail ?? ""),
+      image: options.sessionUserImage ?? null,
+      cursorColorKey: jungleCursor.colorKey,
+      cursorVariant: jungleCursor.variant,
+    },
+  });
 }

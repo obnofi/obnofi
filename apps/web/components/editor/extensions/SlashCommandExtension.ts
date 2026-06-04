@@ -22,11 +22,12 @@ export const SlashCommandExtension = Extension.create({
       onLinkDatabase: undefined as (() => void) | undefined,
       onInsertButton: undefined as (() => void) | undefined,
       onInsertPageLink: undefined as (() => void) | undefined,
+      onSlashCommandChange: undefined as ((query: string | null) => void) | undefined,
     };
   },
 
   addProseMirrorPlugins() {
-    const { workspaceId, pageId, onLinkDatabase, onInsertButton, onInsertPageLink } = this.options;
+    const { workspaceId, pageId, onLinkDatabase, onInsertButton, onInsertPageLink, onSlashCommandChange } = this.options;
     return [
       Suggestion({
         editor: this.editor,
@@ -34,7 +35,7 @@ export const SlashCommandExtension = Extension.create({
         allowSpaces: false,
         startOfLine: false,
         items: ({ query }) => getSlashCommandItems(query),
-        render: createSlashSuggestion(workspaceId, pageId, onLinkDatabase, onInsertButton, onInsertPageLink),
+        render: createSlashSuggestion(workspaceId, pageId, onLinkDatabase, onInsertButton, onInsertPageLink, onSlashCommandChange),
       }),
     ];
   },

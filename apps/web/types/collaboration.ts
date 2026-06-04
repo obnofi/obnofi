@@ -18,4 +18,5 @@ export interface AwarenessState {
   cursorVariant?: JungleCursorVariant;
   hasTextCursor?: boolean;
   userCursor: UserCursor | null;
+  slashCommand?: { query: string } | null;
 }

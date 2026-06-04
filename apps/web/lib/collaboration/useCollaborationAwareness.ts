@@ -19,6 +19,7 @@ interface ProviderAwarenessState {
   user?: unknown;
   cursor?: { anchor?: unknown; head?: unknown } | null;
   userCursor?: UserCursor | null;
+  slashCommand?: { query: string } | null;
 }
 
 export function useCollaborationAwareness(provider: WebsocketProvider | null): {
@@ -61,6 +62,7 @@ export function useCollaborationAwareness(provider: WebsocketProvider | null): {
             }
           | undefined;
         const userCursor = awarenessState.userCursor as UserCursor | null | undefined;
+        const slashCommand = awarenessState.slashCommand as { query: string } | null | undefined;
         const hasTextCursor = Boolean(
           awarenessState.cursor &&
             (awarenessState.cursor.anchor != null || awarenessState.cursor.head != null)
@@ -94,6 +96,7 @@ export function useCollaborationAwareness(provider: WebsocketProvider | null): {
             cursorVariant: awarenessCursorVariant,
             hasTextCursor,
             userCursor: userCursor ?? null,
+            slashCommand: slashCommand ?? null,
             image: awarenessImage,
           });
         }

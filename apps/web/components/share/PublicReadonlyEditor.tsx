@@ -1,13 +1,10 @@
 "use client";
 
 import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import { ButtonBlock } from "@/components/editor/extensions/ButtonBlock";
 import { CodeBlock } from "@/components/editor/extensions/CodeBlock";
-import { TaskItem, TaskList } from "@/components/editor/extensions/TaskList";
-import { TextHighlightMark } from "@/components/editor/extensions/TextHighlightMark";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import { PublicReadonlyCodeBlock } from "./PublicReadonlyCodeBlock";
+import { createGroveEditorExtensions } from "@/hooks/useGroveEditorExtensions";
 
 interface PublicReadonlyEditorProps {
   content: object | null;
@@ -21,14 +18,18 @@ export function PublicReadonlyEditor({ content }: PublicReadonlyEditorProps) {
   });
 
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      TextHighlightMark,
-      TaskList,
-      TaskItem,
-      ButtonBlock,
-      readonlyCodeBlock,
-    ],
+    extensions: createGroveEditorExtensions({
+      ydoc: null,
+      provider: null,
+      lineIndicatorEnabled: false,
+      editable: false,
+      placeholder: "",
+      onLinkDatabase: () => {},
+      onInsertButton: () => {},
+      onInsertPageLink: () => {},
+      userColor: () => "#2B593F",
+      codeBlockExtension: readonlyCodeBlock,
+    }),
     content: content || { type: "doc", content: [{ type: "paragraph" }] },
     editable: false,
     immediatelyRender: false,
