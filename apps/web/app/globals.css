@@ -1110,6 +1110,11 @@ html.jungle {
   outline: none;
 }
 
+/* Moss note card 내에서는 focus ring 제거 */
+.moss-note-card :focus-visible {
+  outline: none;
+}
+
 /* =========================================================
    PAGE LINK
    ========================================================= */
