@@ -24,18 +24,18 @@ export const GraphNode = memo(function GraphNode({
   const fillColor = nodeData.isCurrentNote
     ? "var(--color-accent)"
     : nodeData.isHovered
-    ? "rgba(75, 75, 75, 0.92)"
+    ? "var(--color-text-primary)"
     : nodeData.isConnected
-    ? "rgba(120, 120, 120, 0.82)"
+    ? "var(--color-text-secondary)"
     : nodeData.isOrphan
-    ? "rgba(100, 100, 100, 0.3)"
-    : "rgba(160, 160, 160, 0.65)";
+    ? "var(--color-text-placeholder)"
+    : "var(--color-text-secondary)";
 
   const glowColor = nodeData.isCurrentNote
     ? "rgba(46, 125, 69, 0.25)"
     : nodeData.isHovered
-    ? "rgba(110, 110, 110, 0.2)"
-    : "rgba(180, 180, 180, 0.15)";
+    ? "rgba(55, 53, 47, 0.2)"
+    : "rgba(120, 120, 120, 0.12)";
 
   return (
     <div
@@ -47,11 +47,13 @@ export const GraphNode = memo(function GraphNode({
         type="target"
         position={Position.Left}
         className="!h-1 !w-1 !border-0 !bg-transparent opacity-0"
+        style={{ left: "50%", top: "50%" }}
       />
       <Handle
         type="source"
         position={Position.Right}
         className="!h-1 !w-1 !border-0 !bg-transparent opacity-0"
+        style={{ left: "50%", top: "50%" }}
       />
 
       <div
