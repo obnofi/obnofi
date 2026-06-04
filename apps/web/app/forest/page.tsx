@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { ForestFeedClient } from "@/components/published/ForestFeedClient";
 import { ForestShell } from "@/components/published/ForestShell";
 import { listForestTags, listPublishedSnapshots } from "@/lib/publishedPages";
@@ -21,12 +22,14 @@ export default async function ForestPage({
 
   return (
     <ForestShell currentSection="forest">
-      <ForestFeedClient
-        initialPublications={publications}
-        initialTags={tags}
-        initialSort={sort}
-        initialTag={tag}
-      />
+      <Suspense>
+        <ForestFeedClient
+          initialPublications={publications}
+          initialTags={tags}
+          initialSort={sort}
+          initialTag={tag}
+        />
+      </Suspense>
     </ForestShell>
   );
 }

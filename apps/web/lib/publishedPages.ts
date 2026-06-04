@@ -1,4 +1,4 @@
-import { PublishedSnapshotType as PrismaPublishedSnapshotType, prisma } from "@obnofi/db";
+import { Prisma, PublishedSnapshotType as PrismaPublishedSnapshotType, prisma } from "@obnofi/db";
 import { resolvePersistedYjsContent } from "@/lib/yjsContent";
 import { createGraphFromPages } from "@/lib/graph/graphDataUtils";
 import { toPage } from "@/lib/prisma-transforms";
@@ -65,6 +65,37 @@ function hasPublishedPagesRuntime() {
   );
 }
 
+function isPublishedPagesTableMissing(error: unknown) {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+
+  if (error.code !== "P2021") {
+    return false;
+  }
+
+  return (
+    error.message.includes("public.PublishedPage") ||
+    error.message.includes("public.PublishedPageLike") ||
+    error.message.includes('"PublishedPage"') ||
+    error.message.includes('"PublishedPageLike"')
+  );
+}
+
+async function withPublishedPagesFallback<T>(
+  runPrisma: () => Promise<T>,
+  runMock: () => T | Promise<T>
+): Promise<T> {
+  try {
+    return await runPrisma();
+  } catch (error) {
+    if (isPublishedPagesTableMissing(error)) {
+      return await runMock();
+    }
+    throw error;
+  }
+}
+
 function createMockPublishedSnapshotRow(input: {
   id: string;
   title: string;
@@ -89,12 +120,12 @@ function createMockPublishedSnapshotRow(input: {
 }
 
 const globalForPublishedPages = globalThis as typeof globalThis & {
-  __obnofiPublishedPagesMockStore?: PublishedSnapshotRow[];
+  __obnofiPublishedPagesMockStoreV2?: PublishedSnapshotRow[];
 };
 
 function getMockPublishedPagesStore() {
-  if (!globalForPublishedPages.__obnofiPublishedPagesMockStore) {
-    globalForPublishedPages.__obnofiPublishedPagesMockStore = [
+  if (!globalForPublishedPages.__obnofiPublishedPagesMockStoreV2) {
+    globalForPublishedPages.__obnofiPublishedPagesMockStoreV2 = [
       createMockPublishedSnapshotRow({
         id: "forest-demo-page",
         title: "Jungle Weekly Review",
@@ -204,7 +235,7 @@ function getMockPublishedPagesStore() {
       createMockPublishedSnapshotRow({
         id: "forest-demo-graph",
         title: "Workspace Graph View",
-        description: "문서 연결 구조를 공유하는 Graph snapshot입니다.",
+        description: "문서 연결 구조를 공유하는 Graph snapshot입니다. 노드를 클릭하면 해당 페이지의 상세 내용을 확인할 수 있으며, 엣지는 페이지 간 링크 관계를 나타냅니다. 워크스페이스 전체 지식 지도를 한눈에 파악할 때 유용합니다.",
         tags: ["graph", "wiki"],
         likeCount: 4,
         createdAt: "2026-06-01T16:20:00.000Z",
@@ -231,10 +262,285 @@ function getMockPublishedPagesStore() {
           image: null,
         },
       }),
+      createMockPublishedSnapshotRow({
+        id: "forest-demo-reading",
+        title: "2026 독서 기록",
+        description: "올해 읽은 책 목록과 간단한 감상을 정리한 문서입니다. 소설, 인문학, 기술서적까지 다양한 분야를 아우르며 각 책에서 인상 깊었던 구절을 함께 남겼습니다. 매달 업데이트할 예정입니다.",
+        tags: ["reading", "log", "books"],
+        likeCount: 21,
+        createdAt: "2026-05-30T08:00:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "demo-page-4",
+        workspaceId: "demo-workspace-2",
+        snapshotContent: {
+          title: "2026 독서 기록",
+          icon: "📚",
+          coverImage: null,
+          updatedAt: "2026-05-30T07:40:00.000Z",
+          pageType: "document",
+          content: { type: "doc", content: [] },
+        },
+        user: {
+          id: "demo-user-4",
+          name: "Fern",
+          email: "fern@obnofi.local",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-demo-ux",
+        title: "UX Research Note",
+        description: "사용자 인터뷰 5건을 분석하고 공통 Pain Point를 추출한 노트입니다. 각 인터뷰에서 발견된 패턴을 Affinity Diagram으로 묶었으며, 우선순위 높은 개선 포인트 3가지를 도출했습니다. 팀 전체가 참고할 수 있도록 공유합니다.",
+        tags: ["ux", "research", "interview"],
+        likeCount: 15,
+        createdAt: "2026-05-28T14:10:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "demo-page-5",
+        workspaceId: "demo-workspace-3",
+        snapshotContent: {
+          title: "UX Research Note",
+          icon: "🔍",
+          coverImage: null,
+          updatedAt: "2026-05-28T13:50:00.000Z",
+          pageType: "document",
+          content: { type: "doc", content: [] },
+        },
+        user: {
+          id: "demo-user-5",
+          name: "Bark",
+          email: "bark@obnofi.local",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-demo-canvas-arch",
+        title: "시스템 아키텍처 다이어그램",
+        description: "마이크로서비스 전환 계획을 도식화한 Clearing 보드입니다.",
+        tags: ["architecture", "canvas"],
+        likeCount: 9,
+        createdAt: "2026-05-25T11:00:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.CANVAS,
+        pageId: "demo-page-6",
+        workspaceId: "demo-workspace-1",
+        snapshotContent: {
+          title: "시스템 아키텍처 다이어그램",
+          icon: null,
+          coverImage: null,
+          updatedAt: "2026-05-25T10:30:00.000Z",
+          pageType: "canvas",
+          content: { version: 2, layers: [] },
+        },
+        user: {
+          id: "demo-user-2",
+          name: "Moss",
+          email: "moss@obnofi.local",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-demo-essay",
+        title: "생산성에 대한 단상",
+        description: "생산성이란 단순히 더 많은 일을 빠르게 처리하는 것이 아니라, 올바른 일을 적절한 타이밍에 집중해서 해내는 것이라고 생각합니다. GTD, 포모도로, 딥워크 등 여러 방법론을 직접 사용해보며 느낀 점들을 정리했습니다. 어떤 시스템도 결국 자기 자신에 대한 이해 없이는 작동하지 않는다는 결론에 이르렀습니다.",
+        tags: ["essay", "productivity", "notes"],
+        likeCount: 33,
+        createdAt: "2026-05-20T09:30:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "demo-page-7",
+        workspaceId: "demo-workspace-4",
+        snapshotContent: {
+          title: "생산성에 대한 단상",
+          icon: "✍️",
+          coverImage: null,
+          updatedAt: "2026-05-20T09:00:00.000Z",
+          pageType: "document",
+          content: { type: "doc", content: [] },
+        },
+        user: {
+          id: "demo-user-6",
+          name: "Root",
+          email: "root@obnofi.local",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-demo-sprint",
+        title: "5월 스프린트 회고",
+        description: "이번 스프린트에서 완료한 작업과 미완료 항목을 정리하고, 팀 전체가 공유할 액션 아이템을 도출한 문서입니다.",
+        tags: ["sprint", "retrospective", "weekly"],
+        likeCount: 6,
+        createdAt: "2026-05-17T17:00:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "demo-page-8",
+        workspaceId: "demo-workspace-1",
+        snapshotContent: {
+          title: "5월 스프린트 회고",
+          icon: "🌀",
+          coverImage: null,
+          updatedAt: "2026-05-17T16:40:00.000Z",
+          pageType: "document",
+          content: { type: "doc", content: [] },
+        },
+        user: {
+          id: "demo-user-1",
+          name: "Canopy",
+          email: "canopy@obnofi.local",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-demo-travel",
+        title: "교토 여행 기록",
+        description: "4박 5일 교토 여행 중 방문한 장소와 먹은 음식, 느낀 점을 정리했습니다. 아라시야마 대나무 숲, 후시미 이나리 신사, 니조성을 중심으로 동선을 짰고 각 장소마다 사진과 메모를 남겼습니다. 다음에 또 가고 싶은 곳 리스트도 포함되어 있습니다.",
+        tags: ["travel", "japan", "log"],
+        likeCount: 44,
+        createdAt: "2026-05-14T10:00:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "demo-page-9",
+        workspaceId: "demo-workspace-5",
+        snapshotContent: {
+          title: "교토 여행 기록",
+          icon: "🗾",
+          coverImage: null,
+          updatedAt: "2026-05-14T09:30:00.000Z",
+          pageType: "document",
+          content: { type: "doc", content: [] },
+        },
+        user: {
+          id: "demo-user-7",
+          name: "Reed",
+          email: "reed@obnofi.local",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-demo-cs",
+        title: "CS 면접 준비 노트",
+        description: "운영체제, 네트워크, 데이터베이스, 자료구조 알고리즘 영역별로 자주 나오는 질문과 핵심 답변을 정리한 문서입니다. 실제 면접에서 받은 질문도 추가로 기록했습니다.",
+        tags: ["cs", "interview", "study"],
+        likeCount: 58,
+        createdAt: "2026-05-10T13:00:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "demo-page-10",
+        workspaceId: "demo-workspace-6",
+        snapshotContent: {
+          title: "CS 면접 준비 노트",
+          icon: "💻",
+          coverImage: null,
+          updatedAt: "2026-05-10T12:40:00.000Z",
+          pageType: "document",
+          content: { type: "doc", content: [] },
+        },
+        user: {
+          id: "demo-user-8",
+          name: "Spore",
+          email: "spore@obnofi.local",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-demo-recipe",
+        title: "자취 요리 레시피 모음",
+        description: "혼자 살면서 만들어 먹기 좋은 레시피를 모았습니다. 재료가 3개 이하인 것만, 30분 안에 되는 것만 추려서 정리했고 칼로리와 단백질 정보도 함께 적었습니다.",
+        tags: ["recipe", "daily", "food"],
+        likeCount: 37,
+        createdAt: "2026-05-06T18:30:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "demo-page-11",
+        workspaceId: "demo-workspace-7",
+        snapshotContent: {
+          title: "자취 요리 레시피 모음",
+          icon: "🍳",
+          coverImage: null,
+          updatedAt: "2026-05-06T18:10:00.000Z",
+          pageType: "document",
+          content: { type: "doc", content: [] },
+        },
+        user: {
+          id: "demo-user-9",
+          name: "Petal",
+          email: "petal@obnofi.local",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-demo-startup",
+        title: "사이드 프로젝트 런칭 체크리스트",
+        description: "개인 프로젝트를 처음 세상에 내놓기 전 반드시 확인해야 할 항목들을 정리했습니다. 도메인, SEO, OG 태그, 에러 트래킹, 분석 도구 설치, 약관 및 개인정보처리방침까지 빠진 항목이 없도록 구성했습니다.",
+        tags: ["startup", "checklist", "launch"],
+        likeCount: 29,
+        createdAt: "2026-04-28T09:00:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "demo-page-12",
+        workspaceId: "demo-workspace-8",
+        snapshotContent: {
+          title: "사이드 프로젝트 런칭 체크리스트",
+          icon: "🚀",
+          coverImage: null,
+          updatedAt: "2026-04-28T08:40:00.000Z",
+          pageType: "document",
+          content: { type: "doc", content: [] },
+        },
+        user: {
+          id: "demo-user-10",
+          name: "Grove",
+          email: "grove@obnofi.local",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-demo-mindmap",
+        title: "2026 목표 마인드맵",
+        description: "올해 이루고 싶은 목표를 Clearing 캔버스에 시각화한 snapshot입니다.",
+        tags: ["goal", "canvas", "mindmap"],
+        likeCount: 18,
+        createdAt: "2026-04-20T11:00:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.CANVAS,
+        pageId: "demo-page-13",
+        workspaceId: "demo-workspace-5",
+        snapshotContent: {
+          title: "2026 목표 마인드맵",
+          icon: null,
+          coverImage: null,
+          updatedAt: "2026-04-20T10:30:00.000Z",
+          pageType: "canvas",
+          content: { version: 2, layers: [] },
+        },
+        user: {
+          id: "demo-user-7",
+          name: "Reed",
+          email: "reed@obnofi.local",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-demo-lang",
+        title: "영어 공부법 정리",
+        description: "쉐도잉, 영화 스크립트 분석, 단어장 앱 비교까지 2년간 시도해본 영어 공부 방법들의 장단점을 솔직하게 적었습니다. 결론적으로 꾸준히 지속 가능한 방법만 남겼습니다.",
+        tags: ["english", "study", "language"],
+        likeCount: 52,
+        createdAt: "2026-04-12T14:00:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "demo-page-14",
+        workspaceId: "demo-workspace-9",
+        snapshotContent: {
+          title: "영어 공부법 정리",
+          icon: "📖",
+          coverImage: null,
+          updatedAt: "2026-04-12T13:45:00.000Z",
+          pageType: "document",
+          content: { type: "doc", content: [] },
+        },
+        user: {
+          id: "demo-user-11",
+          name: "Twig",
+          email: "twig@obnofi.local",
+          image: null,
+        },
+      }),
     ];
   }
 
-  return globalForPublishedPages.__obnofiPublishedPagesMockStore;
+  return globalForPublishedPages.__obnofiPublishedPagesMockStoreV2;
 }
 
 function getActiveMockRows() {
@@ -358,7 +664,7 @@ export async function getActivePublicationForPage(
   userId: string,
   pageId: string
 ): Promise<PublishedSnapshotManageResponse> {
-  if (!hasPublishedPagesRuntime()) {
+  const runMock = () => {
     const publication = getActiveMockRows()
       .filter((row) => row.userId === userId && row.pageId === pageId)
       .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
@@ -370,41 +676,47 @@ export async function getActivePublicationForPage(
     return {
       publication: publication ? getMockPublishedSnapshotSummary(publication, userId) : null,
     };
+  };
+
+  if (!hasPublishedPagesRuntime()) {
+    return runMock();
   }
 
-  const publication = await prisma.publishedPage.findFirst({
-    where: {
-      userId,
-      pageId,
-      deletedAt: null,
-      snapshotType: { in: [PUBLISHED_SNAPSHOT_TYPE.PAGE, PUBLISHED_SNAPSHOT_TYPE.CANVAS] },
-    },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      tags: true,
-      likeCount: true,
-      createdAt: true,
-      snapshotType: true,
-      pageId: true,
-      workspaceId: true,
-      user: { select: { id: true, name: true, email: true, image: true } },
-      likes: { select: { userId: true }, where: { userId } },
-    },
-  });
+  return withPublishedPagesFallback(async () => {
+    const publication = await prisma.publishedPage.findFirst({
+      where: {
+        userId,
+        pageId,
+        deletedAt: null,
+        snapshotType: { in: [PUBLISHED_SNAPSHOT_TYPE.PAGE, PUBLISHED_SNAPSHOT_TYPE.CANVAS] },
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        tags: true,
+        likeCount: true,
+        createdAt: true,
+        snapshotType: true,
+        pageId: true,
+        workspaceId: true,
+        user: { select: { id: true, name: true, email: true, image: true } },
+        likes: { select: { userId: true }, where: { userId } },
+      },
+    });
 
-  return {
-    publication: publication ? toPublishedSnapshotSummary(publication, userId) : null,
-  };
+    return {
+      publication: publication ? toPublishedSnapshotSummary(publication, userId) : null,
+    };
+  }, runMock);
 }
 
 export async function getActiveGraphPublicationForWorkspace(
   userId: string,
   workspaceId: string
 ): Promise<PublishedSnapshotManageResponse> {
-  if (!hasPublishedPagesRuntime()) {
+  const runMock = () => {
     const publication = getActiveMockRows()
       .filter(
         (row) =>
@@ -417,34 +729,40 @@ export async function getActiveGraphPublicationForWorkspace(
     return {
       publication: publication ? getMockPublishedSnapshotSummary(publication, userId) : null,
     };
+  };
+
+  if (!hasPublishedPagesRuntime()) {
+    return runMock();
   }
 
-  const publication = await prisma.publishedPage.findFirst({
-    where: {
-      userId,
-      workspaceId,
-      deletedAt: null,
-      snapshotType: PUBLISHED_SNAPSHOT_TYPE.GRAPH,
-    },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      tags: true,
-      likeCount: true,
-      createdAt: true,
-      snapshotType: true,
-      pageId: true,
-      workspaceId: true,
-      user: { select: { id: true, name: true, email: true, image: true } },
-      likes: { select: { userId: true }, where: { userId } },
-    },
-  });
+  return withPublishedPagesFallback(async () => {
+    const publication = await prisma.publishedPage.findFirst({
+      where: {
+        userId,
+        workspaceId,
+        deletedAt: null,
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.GRAPH,
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        tags: true,
+        likeCount: true,
+        createdAt: true,
+        snapshotType: true,
+        pageId: true,
+        workspaceId: true,
+        user: { select: { id: true, name: true, email: true, image: true } },
+        likes: { select: { userId: true }, where: { userId } },
+      },
+    });
 
-  return {
-    publication: publication ? toPublishedSnapshotSummary(publication, userId) : null,
-  };
+    return {
+      publication: publication ? toPublishedSnapshotSummary(publication, userId) : null,
+    };
+  }, runMock);
 }
 
 export async function listPublishedSnapshots(options: {
@@ -452,7 +770,7 @@ export async function listPublishedSnapshots(options: {
   tag?: string | null;
   viewerUserId?: string | null;
 }): Promise<PublishedSnapshotSummary[]> {
-  if (!hasPublishedPagesRuntime()) {
+  const runMock = () => {
     const tag = options.tag?.toLowerCase() ?? null;
     const rows = getActiveMockRows()
       .filter((row) => (tag ? row.tags.includes(tag) : true))
@@ -465,43 +783,49 @@ export async function listPublishedSnapshots(options: {
       .slice(0, 100);
 
     return rows.map((row) => getMockPublishedSnapshotSummary(row, options.viewerUserId));
+  };
+
+  if (!hasPublishedPagesRuntime()) {
+    return runMock();
   }
 
-  const rows = await prisma.publishedPage.findMany({
-    where: {
-      deletedAt: null,
-      ...(options.tag ? { tags: { has: options.tag.toLowerCase() } } : {}),
-    },
-    orderBy:
-      options.sort === "popular"
-        ? [{ likeCount: "desc" }, { createdAt: "desc" }]
-        : [{ createdAt: "desc" }],
-    take: 100,
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      tags: true,
-      likeCount: true,
-      createdAt: true,
-      snapshotType: true,
-      pageId: true,
-      workspaceId: true,
-      user: { select: { id: true, name: true, email: true, image: true } },
-      likes: options.viewerUserId
-        ? { where: { userId: options.viewerUserId }, select: { userId: true } }
-        : false,
-    },
-  });
+  return withPublishedPagesFallback(async () => {
+    const rows = await prisma.publishedPage.findMany({
+      where: {
+        deletedAt: null,
+        ...(options.tag ? { tags: { has: options.tag.toLowerCase() } } : {}),
+      },
+      orderBy:
+        options.sort === "popular"
+          ? [{ likeCount: "desc" }, { createdAt: "desc" }]
+          : [{ createdAt: "desc" }],
+      take: 100,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        tags: true,
+        likeCount: true,
+        createdAt: true,
+        snapshotType: true,
+        pageId: true,
+        workspaceId: true,
+        user: { select: { id: true, name: true, email: true, image: true } },
+        likes: options.viewerUserId
+          ? { where: { userId: options.viewerUserId }, select: { userId: true } }
+          : false,
+      },
+    });
 
-  return rows.map((row) => toPublishedSnapshotSummary(row, options.viewerUserId));
+    return rows.map((row) => toPublishedSnapshotSummary(row, options.viewerUserId));
+  }, runMock);
 }
 
 export async function getPublishedSnapshotDetail(
   publishId: string,
   viewerUserId?: string | null
 ): Promise<PublishedSnapshotDetail | null> {
-  if (!hasPublishedPagesRuntime()) {
+  const runMock = () => {
     const row = getActiveMockRows().find((item) => item.id === publishId);
     if (!row) {
       return null;
@@ -511,36 +835,42 @@ export async function getPublishedSnapshotDetail(
       ...getMockPublishedSnapshotSummary(row, viewerUserId),
       snapshotContent: row.snapshotContent,
     };
-  }
-
-  const row = await prisma.publishedPage.findFirst({
-    where: { id: publishId, deletedAt: null },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      tags: true,
-      likeCount: true,
-      createdAt: true,
-      snapshotType: true,
-      pageId: true,
-      workspaceId: true,
-      snapshotContent: true,
-      user: { select: { id: true, name: true, email: true, image: true } },
-      likes: viewerUserId
-        ? { where: { userId: viewerUserId }, select: { userId: true } }
-        : false,
-    },
-  });
-
-  if (!row) {
-    return null;
-  }
-
-  return {
-    ...toPublishedSnapshotSummary(row, viewerUserId),
-    snapshotContent: row.snapshotContent as PublishedPageSnapshotContent | PublishedGraphSnapshotContent,
   };
+
+  if (!hasPublishedPagesRuntime()) {
+    return runMock();
+  }
+
+  return withPublishedPagesFallback(async () => {
+    const row = await prisma.publishedPage.findFirst({
+      where: { id: publishId, deletedAt: null },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        tags: true,
+        likeCount: true,
+        createdAt: true,
+        snapshotType: true,
+        pageId: true,
+        workspaceId: true,
+        snapshotContent: true,
+        user: { select: { id: true, name: true, email: true, image: true } },
+        likes: viewerUserId
+          ? { where: { userId: viewerUserId }, select: { userId: true } }
+          : false,
+      },
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      ...toPublishedSnapshotSummary(row, viewerUserId),
+      snapshotContent: row.snapshotContent as PublishedPageSnapshotContent | PublishedGraphSnapshotContent,
+    };
+  }, runMock);
 }
 
 export async function createPagePublication(options: {
@@ -626,18 +956,57 @@ export async function createPagePublication(options: {
     return getMockPublishedSnapshotSummary(created, options.userId);
   }
 
-  return prisma.$transaction(async (tx) => {
-    await tx.publishedPage.updateMany({
-      where: {
-        userId: options.userId,
-        pageId: options.pageId,
-        deletedAt: null,
-      },
-      data: { deletedAt: new Date() },
-    });
+  return withPublishedPagesFallback(
+    () =>
+      prisma.$transaction(async (tx) => {
+        await tx.publishedPage.updateMany({
+          where: {
+            userId: options.userId,
+            pageId: options.pageId,
+            deletedAt: null,
+          },
+          data: { deletedAt: new Date() },
+        });
 
-    const created = await tx.publishedPage.create({
-      data: {
+        const created = await tx.publishedPage.create({
+          data: {
+            userId: options.userId,
+            pageId: page.id,
+            workspaceId: page.workspaceId,
+            snapshotType,
+            snapshotContent,
+            title: page.title,
+            description: options.description.trim(),
+            tags: normalizeTags(options.tags),
+          },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            tags: true,
+            likeCount: true,
+            createdAt: true,
+            snapshotType: true,
+            pageId: true,
+            workspaceId: true,
+            user: { select: { id: true, name: true, email: true, image: true } },
+            likes: { where: { userId: options.userId }, select: { userId: true } },
+          },
+        });
+
+        return toPublishedSnapshotSummary(created, options.userId);
+      }),
+    () => {
+      const store = getMockPublishedPagesStore();
+      const deletedAt = new Date();
+      for (const row of store) {
+        if (row.userId === options.userId && row.pageId === options.pageId && !row.deletedAt) {
+          row.deletedAt = deletedAt;
+        }
+      }
+
+      const created: PublishedSnapshotRow = {
+        id: `mock-publish-${Date.now()}`,
         userId: options.userId,
         pageId: page.id,
         workspaceId: page.workspaceId,
@@ -646,24 +1015,22 @@ export async function createPagePublication(options: {
         title: page.title,
         description: options.description.trim(),
         tags: normalizeTags(options.tags),
-      },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        tags: true,
-        likeCount: true,
-        createdAt: true,
-        snapshotType: true,
-        pageId: true,
-        workspaceId: true,
-        user: { select: { id: true, name: true, email: true, image: true } },
-        likes: { where: { userId: options.userId }, select: { userId: true } },
-      },
-    });
+        likeCount: 0,
+        createdAt: new Date(),
+        deletedAt: null,
+        user: {
+          id: options.userId,
+          name: "You",
+          email: "you@obnofi.local",
+          image: null,
+        },
+        likes: [],
+      };
+      store.unshift(created);
 
-    return toPublishedSnapshotSummary(created, options.userId);
-  });
+      return getMockPublishedSnapshotSummary(created, options.userId);
+    }
+  );
 }
 
 export async function createGraphPublication(options: {
@@ -733,19 +1100,63 @@ export async function createGraphPublication(options: {
     return getMockPublishedSnapshotSummary(created, options.userId);
   }
 
-  return prisma.$transaction(async (tx) => {
-    await tx.publishedPage.updateMany({
-      where: {
-        userId: options.userId,
-        workspaceId: options.workspaceId,
-        snapshotType: PUBLISHED_SNAPSHOT_TYPE.GRAPH,
-        deletedAt: null,
-      },
-      data: { deletedAt: new Date() },
-    });
+  return withPublishedPagesFallback(
+    () =>
+      prisma.$transaction(async (tx) => {
+        await tx.publishedPage.updateMany({
+          where: {
+            userId: options.userId,
+            workspaceId: options.workspaceId,
+            snapshotType: PUBLISHED_SNAPSHOT_TYPE.GRAPH,
+            deletedAt: null,
+          },
+          data: { deletedAt: new Date() },
+        });
 
-    const created = await tx.publishedPage.create({
-      data: {
+        const created = await tx.publishedPage.create({
+          data: {
+            userId: options.userId,
+            workspaceId: options.workspaceId,
+            pageId: options.focusedPageId,
+            snapshotType: PUBLISHED_SNAPSHOT_TYPE.GRAPH,
+            snapshotContent,
+            title,
+            description: options.description.trim(),
+            tags: normalizeTags(options.tags),
+          },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            tags: true,
+            likeCount: true,
+            createdAt: true,
+            snapshotType: true,
+            pageId: true,
+            workspaceId: true,
+            user: { select: { id: true, name: true, email: true, image: true } },
+            likes: { where: { userId: options.userId }, select: { userId: true } },
+          },
+        });
+
+        return toPublishedSnapshotSummary(created, options.userId);
+      }),
+    () => {
+      const store = getMockPublishedPagesStore();
+      const deletedAt = new Date();
+      for (const row of store) {
+        if (
+          row.userId === options.userId &&
+          row.workspaceId === options.workspaceId &&
+          row.snapshotType === PUBLISHED_SNAPSHOT_TYPE.GRAPH &&
+          !row.deletedAt
+        ) {
+          row.deletedAt = deletedAt;
+        }
+      }
+
+      const created: PublishedSnapshotRow = {
+        id: `mock-publish-${Date.now()}`,
         userId: options.userId,
         workspaceId: options.workspaceId,
         pageId: options.focusedPageId,
@@ -754,24 +1165,22 @@ export async function createGraphPublication(options: {
         title,
         description: options.description.trim(),
         tags: normalizeTags(options.tags),
-      },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        tags: true,
-        likeCount: true,
-        createdAt: true,
-        snapshotType: true,
-        pageId: true,
-        workspaceId: true,
-        user: { select: { id: true, name: true, email: true, image: true } },
-        likes: { where: { userId: options.userId }, select: { userId: true } },
-      },
-    });
+        likeCount: 0,
+        createdAt: new Date(),
+        deletedAt: null,
+        user: {
+          id: options.userId,
+          name: "You",
+          email: "you@obnofi.local",
+          image: null,
+        },
+        likes: [],
+      };
+      store.unshift(created);
 
-    return toPublishedSnapshotSummary(created, options.userId);
-  });
+      return getMockPublishedSnapshotSummary(created, options.userId);
+    }
+  );
 }
 
 export async function softDeletePublication(publishId: string, userId: string) {
@@ -786,12 +1195,23 @@ export async function softDeletePublication(publishId: string, userId: string) {
     return true;
   }
 
-  const updated = await prisma.publishedPage.updateMany({
-    where: { id: publishId, userId, deletedAt: null },
-    data: { deletedAt: new Date() },
-  });
+  return withPublishedPagesFallback(async () => {
+    const updated = await prisma.publishedPage.updateMany({
+      where: { id: publishId, userId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
 
-  return updated.count > 0;
+    return updated.count > 0;
+  }, () => {
+    const row = getMockPublishedPagesStore().find(
+      (item) => item.id === publishId && item.userId === userId && !item.deletedAt
+    );
+    if (!row) {
+      return false;
+    }
+    row.deletedAt = new Date();
+    return true;
+  });
 }
 
 export async function togglePublicationLike(publishId: string, userId: string, shouldLike: boolean) {
@@ -816,50 +1236,71 @@ export async function togglePublicationLike(publishId: string, userId: string, s
     };
   }
 
-  const publication = await prisma.publishedPage.findFirst({
-    where: { id: publishId, deletedAt: null },
-    select: { id: true },
-  });
+  return withPublishedPagesFallback(async () => {
+    const publication = await prisma.publishedPage.findFirst({
+      where: { id: publishId, deletedAt: null },
+      select: { id: true },
+    });
 
-  if (!publication) {
-    return null;
-  }
+    if (!publication) {
+      return null;
+    }
 
-  await prisma.$transaction(async (tx) => {
-    if (shouldLike) {
-      await tx.publishedPageLike.upsert({
-        where: {
-          userId_publishedPageId: {
+    await prisma.$transaction(async (tx) => {
+      if (shouldLike) {
+        await tx.publishedPageLike.upsert({
+          where: {
+            userId_publishedPageId: {
+              userId,
+              publishedPageId: publishId,
+            },
+          },
+          update: {},
+          create: {
             userId,
             publishedPageId: publishId,
           },
-        },
-        update: {},
-        create: {
-          userId,
-          publishedPageId: publishId,
-        },
+        });
+      } else {
+        await tx.publishedPageLike.deleteMany({
+          where: {
+            userId,
+            publishedPageId: publishId,
+          },
+        });
+      }
+
+      const likeCount = await tx.publishedPageLike.count({
+        where: { publishedPageId: publishId },
       });
-    } else {
-      await tx.publishedPageLike.deleteMany({
-        where: {
-          userId,
-          publishedPageId: publishId,
-        },
+
+      await tx.publishedPage.update({
+        where: { id: publishId },
+        data: { likeCount },
       });
+    });
+
+    return getPublishedSnapshotDetail(publishId, userId);
+  }, () => {
+    const row = getActiveMockRows().find((item) => item.id === publishId);
+    if (!row) {
+      return null;
     }
 
-    const likeCount = await tx.publishedPageLike.count({
-      where: { publishedPageId: publishId },
-    });
+    const hasLike = row.likes.some((like) => like.userId === userId);
+    if (shouldLike && !hasLike) {
+      row.likes.push({ userId });
+    }
+    if (!shouldLike && hasLike) {
+      row.likes = row.likes.filter((like) => like.userId !== userId);
+    }
+    row.likeCount = row.likes.length;
 
-    await tx.publishedPage.update({
-      where: { id: publishId },
-      data: { likeCount },
-    });
+    return {
+      ...getMockPublishedSnapshotSummary(row, userId),
+      snapshotContent: row.snapshotContent,
+    };
   });
-
-  return getPublishedSnapshotDetail(publishId, userId);
 }
 
 export async function canUserAccessPage(userId: string, pageId: string) {
@@ -899,15 +1340,21 @@ export async function listForestTags() {
     ).sort((a, b) => a.localeCompare(b));
   }
 
-  const rows = await prisma.publishedPage.findMany({
-    where: { deletedAt: null },
-    select: { tags: true },
-    take: 200,
-  });
+  return withPublishedPagesFallback(async () => {
+    const rows = await prisma.publishedPage.findMany({
+      where: { deletedAt: null },
+      select: { tags: true },
+      take: 200,
+    });
 
-  return Array.from(
-    new Set(rows.flatMap((row) => row.tags).filter(Boolean))
-  ).sort((a, b) => a.localeCompare(b));
+    return Array.from(
+      new Set(rows.flatMap((row) => row.tags).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b));
+  }, () =>
+    Array.from(
+      new Set(getActiveMockRows().flatMap((row) => row.tags).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b))
+  );
 }
 
 export { normalizeTags };

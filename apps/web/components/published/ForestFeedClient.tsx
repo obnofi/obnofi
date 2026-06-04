@@ -31,7 +31,10 @@ export function ForestFeedClient({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [publications, setPublications] = useState(initialPublications);
-  const [tags, setTags] = useState(initialTags);
+  const [votes, setVotes] = useState<Record<string, "up" | "down" | null>>({});
+
+  const toggleVote = (id: string, dir: "up" | "down") =>
+    setVotes((prev) => ({ ...prev, [id]: prev[id] === dir ? null : dir }));
 
   const sort = searchParams.get("sort") === "popular" ? "popular" : initialSort;
   const tag = searchParams.get("tag") ?? initialTag;
@@ -44,160 +47,142 @@ export function ForestFeedClient({
     let cancelled = false;
     startTransition(() => {
       fetch(url)
-        .then((response) => (response.ok ? response.json() : null))
+        .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
-          if (!data || cancelled) {
-            return;
-          }
+          if (!data || cancelled) return;
           setPublications(data.publications);
-          setTags(data.tags);
         })
         .catch(() => {});
     });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [searchParams]);
 
-  const updateQuery = (next: { sort?: "latest" | "popular"; tag?: string | null }) => {
+  const pushTag = (item: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (next.sort) {
-      params.set("sort", next.sort);
-    }
-    if (next.tag) {
-      params.set("tag", next.tag);
-    } else {
-      params.delete("tag");
-    }
-    router.push(`/forest?${params.toString()}`);
+    params.set("tag", item);
+    router.push(`?${params.toString()}`);
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 px-6 py-10">
-      <section className="flex flex-col gap-4">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">
-            Community Forest
-          </p>
-          <h1 className="mt-2 text-4xl font-bold text-[var(--color-text-primary)]">
-            Forest
-          </h1>
-          <p className="mt-3 max-w-[68ch] text-[15px] text-[var(--color-text-secondary)]">
-            다른 사람들이 fossilize한 읽기 전용 snapshot을 둘러보고, 나중에 다시 보고 싶은 것은 저장해 두세요.
-          </p>
-        </div>
+    <div
+      className="flex flex-col w-full h-full overflow-y-auto"
+      style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 0.15s" }}
+    >
+      {/* header */}
+      <header className="h-12 border-b border-[var(--color-border)] flex items-center justify-between px-4 shrink-0 bg-[var(--color-background)]">
+        <span className="text-[14px] text-[var(--color-text-primary)] font-medium">
+          forest
+        </span>
+      </header>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => updateQuery({ sort: "latest", tag })}
-            className={`rounded-full px-3 py-1 text-[12px] transition ${
-              sort === "latest"
-                ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)]"
-                : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
-            }`}
-          >
-            Latest
-          </button>
-          <button
-            type="button"
-            onClick={() => updateQuery({ sort: "popular", tag })}
-            className={`rounded-full px-3 py-1 text-[12px] transition ${
-              sort === "popular"
-                ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)]"
-                : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
-            }`}
-          >
-            Popular
-          </button>
-        </div>
+      <div className="mx-auto w-full max-w-[640px] px-4">
+      {publications.length === 0 ? (
+        <p className="py-20 text-center text-[14px] text-[var(--color-text-secondary)]">
+          {isPending ? "불러오는 중…" : "게시된 snapshot이 없습니다."}
+        </p>
+      ) : (
+        <div className="flex flex-col divide-y divide-[var(--color-border)]">
+          {publications.map((pub) => (
+            <article key={pub.id} className="py-10">
+              <div className="min-w-0 flex-1">
+                {/* type */}
+                <p
+                  className="mb-3 text-[13px] text-[var(--color-text-secondary)]"
+                  style={{ fontFamily: "'Averia Serif Libre', serif" }}
+                >
+                  {pub.snapshotType?.toLowerCase()}
+                </p>
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => updateQuery({ tag: null, sort })}
-            className={`rounded-full px-3 py-1 text-[12px] transition ${
-              !tag
-                ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)]"
-                : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
-            }`}
-          >
-            All
-          </button>
-          {tags.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => updateQuery({ tag: item, sort })}
-              className={`rounded-full px-3 py-1 text-[12px] transition ${
-                tag === item
-                  ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)]"
-                  : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
-              }`}
-            >
-              #{item}
-            </button>
+                {/* title */}
+                <Link
+                  href={`/p/${pub.id}`}
+                  className="block leading-tight text-[var(--color-text-primary)] hover:text-[var(--color-accent)]"
+                  style={{
+                    fontFamily: "'Pretendard Variable', Pretendard, sans-serif",
+                    fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
+                    fontWeight: 700,
+                  }}
+                >
+                  {pub.title}
+                </Link>
+
+                {/* description */}
+                {pub.description ? (
+                  <p
+                    className="mt-5 line-clamp-3 text-[16px] leading-[1.75] text-[var(--color-text-secondary)]"
+                    style={{ fontFamily: "'Averia Serif Libre', serif" }}
+                  >
+                    {pub.description}
+                  </p>
+                ) : null}
+
+                {/* tags */}
+                {pub.tags.length > 0 ? (
+                  <div className="mt-5 flex flex-wrap gap-4">
+                    {pub.tags.map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => pushTag(item)}
+                        className="text-[15px] text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent)]"
+                        style={{ fontFamily: "'Averia Serif Libre', serif" }}
+                      >
+                        #{item}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+
+                {/* meta */}
+                <div className="mt-6 flex items-center gap-4">
+                  <span className="text-[13px] text-[var(--color-text-secondary)]">
+                    {pub.author.name}
+                  </span>
+                  <span className="text-[13px] text-[var(--color-text-secondary)]">
+                    {formatDate(pub.createdAt)}
+                  </span>
+                  <ForestLikeButton
+                    publishId={pub.id}
+                    initialLiked={pub.viewerHasLiked}
+                    initialLikeCount={pub.likeCount}
+                    compact
+                  />
+                  <button
+                    type="button"
+                    aria-label="위로"
+                    onClick={() => toggleVote(pub.id, "up")}
+                    className="flex h-7 w-7 items-center justify-center rounded transition"
+                    style={{
+                      color: votes[pub.id] === "up" ? "#e53e3e" : "var(--color-text-secondary)",
+                      background: votes[pub.id] === "up" ? "#fff5f5" : undefined,
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M7 11V3M7 3L3 7M7 3L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="아래로"
+                    onClick={() => toggleVote(pub.id, "down")}
+                    className="flex h-7 w-7 items-center justify-center rounded transition"
+                    style={{
+                      color: votes[pub.id] === "down" ? "#3182ce" : "var(--color-text-secondary)",
+                      background: votes[pub.id] === "down" ? "#ebf8ff" : undefined,
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M7 3V11M7 11L3 7M7 11L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </article>
           ))}
         </div>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {publications.map((publication) => (
-          <article
-            key={publication.id}
-            className="flex h-full flex-col rounded-2xl bg-[var(--color-surface)] p-5"
-          >
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
-                  {publication.snapshotType}
-                </p>
-                <Link
-                  href={`/p/${publication.id}`}
-                  className="mt-2 block text-xl font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-accent)]"
-                >
-                  {publication.title}
-                </Link>
-              </div>
-              <ForestLikeButton
-                publishId={publication.id}
-                initialLiked={publication.viewerHasLiked}
-                initialLikeCount={publication.likeCount}
-                compact
-              />
-            </div>
-
-            <p className="flex-1 text-[14px] leading-6 text-[var(--color-text-secondary)]">
-              {publication.description}
-            </p>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              {publication.tags.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => updateQuery({ tag: item, sort })}
-                  className="rounded-full bg-[var(--color-background)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)]"
-                >
-                  #{item}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-5 flex items-center justify-between text-[12px] text-[var(--color-text-secondary)]">
-              <span>{publication.author.name}</span>
-              <span>{formatDate(publication.createdAt)}</span>
-            </div>
-          </article>
-        ))}
-      </section>
-
-      {publications.length === 0 ? (
-        <div className="rounded-2xl bg-[var(--color-surface)] px-6 py-10 text-center text-[14px] text-[var(--color-text-secondary)]">
-          {isPending ? "Forest를 불러오는 중입니다." : "아직 게시된 snapshot이 없습니다."}
-        </div>
-      ) : null}
+      )}
+      </div>
     </div>
   );
 }

@@ -80,6 +80,37 @@ function sanitizeNode(
     };
   }
 
+  if (record.type === "databaseNode" || record.type === "linkedDatabaseEmbed") {
+    const attrs =
+      record.attrs && typeof record.attrs === "object"
+        ? (record.attrs as Record<string, JsonValue>)
+        : {};
+    const referencedPageId =
+      typeof attrs.pageId === "string" ? attrs.pageId : null;
+
+    if (referencedPageId && publicPageIds.has(referencedPageId)) {
+      const referencedPage = publicPageById.get(referencedPageId);
+      return {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: referencedPage
+              ? `Embedded database: ${referencedPage.title}`
+              : "Embedded database",
+          },
+        ],
+      };
+    }
+
+    return {
+      type: "paragraph",
+      content: [
+        { type: "text", text: "Embedded database hidden because it is not public." },
+      ],
+    };
+  }
+
   if (record.type === "canvasEmbed") {
     const attrs =
       record.attrs && typeof record.attrs === "object"
@@ -108,6 +139,33 @@ function sanitizeNode(
       content: [
         { type: "text", text: "Embedded canvas hidden because it is not public." },
       ],
+    };
+  }
+
+  if (record.type === "subPageEmbed" || record.type === "pageLink") {
+    const attrs =
+      record.attrs && typeof record.attrs === "object"
+        ? (record.attrs as Record<string, JsonValue>)
+        : {};
+    const referencedPageId =
+      typeof attrs.pageId === "string" ? attrs.pageId : null;
+
+    if (referencedPageId && publicPageIds.has(referencedPageId)) {
+      const referencedPage = publicPageById.get(referencedPageId);
+      return {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: referencedPage?.title ?? "Public reference",
+          },
+        ],
+      };
+    }
+
+    return {
+      type: "paragraph",
+      content: [{ type: "text", text: "Private reference" }],
     };
   }
 
