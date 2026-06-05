@@ -20,8 +20,8 @@ import { normalizeTiptapDocument } from "@/lib/normalizeTiptapDocument";
 
 export function fromPrismaPageType(
   t: PrismaPageType
-): "document" | "canvas" | "database" {
-  return t.toLowerCase() as "document" | "canvas" | "database";
+): "document" | "canvas" | "database" | "mindmap" {
+  return t.toLowerCase() as "document" | "canvas" | "database" | "mindmap";
 }
 
 export function toPrismaPageType(t: string): PrismaPageType {

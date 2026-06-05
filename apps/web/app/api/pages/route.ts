@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const validTypes = ["document", "canvas", "database"];
+    const validTypes = ["document", "canvas", "database", "mindmap"];
     if (!validTypes.includes(type)) {
       return NextResponse.json({ error: "Invalid page type" }, { status: 400 });
     }

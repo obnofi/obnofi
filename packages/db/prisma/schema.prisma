@@ -208,6 +208,7 @@ enum PageType {
   DOCUMENT
   CANVAS
   DATABASE
+  MINDMAP
 }
 
 enum PublishedSnapshotType {

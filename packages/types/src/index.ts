@@ -3,7 +3,7 @@ export * from "./ai";
 export * from "./db-diagram";
 
 // Re-export common types at the top level
-export type PageType = "document" | "canvas" | "database";
+export type PageType = "document" | "canvas" | "database" | "mindmap";
 export type GroveTitleLevel = 1 | 2 | 3 | 4 | 5;
 export type HeadingLevel = 1 | 2 | 3 | 4 | 5;
 export type PageHighlightColor =
