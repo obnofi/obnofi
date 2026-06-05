@@ -38,6 +38,16 @@ export type CreateStickyNoteInput = {
 
 const MAX_HISTORY = 5;
 
+function sortElementsIfNeeded(elements: Element[]) {
+  for (let index = 1; index < elements.length; index += 1) {
+    if (elements[index - 1].zIndex > elements[index].zIndex) {
+      return [...elements].sort((left, right) => left.zIndex - right.zIndex);
+    }
+  }
+
+  return elements;
+}
+
 type ElementState = {
   elements: Element[];
   stickyNotes: StickyNoteItem[];
@@ -67,13 +77,13 @@ export const useElementStore = create<ElementState>((set) => ({
   future: [],
   setElements: (elements) =>
     set({
-      elements: [...elements].sort((left, right) => left.zIndex - right.zIndex),
+      elements: sortElementsIfNeeded([...elements]),
       past: [],
       future: [],
     }),
   addElement: (element) =>
     set((state) => ({
-      elements: [...state.elements, element].sort((left, right) => left.zIndex - right.zIndex),
+      elements: sortElementsIfNeeded([...state.elements, element]),
     })),
   pushHistory: (snapshot) =>
     set((state) => ({
@@ -102,11 +112,17 @@ export const useElementStore = create<ElementState>((set) => ({
     }),
   updateElement: (elementId, patch) =>
     set((state) => {
+      let shouldSort = false;
       const nextElements: Element[] = state.elements.map((element) =>
-        element.id === elementId ? ({ ...element, ...patch } as Element) : element
+        element.id === elementId
+          ? (() => {
+              shouldSort = shouldSort || patch.zIndex !== undefined;
+              return { ...element, ...patch } as Element;
+            })()
+          : element
       );
       return {
-        elements: nextElements.sort((left, right) => left.zIndex - right.zIndex),
+        elements: shouldSort ? sortElementsIfNeeded(nextElements) : nextElements,
       };
     }),
   updateElements: (patches) =>
@@ -117,6 +133,7 @@ export const useElementStore = create<ElementState>((set) => ({
       }
 
       let didChange = false;
+      let shouldSort = false;
       const nextElements = state.elements.map((element) => {
         const patch = patches[element.id];
         if (!patch) {
@@ -124,6 +141,7 @@ export const useElementStore = create<ElementState>((set) => ({
         }
 
         didChange = true;
+        shouldSort = shouldSort || patch.zIndex !== undefined;
         return { ...element, ...patch } as Element;
       });
 
@@ -132,7 +150,7 @@ export const useElementStore = create<ElementState>((set) => ({
       }
 
       return {
-        elements: nextElements.sort((left, right) => left.zIndex - right.zIndex),
+        elements: shouldSort ? sortElementsIfNeeded(nextElements) : nextElements,
       };
     }),
   removeElement: (elementId) =>
@@ -144,14 +162,14 @@ export const useElementStore = create<ElementState>((set) => ({
       const existingIndex = state.elements.findIndex((candidate) => candidate.id === element.id);
       if (existingIndex === -1) {
         return {
-          elements: [...state.elements, element].sort((left, right) => left.zIndex - right.zIndex),
+          elements: sortElementsIfNeeded([...state.elements, element]),
         };
       }
 
       const nextElements = [...state.elements];
       nextElements[existingIndex] = element;
       return {
-        elements: nextElements.sort((left, right) => left.zIndex - right.zIndex),
+        elements: sortElementsIfNeeded(nextElements),
       };
     }),
   createStickyNote: (input) => {

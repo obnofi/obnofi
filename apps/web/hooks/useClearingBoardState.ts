@@ -21,6 +21,8 @@ export function useClearingBoardState(title?: string) {
   const lastScenePointRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const lastCursorSyncRef = useRef(0);
   const viewportRef = useRef(useCanvasStore.getState().viewport);
+  const dragUpdateFrameRef = useRef<number | null>(null);
+  const pendingDragPatchesRef = useRef<Record<string, Partial<Element>> | null>(null);
 
   // Supabase / collaboration refs
   const presenceChannelRef = useRef<RealtimeChannel | null>(null);
@@ -64,6 +66,7 @@ export function useClearingBoardState(title?: string) {
   return {
     // DOM refs
     boardRef, fileInputRef, draftConnectorApiRef, lastScenePointRef, lastCursorSyncRef, viewportRef,
+    dragUpdateFrameRef, pendingDragPatchesRef,
     // Interaction refs
     dragStateRef, panStateRef, drawStateRef, lassoStateRef,
     // Collaboration refs

@@ -17,6 +17,8 @@ type ViewportState = { x: number; y: number; zoom: number; scale?: number };
 export type ClearingPointerHandlerOptions = {
   boardRef: React.RefObject<HTMLDivElement | null>;
   dragStateRef: React.MutableRefObject<DragState>;
+  dragUpdateFrameRef: React.MutableRefObject<number | null>;
+  pendingDragPatchesRef: React.MutableRefObject<Record<string, Partial<Element>> | null>;
   panStateRef: React.MutableRefObject<PanState>;
   drawStateRef: React.MutableRefObject<DrawState>;
   lassoStateRef: React.MutableRefObject<LassoState>;
@@ -58,14 +60,14 @@ export type ClearingPointerHandlerOptions = {
 
 export function useClearingPointerHandlers(opts: ClearingPointerHandlerOptions) {
   const {
-    boardRef, dragStateRef, drawStateRef, lassoStateRef,
+    boardRef, dragStateRef, dragUpdateFrameRef, pendingDragPatchesRef, lassoStateRef,
     lastScenePointRef, viewportRef, draftConnectorApiRef,
     currentUserRef, presenceChannelRef, lastCursorSyncRef,
     viewport, elements, elementLookup, selectedIds, selectedElementId,
     tool, lineStyle,
     setViewport, setSelectedElement, setConnectorCursor,
     setActiveThreadTarget, setSelectionBounds,
-    clearSelection, selectSingle, toggleSelectedId,
+    selectSingle, toggleSelectedId,
     updateElement, updateElements,
   } = opts;
 
@@ -203,7 +205,17 @@ export function useClearingPointerHandlers(opts: ClearingPointerHandlerOptions) 
             patches[childId] = { x: o.x + dx, y: o.y + dy, updatedAt: ts };
           });
         }
-        updateElements(patches);
+        pendingDragPatchesRef.current = patches;
+        if (dragUpdateFrameRef.current == null) {
+          dragUpdateFrameRef.current = window.requestAnimationFrame(() => {
+            dragUpdateFrameRef.current = null;
+            const nextPatches = pendingDragPatchesRef.current;
+            pendingDragPatchesRef.current = null;
+            if (nextPatches) {
+              updateElements(nextPatches);
+            }
+          });
+        }
       }
 
       lastScenePointRef.current = sp;
@@ -265,9 +277,9 @@ export function useClearingPointerHandlers(opts: ClearingPointerHandlerOptions) 
 
       return sp;
     },
-    [boardRef, currentUserRef, draftConnectorApiRef, dragStateRef, elementLookup,
+    [boardRef, currentUserRef, draftConnectorApiRef, dragStateRef, dragUpdateFrameRef, elementLookup,
      lassoStateRef, lastCursorSyncRef, lastScenePointRef, opts,
-     presenceChannelRef, setConnectorCursor, setSelectionBounds, setViewport,
+     pendingDragPatchesRef, presenceChannelRef, setConnectorCursor, setSelectionBounds, setViewport,
      tool, updateElement, updateElements, viewport.x, viewport.y, viewport.zoom, viewportRef]
   );
 

@@ -64,7 +64,6 @@ export function ClearingBoard({
   const currentUserId = currentUser?.id ?? null;
 
   const elementLookup = useMemo(() => Object.fromEntries(elements.map((e) => [e.id, e])), [elements]);
-  const renderedElements = useMemo(() => [...elements].sort((a, b) => a.zIndex - b.zIndex), [elements]);
   const remoteCanvasCursors = useMemo(
     () => awarenessStates.filter(
       (st) => st.userId !== localUserId && st.userCursor?.type === "canvas" &&
@@ -121,7 +120,8 @@ export function ClearingBoard({
   });
 
   const pointerHandlers = useClearingPointerHandlers({
-    boardRef: s.boardRef, dragStateRef: s.dragStateRef, panStateRef: s.panStateRef,
+    boardRef: s.boardRef, dragStateRef: s.dragStateRef, dragUpdateFrameRef: s.dragUpdateFrameRef,
+    pendingDragPatchesRef: s.pendingDragPatchesRef, panStateRef: s.panStateRef,
     drawStateRef: s.drawStateRef, lassoStateRef: s.lassoStateRef,
     lastScenePointRef: s.lastScenePointRef, viewportRef: s.viewportRef,
     draftConnectorApiRef: s.draftConnectorApiRef,
@@ -229,8 +229,7 @@ export function ClearingBoard({
             currentUserRef={s.currentUserRef} currentRoomRef={s.currentRoomRef}
             lastScenePointRef={s.lastScenePointRef}
             viewport={viewport} tool={tool} lineStyle={lineStyle}
-            elements={elements} renderedElements={renderedElements}
-            elementLookup={elementLookup} comments={s.comments}
+            elements={elements} elementLookup={elementLookup} comments={s.comments}
             selectedIds={selectedIds} selectionFrame={selectionFrame}
             floatingStamps={s.floatingStamps} remoteCanvasCursors={remoteCanvasCursors}
             others={others} currentUser={currentUser}

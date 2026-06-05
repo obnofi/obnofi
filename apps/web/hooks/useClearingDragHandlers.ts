@@ -40,11 +40,11 @@ export type ClearingBoardPointerDownOptions = {
 };
 
 export function useClearingBoardPointerDown({
-  boardRef, dragStateRef, panStateRef, drawStateRef, lassoStateRef,
+  boardRef, panStateRef, drawStateRef, lassoStateRef,
   lastScenePointRef, viewportRef, draftConnectorApiRef,
   currentRoomRef, currentUserRef, presenceChannelRef,
   viewport, elements, tool, lineStyle, activeEmojiStamp,
-  setViewport, setSelectedElement, setTool, setContextMenu,
+  setSelectedElement, setTool, setContextMenu,
   setActiveThreadTarget, setActiveEmojiStamp, setFloatingStamps,
   setSelectionBounds, clearSelection, selectSingle,
   addElement, pushHistory, persistElement,
@@ -162,6 +162,8 @@ export function useClearingBoardPointerDown({
 
 export type ClearingBoardPointerUpOptions = {
   dragStateRef: React.MutableRefObject<DragState>;
+  dragUpdateFrameRef: React.MutableRefObject<number | null>;
+  pendingDragPatchesRef: React.MutableRefObject<Record<string, Partial<Element>> | null>;
   panStateRef: React.MutableRefObject<PanState>;
   drawStateRef: React.MutableRefObject<DrawState>;
   lassoStateRef: React.MutableRefObject<LassoState>;
@@ -178,18 +180,28 @@ export type ClearingBoardPointerUpOptions = {
   setSelectionBounds: (bounds: { x: number; y: number; width: number; height: number } | null) => void;
   selectSingle: (id: string) => void;
   addElement: (el: Element) => void;
+  updateElements: (patches: Record<string, Partial<Element>>) => void;
   pushHistory: (snapshot?: Element[]) => void;
   persistElement: (el: Element) => Promise<void>;
 };
 
 export function useClearingBoardPointerUp({
-  dragStateRef, panStateRef, drawStateRef, lassoStateRef,
+  dragStateRef, dragUpdateFrameRef, pendingDragPatchesRef, panStateRef, drawStateRef, lassoStateRef,
   lastScenePointRef, draftConnectorApiRef,
   currentRoomRef, currentUserRef, elements, elementLookup, selectionBounds,
   setSelectedElement, setTool, setSelectedIds, setSelectionBounds,
-  selectSingle, addElement, pushHistory, persistElement,
+  selectSingle, addElement, updateElements, pushHistory, persistElement,
 }: ClearingBoardPointerUpOptions) {
   return useCallback(async () => {
+    if (dragUpdateFrameRef.current != null) {
+      window.cancelAnimationFrame(dragUpdateFrameRef.current);
+      dragUpdateFrameRef.current = null;
+    }
+    if (pendingDragPatchesRef.current) {
+      updateElements(pendingDragPatchesRef.current);
+      pendingDragPatchesRef.current = null;
+    }
+
     if (dragStateRef.current) {
       const didMove = Object.entries(dragStateRef.current.groupOrigin).some(([id, origin]) => {
         const el = elementLookup[id];
@@ -274,10 +286,10 @@ export function useClearingBoardPointerUp({
     dragStateRef.current = null;
     panStateRef.current = null;
   }, [
-    addElement, currentRoomRef, currentUserRef, draftConnectorApiRef,
-    dragStateRef, drawStateRef, elementLookup, elements, lassoStateRef,
-    lastScenePointRef, panStateRef, persistElement, pushHistory,
+    addElement, currentRoomRef, currentUserRef, dragStateRef, dragUpdateFrameRef, draftConnectorApiRef,
+    drawStateRef, elementLookup, elements, lassoStateRef, lastScenePointRef,
+    panStateRef, pendingDragPatchesRef, persistElement, pushHistory,
     selectSingle, selectionBounds, setSelectedElement, setSelectedIds,
-    setSelectionBounds, setTool,
+    setSelectionBounds, setTool, updateElements,
   ]);
 }

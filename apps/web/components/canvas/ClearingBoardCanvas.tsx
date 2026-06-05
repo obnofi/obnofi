@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useMemo, type RefObject } from "react";
 import type { DraftConnectorApi } from "@/components/canvas/DraftConnectorLayer";
 import { DraftConnectorLayer } from "@/components/canvas/DraftConnectorLayer";
 import { PenTool } from "@/components/canvas/PenTool";
@@ -36,7 +36,6 @@ type ClearingBoardCanvasProps = {
   tool: string;
   lineStyle: string;
   elements: Element[];
-  renderedElements: Element[];
   elementLookup: Record<string, Element>;
   comments: Comment[];
   selectedIds: string[];
@@ -79,7 +78,7 @@ type ClearingBoardCanvasProps = {
 
 export function ClearingBoardCanvas({
   boardRef, draftConnectorApiRef, currentUserRef, currentRoomRef, lastScenePointRef: _lastScenePointRef,
-  viewport, tool, elements, renderedElements, elementLookup,
+  viewport, tool, elements, elementLookup,
   comments, selectedIds, selectionFrame, floatingStamps,
   remoteCanvasCursors, others, currentUser,
   drawingColor, drawingStrokeWidth, uploadingImage, canUndo, canRedo,
@@ -92,6 +91,38 @@ export function ClearingBoardCanvas({
 }: ClearingBoardCanvasProps) {
   void _lastScenePointRef;
   const jungleCursor = useJungleCursor();
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const commentCountByElementId = useMemo(() => {
+    const next = new Map<string, number>();
+    comments.forEach((comment) => {
+      if (!comment.elementId) return;
+      next.set(comment.elementId, (next.get(comment.elementId) ?? 0) + 1);
+    });
+    return next;
+  }, [comments]);
+  const containingSectionByElementId = useMemo(() => {
+    const sections = elements.filter((element) => element.type === "section");
+    const next = new Map<string, string>();
+
+    elements.forEach((element) => {
+      if (element.type === "section") return;
+
+      for (const section of sections) {
+        if (
+          section.id !== element.id &&
+          element.x >= section.x &&
+          element.x + element.width <= section.x + section.width &&
+          element.y >= section.y &&
+          element.y + element.height <= section.y + section.height
+        ) {
+          next.set(element.id, section.id);
+          break;
+        }
+      }
+    });
+
+    return next;
+  }, [elements]);
 
   return (
     <>
@@ -152,20 +183,16 @@ export function ClearingBoardCanvas({
             transformOrigin: "top left",
           }}
         >
-          {renderedElements.map((element) => {
-            const containingSection = elements.find((e) =>
-              e.type === "section" && e.id !== element.id &&
-              element.x >= e.x && element.x + element.width <= e.x + e.width &&
-              element.y >= e.y && element.y + element.height <= e.y + e.height
-            );
+          {elements.map((element) => {
+            const containingSectionId = containingSectionByElementId.get(element.id);
             return (
               <BoardElementRenderer
                 key={element.id}
-                commentCount={comments.filter((c) => c.elementId === element.id).length}
-                containingSectionId={containingSection?.id}
+                commentCount={commentCountByElementId.get(element.id) ?? 0}
+                containingSectionId={containingSectionId}
                 element={element}
-                isSectionSelected={containingSection ? selectedIds.includes(containingSection.id) : false}
-                isSelected={selectedIds.includes(element.id)}
+                isSectionSelected={containingSectionId ? selectedIdSet.has(containingSectionId) : false}
+                isSelected={selectedIdSet.has(element.id)}
                 linkedElements={elementLookup}
                 onPointerDown={onElementPointerDown}
                 onConnectorStart={onConnectorStart}
