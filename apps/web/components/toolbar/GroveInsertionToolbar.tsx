@@ -29,6 +29,7 @@ type ToolbarItem = {
   onClick: () => void;
   disabled?: boolean;
   active?: boolean;
+  iconOnlyToggle?: boolean;
 };
 
 function ToolbarAnimalIcon({
@@ -121,6 +122,7 @@ export function GroveInsertionToolbar({
       onClick: handleOwlAi,
       disabled: !canInsert,
       active: isOwlOpen,
+      iconOnlyToggle: true,
       icon: (
         <ToolbarAnimalIcon
           alt="Owl"
@@ -170,9 +172,7 @@ export function GroveInsertionToolbar({
             title="하이라이트 커서"
             className={[
               "flex h-11 min-w-11 items-center justify-center rounded-2xl px-3 text-sm text-[var(--color-text-primary)] transition",
-              jungleCursor.variant === "highlighting"
-                ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)] shadow-[inset_0_0_0_1px_var(--color-accent)]"
-                : "hover:bg-[var(--color-hover)]",
+              "hover:bg-[var(--color-hover)]",
             ].join(" ")}
           >
             <ToolbarAnimalIcon
@@ -191,7 +191,7 @@ export function GroveInsertionToolbar({
             onToggle={() => onToggleSpeech?.()}
           />
         ) : null}
-        {items.map(({ id, label, tooltip, icon, onClick, disabled, active }) => (
+        {items.map(({ id, label, tooltip, icon, onClick, disabled, active, iconOnlyToggle }) => (
           <button
             key={id}
             type="button"
@@ -203,7 +203,7 @@ export function GroveInsertionToolbar({
             title={tooltip}
             className={[
               "flex h-11 min-w-11 items-center justify-center gap-2 rounded-2xl px-3 text-sm text-[var(--color-text-primary)] transition",
-              active
+              active && !iconOnlyToggle
                 ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)] shadow-[inset_0_0_0_1px_var(--color-accent)]"
                 : "hover:bg-[var(--color-hover)]",
               disabled ? "cursor-not-allowed opacity-40 hover:bg-transparent" : "",
