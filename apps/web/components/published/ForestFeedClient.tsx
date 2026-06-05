@@ -21,6 +21,12 @@ function formatDate(value: string) {
   });
 }
 
+const TYPE_LABEL: Record<string, string> = {
+  page: "page",
+  canvas: "canvas",
+  graph: "graph",
+};
+
 export function ForestFeedClient({
   initialPublications,
   initialTags,
@@ -31,10 +37,6 @@ export function ForestFeedClient({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [publications, setPublications] = useState(initialPublications);
-  const [votes, setVotes] = useState<Record<string, "up" | "down" | null>>({});
-
-  const toggleVote = (id: string, dir: "up" | "down") =>
-    setVotes((prev) => ({ ...prev, [id]: prev[id] === dir ? null : dir }));
 
   const sort = searchParams.get("sort") === "popular" ? "popular" : initialSort;
   const tag = searchParams.get("tag") ?? initialTag;
@@ -55,62 +57,141 @@ export function ForestFeedClient({
         .catch(() => {});
     });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [searchParams]);
+
+  const pushSort = (next: "latest" | "popular") => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("sort", next);
+    router.push(`?${params.toString()}`);
+  };
 
   const pushTag = (item: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("tag", item);
+    if (tag === item) {
+      params.delete("tag");
+    } else {
+      params.set("tag", item);
+    }
+    router.push(`?${params.toString()}`);
+  };
+
+  const clearTag = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("tag");
     router.push(`?${params.toString()}`);
   };
 
   return (
     <div
-      className="flex flex-col w-full h-full overflow-y-auto"
+      className="flex flex-col w-full min-h-full"
       style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 0.15s" }}
     >
-      {/* header */}
-      <header className="h-12 border-b border-[var(--color-border)] flex items-center justify-between px-4 shrink-0 bg-[var(--color-background)]">
-        <span className="text-[14px] text-[var(--color-text-primary)] font-medium">
-          forest
-        </span>
+      {/* toolbar */}
+      <header
+        className="shrink-0 bg-[var(--color-background)] px-6 py-3 flex flex-wrap items-center gap-3"
+        style={{ borderBottom: "1px solid var(--color-border)" }}
+      >
+        <div className="flex items-center gap-1 rounded-lg bg-[var(--color-surface)] p-0.5" style={{ border: "1px solid var(--color-border)" }}>
+          {(["latest", "popular"] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => pushSort(s)}
+              className="rounded-md px-3 py-1 text-[13px] transition"
+              style={{
+                background: sort === s ? "var(--color-accent-subtle)" : "transparent",
+                color: sort === s ? "var(--color-accent)" : "var(--color-text-secondary)",
+                fontWeight: sort === s ? 600 : 400,
+              }}
+            >
+              {s === "latest" ? "최신순" : "인기순"}
+            </button>
+          ))}
+        </div>
+
+        {/* active tag chip */}
+        {tag ? (
+          <div className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px]" style={{ background: "var(--color-accent-subtle)", color: "var(--color-accent)" }}>
+            <span>#{tag}</span>
+            <button
+              type="button"
+              onClick={clearTag}
+              className="ml-0.5 rounded-full p-0.5 transition hover:opacity-70"
+              aria-label="태그 초기화"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M2 2L8 8M8 2L2 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+        ) : null}
+
+        {/* tag pills */}
+        {initialTags.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {initialTags.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => pushTag(t)}
+                className="rounded-full px-2.5 py-0.5 text-[12px] transition"
+                style={{
+                  background: tag === t ? "var(--color-accent-subtle)" : "var(--color-hover)",
+                  color: tag === t ? "var(--color-accent)" : "var(--color-text-secondary)",
+                }}
+              >
+                #{t}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </header>
 
-      <div className="mx-auto w-full max-w-[640px] px-4">
-      {publications.length === 0 ? (
-        <p className="py-20 text-center text-[14px] text-[var(--color-text-secondary)]">
-          {isPending ? "불러오는 중…" : "게시된 snapshot이 없습니다."}
-        </p>
-      ) : (
-        <div className="flex flex-col divide-y divide-[var(--color-border)]">
-          {publications.map((pub) => (
-            <article key={pub.id} className="py-10">
-              <div className="min-w-0 flex-1">
-                {/* type */}
+      {/* masonry grid */}
+      <main className="p-6">
+        {publications.length === 0 ? (
+          <p className="py-20 text-center text-[14px] text-[var(--color-text-secondary)]">
+            {isPending ? "불러오는 중…" : "게시된 snapshot이 없습니다."}
+          </p>
+        ) : (
+          <div className="columns-1 sm:columns-2 lg:columns-3 gap-x-5">
+            {publications.map((pub) => (
+              <article
+                key={pub.id}
+                className="break-inside-avoid mb-5 rounded-xl p-5 transition"
+                style={{
+                  background: "var(--color-surface)",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
+                {/* type badge */}
                 <p
-                  className="mb-3 text-[13px] text-[var(--color-text-secondary)]"
+                  className="mb-2.5 text-[11px] uppercase tracking-[0.15em] text-[var(--color-text-placeholder)]"
                   style={{ fontFamily: "'Averia Serif Libre', serif" }}
                 >
-                  {pub.snapshotType?.toLowerCase()}
+                  {TYPE_LABEL[pub.snapshotType] ?? pub.snapshotType}
                 </p>
 
                 {/* title */}
                 <Link
                   href={`/p/${pub.id}`}
-                  className="block leading-tight text-[var(--color-text-primary)] hover:text-[var(--color-accent)]"
+                  className="block text-[var(--color-text-primary)] hover:text-[var(--color-accent)] transition leading-snug"
                   style={{
                     fontFamily: "'Pretendard Variable', Pretendard, sans-serif",
-                    fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
+                    fontSize: "1.125rem",
                     fontWeight: 700,
                   }}
                 >
-                  {pub.title}
+                  {pub.title || "제목 없음"}
                 </Link>
 
                 {/* description */}
                 {pub.description ? (
                   <p
-                    className="mt-5 line-clamp-3 text-[16px] leading-[1.75] text-[var(--color-text-secondary)]"
+                    className="mt-3 line-clamp-4 text-[13px] leading-[1.7] text-[var(--color-text-secondary)]"
                     style={{ fontFamily: "'Averia Serif Libre', serif" }}
                   >
                     {pub.description}
@@ -119,14 +200,23 @@ export function ForestFeedClient({
 
                 {/* tags */}
                 {pub.tags.length > 0 ? (
-                  <div className="mt-5 flex flex-wrap gap-4">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {pub.tags.map((item) => (
                       <button
                         key={item}
                         type="button"
                         onClick={() => pushTag(item)}
-                        className="text-[15px] text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent)]"
-                        style={{ fontFamily: "'Averia Serif Libre', serif" }}
+                        className="rounded-full px-2.5 py-0.5 text-[12px] transition"
+                        style={{
+                          background: "var(--color-hover)",
+                          color: "var(--color-text-secondary)",
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.color = "var(--color-accent)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-secondary)";
+                        }}
                       >
                         #{item}
                       </button>
@@ -134,12 +224,34 @@ export function ForestFeedClient({
                   </div>
                 ) : null}
 
-                {/* meta */}
-                <div className="mt-6 flex items-center gap-4">
-                  <span className="text-[13px] text-[var(--color-text-secondary)]">
+                {/* footer */}
+                <div
+                  className="mt-4 flex items-center gap-3 pt-4"
+                  style={{ borderTop: "1px solid var(--color-border)" }}
+                >
+                  {/* author avatar */}
+                  {pub.author.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={pub.author.image}
+                      alt={pub.author.name}
+                      className="h-6 w-6 rounded-full object-cover shrink-0"
+                    />
+                  ) : (
+                    <div
+                      className="h-6 w-6 rounded-full shrink-0 flex items-center justify-center text-[11px] font-semibold"
+                      style={{
+                        background: "var(--color-accent-subtle)",
+                        color: "var(--color-accent)",
+                      }}
+                    >
+                      {pub.author.name?.[0] ?? "?"}
+                    </div>
+                  )}
+                  <span className="text-[12px] text-[var(--color-text-secondary)] min-w-0 truncate flex-1">
                     {pub.author.name}
                   </span>
-                  <span className="text-[13px] text-[var(--color-text-secondary)]">
+                  <span className="text-[12px] text-[var(--color-text-placeholder)] shrink-0">
                     {formatDate(pub.createdAt)}
                   </span>
                   <ForestLikeButton
@@ -148,41 +260,12 @@ export function ForestFeedClient({
                     initialLikeCount={pub.likeCount}
                     compact
                   />
-                  <button
-                    type="button"
-                    aria-label="위로"
-                    onClick={() => toggleVote(pub.id, "up")}
-                    className="flex h-7 w-7 items-center justify-center rounded transition"
-                    style={{
-                      color: votes[pub.id] === "up" ? "#e53e3e" : "var(--color-text-secondary)",
-                      background: votes[pub.id] === "up" ? "#fff5f5" : undefined,
-                    }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path d="M7 11V3M7 3L3 7M7 3L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="아래로"
-                    onClick={() => toggleVote(pub.id, "down")}
-                    className="flex h-7 w-7 items-center justify-center rounded transition"
-                    style={{
-                      color: votes[pub.id] === "down" ? "#3182ce" : "var(--color-text-secondary)",
-                      background: votes[pub.id] === "down" ? "#ebf8ff" : undefined,
-                    }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path d="M7 3V11M7 11L3 7M7 11L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
                 </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-      </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
 }
