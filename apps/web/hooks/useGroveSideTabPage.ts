@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { patchGroveCell } from "@/lib/groveCatalogApi";
+import { patchCachedPageTitle } from "@/lib/page/pageStoreSync";
 import { useGroveCatalogStore } from "@/store/useGroveCatalogStore";
-import { usePageStore } from "@/store/pageStore";
 import type { Database, Page, PropertyValue, PropertyValueData } from "@obnofi/types";
 
 interface AncestorPage {
@@ -13,7 +13,12 @@ interface AncestorPage {
 }
 
 export function useGroveSideTabPage(pageId: string | null, isOpen: boolean) {
-  const updatePage = usePageStore((state) => state.updatePage);
+  const patchGrovePageTitle = useGroveCatalogStore(
+    (state) => state.patchGrovePageTitle
+  );
+  const patchGroveSeedTitle = useGroveCatalogStore(
+    (state) => state.patchGroveSeedTitle
+  );
   const patchGroveCellValue = useGroveCatalogStore(
     (state) => state.patchGroveCellValue
   );
@@ -90,10 +95,54 @@ export function useGroveSideTabPage(pageId: string | null, isOpen: boolean) {
       return;
     }
 
-    setPage({ ...page, title });
-    await updatePage(page.id, { title });
-    const latestPage = usePageStore.getState().pages.find((item) => item.id === page.id);
-    setPage(latestPage ?? { ...page, title });
+    const previousTitle = page.title;
+    const parentDatabasePageId = database?.pageId ?? null;
+    const nextPage = { ...page, title };
+
+    setPage(nextPage);
+    patchCachedPageTitle(page.id, title);
+
+    if (page.type === "database") {
+      patchGrovePageTitle(page.id, title);
+    }
+
+    if (parentDatabasePageId) {
+      patchGroveSeedTitle(parentDatabasePageId, page.id, title);
+    }
+
+    try {
+      const response = await fetch(`/api/pages/${page.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update page title");
+      }
+
+      const savedPage = (await response.json()) as Page;
+      setPage(savedPage);
+      patchCachedPageTitle(savedPage.id, savedPage.title);
+
+      if (savedPage.type === "database") {
+        patchGrovePageTitle(savedPage.id, savedPage.title);
+      }
+
+      if (parentDatabasePageId) {
+        patchGroveSeedTitle(parentDatabasePageId, savedPage.id, savedPage.title);
+      }
+    } catch {
+      setPage({ ...page, title: previousTitle });
+      patchCachedPageTitle(page.id, previousTitle);
+
+      if (page.type === "database") {
+        patchGrovePageTitle(page.id, previousTitle);
+      }
+
+      if (parentDatabasePageId) {
+        patchGroveSeedTitle(parentDatabasePageId, page.id, previousTitle);
+      }
+    }
   };
 
   const handlePageContentUpdate = async (nextContent: object) => {

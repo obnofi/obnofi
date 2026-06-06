@@ -26,6 +26,7 @@ import {
   PAGE_ORDER_STEP,
   generateOptimisticPageId,
 } from "@/lib/page/pageUtils";
+import { patchCachedPageTitle } from "@/lib/page/pageStoreSync";
 import { useGroveCatalogStore } from "@/store/useGroveCatalogStore";
 
 interface CreatePropertyInput {
@@ -175,11 +176,19 @@ export function useDatabasePage(pageId: string | null | undefined) {
         return;
       }
 
+      const previousTitle =
+        useGroveCatalogStore.getState().grovePages[pageId]?.title ?? null;
       patchGrovePageTitle(pageId, title);
+      patchCachedPageTitle(pageId, title);
       try {
         await patchGroveTitle(pageId, title);
       } catch {
-        await loadDatabasePage({ force: true });
+        if (previousTitle !== null) {
+          patchGrovePageTitle(pageId, previousTitle);
+          patchCachedPageTitle(pageId, previousTitle);
+        } else {
+          await loadDatabasePage({ force: true });
+        }
       }
     },
     [loadDatabasePage, pageId, patchGrovePageTitle]
