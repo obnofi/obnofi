@@ -36,7 +36,7 @@ export function DatabaseBlockView(props: ReactNodeViewProps) {
     updateDatabaseBlockAttrs,
     createDatabasePage,
     handleSelectionOpen,
-  } = useDatabaseBlockData(attrs, propsRef, attrsRef);
+  } = useDatabaseBlockData(attrs, propsRef);
 
   const selection = useMemo(() => {
     if (!props.editor.isEditable || pageId) {

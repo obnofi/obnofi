@@ -113,7 +113,7 @@ export function GalleryView({
         className="flex min-h-[280px] items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-text-primary)]"
       >
         <Plus className="h-4 w-4" />
-        Plant Seed
+        New seed
       </button>
     </div>
   );

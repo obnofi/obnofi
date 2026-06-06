@@ -75,6 +75,16 @@ export function DatabaseSurface({
     () => [...databasePage.database.properties].sort((a, b) => a.order - b.order),
     [databasePage.database.properties]
   );
+  const availableViewItems = useMemo(() => {
+    const storedViews = databasePage.database.views ?? [];
+    if (storedViews.length === 0) {
+      return viewItems.filter((item) => item.id === "table");
+    }
+
+    return viewItems.filter((item) =>
+      storedViews.some((view) => view.type === item.id)
+    );
+  }, [databasePage.database.views]);
   const rows = databasePage.database.rows;
   const scopeId = `grove:${databasePage.database.id}`;
   const [viewType, setViewType] = useState<GroveSurfaceView>(initialViewType);
@@ -100,6 +110,14 @@ export function DatabaseSurface({
   useEffect(() => {
     setViewType(initialViewType);
   }, [initialViewType]);
+
+  useEffect(() => {
+    if (availableViewItems.some((item) => item.id === viewType)) {
+      return;
+    }
+
+    setViewType(availableViewItems[0]?.id ?? "table");
+  }, [availableViewItems, viewType]);
 
   useEffect(() => {
     onViewTypeChange?.(viewType);
@@ -140,7 +158,7 @@ export function DatabaseSurface({
       <div className="border-b border-[var(--color-border)] px-4 py-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
-            {viewItems.map((item) => {
+            {availableViewItems.map((item) => {
               const Icon = item.icon;
               const isActive = item.id === viewType;
               return (

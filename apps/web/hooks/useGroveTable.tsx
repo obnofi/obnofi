@@ -130,7 +130,7 @@ export function useGroveTable({
       {
         id: "title",
         accessorFn: (row) => row.title,
-        header: "Plant Seed",
+        header: "이름",
         cell: ({ cell, row, getValue }) => {
           if (cell.getIsPlaceholder()) {
             return null;

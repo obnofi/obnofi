@@ -223,7 +223,7 @@ export function DatabaseTableCard({
                 </div>
               )}
               <div className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                {databasePage.database?.rows?.length ?? 0} rows, {databasePage.database?.columns?.length ?? 0} columns
+                {databasePage.database?.rows?.length ?? 0} rows, {(databasePage.database?.columns?.length ?? 0) + 1} columns
               </div>
             </div>
           </div>

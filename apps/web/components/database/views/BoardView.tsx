@@ -220,7 +220,7 @@ export function BoardView({
               className="mt-3 inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
             >
               <Plus className="h-4 w-4" />
-              Plant Seed
+              New seed
             </button>
           </div>
         ))}
