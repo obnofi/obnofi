@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { CodeBlock } from "@/components/editor/extensions/CodeBlock";
 import { ReactNodeViewRenderer } from "@tiptap/react";
@@ -39,6 +40,19 @@ export function PublicReadonlyEditor({ content }: PublicReadonlyEditorProps) {
       },
     },
   });
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const nextContent = content || { type: "doc", content: [{ type: "paragraph" }] };
+    const currentContent = editor.getJSON();
+
+    if (JSON.stringify(currentContent) === JSON.stringify(nextContent)) {
+      return;
+    }
+
+    editor.commands.setContent(nextContent, false);
+  }, [content, editor]);
 
   if (!editor) {
     return null;
