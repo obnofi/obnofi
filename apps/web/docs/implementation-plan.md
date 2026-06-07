@@ -85,9 +85,11 @@
 
 현재 구현 메모:
 - 문서 공동 편집은 Yjs + awareness로 동작한다.
-- 커서 awareness는 `user`, `cursor`(텍스트 caret/selection), `userCursor`(page/canvas/database 포인터)로 분리되어 있다.
+- 커서 awareness는 `user`, `cursor`(텍스트 caret/selection), `userCursor`(page/canvas/database 포인터), `cursorChat`(임시 말풍선)로 분리되어 있다.
 - 클라이언트 세션은 4색 협업 커서 팔레트 중 하나를 랜덤 고정 선택한다.
 - 문서에서는 같은 사용자에 대해 텍스트 caret와 페이지 포인터를 동시에 렌더링하지 않는다.
+- 커서 챗은 문서/데이터 입력 요소가 활성화되지 않은 idle 상태에서 `/`로 열리는 임시 말풍선 입력이며, 입력 중 draft가 실시간 동기화되고 `Enter` 후 5초 뒤 자동 제거된다.
+- 커서 챗 메시지는 세션 awareness에만 존재하며 문서 content나 별도 저장소에 기록하지 않는다.
 
 ### Comments
 - [ ] Comment data model

@@ -94,7 +94,8 @@ erDiagram
 |---|---|
 | `User` | 사용자. `preferences` JSONB에 폰트·다크모드 등 개인설정 보관 |
 | `Workspace` | 워크스페이스. 한 유저가 여러 개 소유 가능 |
-| `WorkspaceMember` | 유저↔워크스페이스 N:M. `Role` enum으로 권한 구분 |
+| `WorkspaceMember` | 유저↔워크스페이스 N:M. `Role` enum(OWNER/EDITOR/VIEWER/MEMBER)으로 권한 구분 |
+| `PageCollaborator` | 유저↔페이지 N:M. `CollabRole` enum(EDITOR/VIEWER)으로 권한 구분. WorkspaceMember의 `Role`과 별개 enum 주의 |
 | `Page` | **문서·캔버스·데이터베이스 페이지를 하나의 테이블로 통합**. DB 행(row)도 Page로 저장 |
 | `Database` | DB 페이지의 메타데이터 (Page와 1:1). Property·View·Row를 거느림 |
 | `Property` | DB 컬럼 정의. `Column`은 레거시 alias |
@@ -126,7 +127,7 @@ erDiagram
 | Page 테이블에 DB 행(row) 통합 | 행도 제목·아이콘·커버·하위 페이지를 가질 수 있음. Notion 구조와 동일 |
 | `content` JSONB | TipTap JSON. 블록 단위 정규화 대비 개발 속도 우선 |
 | `options` JSONB (Property) | SELECT 옵션은 항상 Property와 함께 읽힘. JOIN 불필요 |
-| `value` JSONB (PropertyValue) | 18가지 타입을 별도 테이블화 시 JOIN 비용 > JSONB 유연성 |
+| `value` JSONB (PropertyValue) | 19가지 타입을 별도 테이블화 시 JOIN 비용 > JSONB 유연성 |
 | `config` JSONB (View) | 뷰 설정 구조가 타입마다 상이. 스키마 변경 없이 확장 가능 |
 | `order Float` (Fractional Indexing) | 재정렬 시 전체 업데이트 없이 중간값 삽입 가능 |
 | `sharePassword` bcrypt 해시 | 원문 저장 금지. `/api/pages/[id]/verify`에서 `bcrypt.compare` |
@@ -165,7 +166,6 @@ export type UpdateColumnInput = UpdatePropertyInput;
 { type: "status";           optionId: string | null }
 { type: "date";             value: string | null; endValue?: string | null; includeTime?: boolean }
 { type: "person";           userId: string | null }
-{ type: "people";           userIds: string[] }
 { type: "url";              value: string }
 { type: "email";            value: string }
 { type: "phone";            value: string }

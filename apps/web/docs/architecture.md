@@ -927,6 +927,12 @@ interface WebSocketAPI {
         canvasPosition: { x: number; y: number } | null;
         databaseCell: { rowId: ID; colId: ID } | null;
       } | null;
+      cursorChat?: {
+        text: string;
+        status: 'drafting' | 'sent';
+        expiresAt: number | null;
+        updatedAt: number;
+      } | null;
     };
   };
   
@@ -943,6 +949,9 @@ interface WebSocketAPI {
 // - Each client session pins one random cursor color from the collaboration palette.
 // - Text caret awareness and page-pointer awareness can coexist in transport state,
 //   but the UI must suppress the page pointer when the same user already has a text caret.
+// - Cursor chat is ephemeral awareness only: when no document/data input is active,
+//   slash opens a cursor-adjacent bubble,
+//   draft text syncs live, submitted text auto-expires after 5 seconds, and nothing is persisted.
 ```
 
 ---

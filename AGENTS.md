@@ -53,7 +53,6 @@ All features, components, and code variables follow the **Jungle System** metaph
 | Jungle term | Meaning |
 |---|---|
 | `plantSeed` | Create a new note/page |
-| `fossilize` | Snapshot / version history |
 | `Grove` | Editor area |
 | `Clearing` | Canvas area |
 | `Canopy` | Page cover image / hero image (GrovePageCanopy) |
@@ -191,7 +190,7 @@ Filters, sorts, groupBy, column widths, and visible properties are all in `View.
 | Speech-to-text (Parrot / 앵무새) | `hooks/useSpeechRecognition.ts`, `components/editor/SpeechRecognitionButton.tsx`, `components/editor/SpeechInputIndicator.tsx` |
 | Slash command data/types | `lib/editor/slashCommandTypes.ts`, `lib/editor/slashCommandItemsCore.ts`, `lib/editor/slashCommandItemsExtended.ts` |
 | Block drag/drop | `lib/editor/blockDragHandlers.ts`, `lib/editor/blockUtils.ts`, `lib/editor/blockDomUtils.ts`, `lib/editor/blockActionsPlugin.ts` |
-| Column layout block | `components/editor/blocks/ColumnLayoutBlock.tsx`, `lib/editor/columnBlockDragPlugin.ts` |
+| Column layout block | `components/editor/extensions/ColumnLayoutBlock.tsx`, `lib/editor/columnBlockDragPlugin.ts` |
 | Editor insertion blocks | `components/editor/blocks/` |
 | Editor hooks | `hooks/useEditorContentSync.ts`, `hooks/useGroveEditorExtensions.ts`, `hooks/useCanvasPageState.ts`, `hooks/usePageCursorTracking.ts`, `hooks/useDatabaseBlockData.ts` |
 | Insertion toolbar | `components/toolbar/GroveInsertionToolbar.tsx`, `components/toolbar/LinkEmbedModal.tsx` |

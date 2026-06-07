@@ -604,12 +604,15 @@ MossNote를 삭제합니다.
     "slug": "product-grove",
     "icon": "🌿",
     "ownerId": "user_123",
+    "ownerImage": "https://.../avatar.png",
     "role": "OWNER",
     "createdAt": "2026-05-01T00:00:00.000Z",
     "updatedAt": "2026-05-02T00:00:00.000Z"
   }
 ]
 ```
+
+`ownerImage`는 워크스페이스 소유자의 프로필 이미지(`owner.image`)이며 없으면 `null`입니다.
 
 ### `GET /api/workspaces/[workspaceId]/settings`
 
@@ -764,7 +767,7 @@ MossNote를 삭제합니다.
 검증:
 
 - `title`, `type` 필수
-- `type`은 `document | canvas | database`
+- `type`은 `document | canvas | database | mindmap`
 - `workspaceId`가 있으면 해당 워크스페이스 멤버인지 검증하고, 없으면 로그인 유저의 기본 워크스페이스를 사용
 
 특이사항:
@@ -910,6 +913,48 @@ MossNote를 삭제합니다.
   "isPublic": true
 }
 ```
+
+## Collaborators
+
+페이지 단위 협업자(공동 편집자)를 관리합니다. 권한은 `CollabRole`(`editor` | `viewer`)이며 응답에서는 소문자로 반환됩니다. 모두 웹 세션이 필요합니다.
+
+### `GET /api/pages/[pageId]/collaborators`
+
+페이지의 협업자 목록을 반환합니다.
+
+응답 예시:
+
+```json
+[
+  {
+    "userId": "user_123",
+    "role": "editor",
+    "user": { "id": "user_123", "name": "Yui", "email": "a@b.com", "image": null }
+  }
+]
+```
+
+### `POST /api/pages/[pageId]/collaborators`
+
+이메일로 협업자를 초대(upsert)합니다.
+
+요청 본문:
+
+```json
+{ "email": "a@b.com", "role": "editor" }
+```
+
+동작:
+
+- `email` 필수. 누락 시 `400 { "error": "email is required" }`
+- 해당 이메일 유저가 없으면 `404 { "error": "User not found" }`
+- `role`은 `editor`(기본) | `viewer` — 내부적으로 대문자 `CollabRole`로 저장
+- 이미 협업자면 role만 갱신(upsert)
+- 응답: `{ pageId, userId, role, user }`
+
+### `DELETE /api/pages/[pageId]/collaborators/[userId]`
+
+해당 유저를 페이지 협업자에서 제거합니다.
 
 ## Public Share
 
@@ -1440,6 +1485,29 @@ AI 텍스트 생성 스트림 API입니다.
   "error": "Failed to generate response"
 }
 ```
+
+### `POST /api/ai/owl`
+
+Owl 멀티턴 채팅 API입니다. 도구 호출(tool calling)을 지원하며 스트림으로 응답합니다.
+
+요청 본문:
+
+```json
+{
+  "messages": [{ "role": "user", "content": "..." }],
+  "pageContent": "optional string",
+  "apiKey": "optional string"
+}
+```
+
+동작:
+
+- `messages` 필수(배열). 누락 시 `400 { "error": "messages required" }`
+- API 키는 `apiKey`(요청) → `OPENAI_API_KEY`(환경변수) 순. 둘 다 없으면 `401 { "error": "OpenAI API 키가 필요합니다." }`
+- 모델은 현재 `gpt-4o-mini`
+- `pageContent`가 있으면 시스템 프롬프트에 현재 편집 중인 문서 컨텍스트로 주입
+- 지원 도구: `getCurrentDate`, `getPageContext`, `insertContent`
+- `streamText(...)` 결과를 스트림으로 반환
 
 ## WebSocket
 
