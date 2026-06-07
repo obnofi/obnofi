@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { flexRender, type HeaderGroup } from "@tanstack/react-table";
 import { Plus, X } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { Property, Page, PropertyType, SelectOption } from "@obnofi/types";
 import { getPropertyTypeLabel, getPropertyTypeIcon } from "@/lib/database-utils";
 import { PropertyHeader } from "./PropertyHeader";
+import { DropdownPortal } from "./DropdownPortal";
 
 // ---------------------------------------------------------------------------
 // ADDABLE_TYPES — shared constant
@@ -21,14 +22,23 @@ export const ADDABLE_TYPES: PropertyType[] = [
 // ---------------------------------------------------------------------------
 
 interface AddPropertyPopoverProps {
+  triggerRef: React.RefObject<HTMLElement | null>;
   onConfirm: (name: string, type: PropertyType) => void;
   onClose: () => void;
 }
 
-export function AddPropertyPopover({ onConfirm, onClose }: AddPropertyPopoverProps) {
+export function AddPropertyPopover({
+  triggerRef,
+  onConfirm,
+  onClose,
+}: AddPropertyPopoverProps) {
   const [newPropName, setNewPropName] = useState("");
   const [newPropType, setNewPropType] = useState<PropertyType>("text");
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    nameInputRef.current?.focus();
+  }, []);
 
   const confirm = () => {
     const name = newPropName.trim() || getPropertyTypeLabel(newPropType);
@@ -36,9 +46,8 @@ export function AddPropertyPopover({ onConfirm, onClose }: AddPropertyPopoverPro
   };
 
   return (
-    <>
-      <div className="fixed inset-0 z-[99998]" onClick={onClose} />
-      <div className="absolute right-0 top-full z-[99999] mt-1 w-64 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 shadow-xl">
+    <DropdownPortal triggerRef={triggerRef} isOpen={true} onClose={onClose} align="right">
+      <div className="w-64 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-xs font-semibold text-[var(--color-text-primary)]">속성 추가</span>
           <button type="button" onClick={onClose}>
@@ -89,7 +98,7 @@ export function AddPropertyPopover({ onConfirm, onClose }: AddPropertyPopoverPro
           추가
         </button>
       </div>
-    </>
+    </DropdownPortal>
   );
 }
 
@@ -124,11 +133,6 @@ export function TableHead({
 
   const openAddProp = () => {
     setShowAddProp(true);
-    // Small delay to let the popover mount before focusing the input inside it
-    setTimeout(() => {
-      const input = addPropRef.current?.querySelector<HTMLInputElement>("input");
-      input?.focus();
-    }, 50);
   };
 
   const handleConfirmAddProp = (name: string, type: PropertyType) => {
@@ -223,6 +227,7 @@ export function TableHead({
 
             {showAddProp && (
               <AddPropertyPopover
+                triggerRef={addPropRef}
                 onConfirm={handleConfirmAddProp}
                 onClose={() => setShowAddProp(false)}
               />

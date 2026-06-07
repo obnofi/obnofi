@@ -153,9 +153,9 @@ export function useGroveTable({
             <button
               type="button"
               onClick={() => onOpenRow?.(row.original.id)}
-              className="text-left text-[13px] font-medium text-[var(--color-text-primary)] hover:underline"
+              className="flex min-h-10 w-full items-center rounded-md px-2 py-1.5 text-left text-[13px] font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-hover)]/70 hover:underline"
             >
-              {title}
+              <span className="truncate">{title}</span>
             </button>
           );
         },
