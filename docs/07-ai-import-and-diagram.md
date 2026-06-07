@@ -2,7 +2,8 @@
 
 ## 범위
 
-- 에디터 AI 보조 기능
+- 에디터 AI 보조 기능 (텍스트 변환)
+- Owl AI 채팅 패널 → `12-owl-ai-chat.md` 참조
 - URL 기반 import
 - DB 다이어그램 블록
 
@@ -63,3 +64,5 @@
 
 - AI 레이어 설명은 저장소 소개보다 실제 구현 범위가 좁습니다.
 - 루트 설명에는 별도 `ai/` 런타임 언급이 있지만, 현재 눈에 띄는 실사용 엔트리는 `apps/web/ai`와 Next API입니다.
+- Owl AI 채팅(대화형 멀티턴)은 이 파일에서 다루지 않음 — `12-owl-ai-chat.md` 참조.
+- DB 다이어그램 정확한 경로: `apps/web/src/components/blocks/db-diagram/` (루트의 `apps/web/components/`가 아닌 `apps/web/src/` 하위).

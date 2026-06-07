@@ -21,8 +21,15 @@
 - [04-database-and-views.md](./04-database-and-views.md): 데이터베이스 페이지, Property/Row/View 구조, 셀 타입, 각종 뷰
 - [05-clearing-canvas.md](./05-clearing-canvas.md): Clearing 캔버스, 요소 편집, 댓글, 이미지 업로드, 프레즌스
 - [06-sharing-search-and-graph.md](./06-sharing-search-and-graph.md): 공개 공유, 비밀번호 보호, 검색, 위키 링크, 그래프 뷰
-- [07-ai-import-and-diagram.md](./07-ai-import-and-diagram.md): AI 보조 기능, URL import, DB 다이어그램 블록
+- [07-ai-import-and-diagram.md](./07-ai-import-and-diagram.md): AI 보조 기능(텍스트 변환), URL import, DB 다이어그램 블록
 - [08-realtime-collaboration-and-settings.md](./08-realtime-collaboration-and-settings.md): Yjs 협업, ws-server, 설정 화면, 사용자 환경설정
+- [09-moss-notes.md](./09-moss-notes.md): MossNote 인라인 주석 — 텍스트 선택 앵커, 낙관적 CRUD
+- [10-forest-and-publishing.md](./10-forest-and-publishing.md): Forest 공개 피드, 스냅샷 게시, 좋아요
+- [11-mindgrove.md](./11-mindgrove.md): MindGrove 마인드맵 — ReactFlow 기반 노드/엣지 편집기
+- [12-owl-ai-chat.md](./12-owl-ai-chat.md): Owl AI 채팅 패널 — 멀티턴, tool calling, 에디터 삽입
+- [13-grove-catalog.md](./13-grove-catalog.md): GroveCatalog — DB 클라이언트 상태, API 래퍼, Supabase Realtime
+- [14-database-engine.md](./14-database-engine.md): Database Engine — 쿼리/필터/Formula/Rollup 엔진
+- [15-clearing-canvas-extras.md](./15-clearing-canvas-extras.md): Clearing 추가 기능 — 타이머, CursorChat, Presence, Supabase 저장
 
 ## 현재 코드 기준 큰 흐름
 
@@ -42,3 +49,7 @@
 - `apps/web/docs/implementation-plan.md`는 현재 구현 상태와 많이 다릅니다.
 - `AGENTS.md`의 일부 경로 설명은 이전 구조를 포함하고 있으므로 실제 경로와 함께 확인해야 합니다.
 - 데이터 레이어는 현재 Prisma 기반으로 동작하지만, 일부 설명 문서는 `mock-db` 시절 내용을 여전히 포함합니다.
+- `groveCatalogApi.ts`의 `NEXT_PUBLIC_FASTIFY_URL`은 선택적 외부 백엔드 라우팅용. 미설정 시 동일 origin Next.js API 사용.
+- Clearing 캔버스는 Yjs가 아닌 Supabase Realtime + Supabase DB 직접 사용.
+- DB 다이어그램 블록은 `apps/web/components/`가 아닌 `apps/web/src/components/blocks/db-diagram/` 하위.
+- `apps/web/ai/`(Python orchestrator)는 현재 실사용 흐름과 연결 미확인 — Next.js API(`/api/ai/*`)가 실질적 AI 진입점.
