@@ -868,7 +868,7 @@ export async function getPublishedSnapshotDetail(
 
     return {
       ...toPublishedSnapshotSummary(row, viewerUserId),
-      snapshotContent: row.snapshotContent as PublishedPageSnapshotContent | PublishedGraphSnapshotContent,
+      snapshotContent: row.snapshotContent as unknown as PublishedPageSnapshotContent | PublishedGraphSnapshotContent,
     };
   }, runMock);
 }
@@ -974,7 +974,7 @@ export async function createPagePublication(options: {
             pageId: page.id,
             workspaceId: page.workspaceId,
             snapshotType,
-            snapshotContent,
+            snapshotContent: snapshotContent as unknown as Prisma.InputJsonValue,
             title: page.title,
             description: options.description.trim(),
             tags: normalizeTags(options.tags),
@@ -1052,7 +1052,7 @@ export async function createGraphPublication(options: {
     workspaceId: options.workspaceId,
     focusedPageId: options.focusedPageId,
     nodes: graphData.allNodes,
-    edges: graphData.allEdges,
+    edges: graphData.allEdges as unknown as Record<string, unknown>[],
   };
 
   const focusPage = options.focusedPageId
@@ -1119,7 +1119,7 @@ export async function createGraphPublication(options: {
             workspaceId: options.workspaceId,
             pageId: options.focusedPageId,
             snapshotType: PUBLISHED_SNAPSHOT_TYPE.GRAPH,
-            snapshotContent,
+            snapshotContent: snapshotContent as unknown as Prisma.InputJsonValue,
             title,
             description: options.description.trim(),
             tags: normalizeTags(options.tags),

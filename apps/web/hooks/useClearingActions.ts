@@ -177,7 +177,7 @@ export function useClearingActions({
     updateElement(elementId, {
       content: { ...target.content, votes: { ...currentVotes, [activeUser.id]: nextVotes } },
       updatedAt: new Date().toISOString(),
-    });
+    } as Partial<Element>);
   };
 
   return {

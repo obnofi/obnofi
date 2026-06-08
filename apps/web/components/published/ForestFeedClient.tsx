@@ -71,7 +71,7 @@ function EmptyState({ tag, searchQuery, onClearTag, onClearSearch }: EmptyStateP
     ? "다른 검색어를 시도해보세요."
     : tag
     ? "다른 태그를 선택하거나 전체를 확인해보세요."
-    : "Forest는 Fossilize한 Snapshot을 공유하는 공간입니다.";
+    : "Forest는 게시한 Snapshot을 공유하는 공간입니다.";
 
   const action = searchQuery ? onClearSearch : tag ? onClearTag : null;
   const actionLabel = searchQuery ? "검색 초기화" : "태그 초기화";
