@@ -7,6 +7,7 @@ export function CursorChat({
   cursor,
   draft,
   isEditing = false,
+  maxLength = 52,
   message,
   onCancel,
   onChange,
@@ -16,6 +17,7 @@ export function CursorChat({
   cursor: Point;
   draft?: string;
   isEditing?: boolean;
+  maxLength?: number;
   message?: string | null;
   onCancel?: () => void;
   onChange?: (value: string) => void;
@@ -51,6 +53,9 @@ export function CursorChat({
               }
             }}
           />
+          <div className="mt-1 text-right text-[11px] text-[var(--color-text-secondary)]">
+            {(draft ?? "").length}/{maxLength}
+          </div>
         </div>
       ) : message ? (
         <div

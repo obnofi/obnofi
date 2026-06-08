@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import type { AwarenessState } from "@/types/collaboration";
 
 type ContextAwarenessState = AwarenessState & { clientId: number; image?: string | null };
@@ -30,6 +37,7 @@ export function usePageCursorTracking({
   const pageCursorFrameRef = useRef<number | null>(null);
   const pendingPageCursorRef = useRef<{ x: number; y: number } | null>(null);
   const lastSentPageCursorRef = useRef<{ x: number; y: number } | null>(null);
+  const [localPageCursor, setLocalPageCursor] = useState<{ x: number; y: number } | null>(null);
 
   // Cleanup RAF on unmount
   useEffect(() => {
@@ -45,10 +53,10 @@ export function usePageCursorTracking({
       awarenessStates.filter(
         (state) =>
           state.userId !== localUserId &&
-          !state.hasTextCursor &&
           state.userCursor?.type === "page" &&
           state.userCursor?.pageId === pageId &&
-          state.userCursor.canvasPosition
+          state.userCursor.canvasPosition &&
+          (!state.hasTextCursor || state.cursorChat != null)
       ),
     [awarenessStates, localUserId, pageId]
   );
@@ -84,10 +92,12 @@ export function usePageCursorTracking({
       if (!shell) return;
 
       const rect = shell.getBoundingClientRect();
-      pendingPageCursorRef.current = {
+      const nextPosition = {
         x: Math.max(0, Math.min(event.clientX - rect.left, rect.width)),
         y: Math.max(0, Math.min(event.clientY - rect.top, rect.height)),
       };
+      pendingPageCursorRef.current = nextPosition;
+      setLocalPageCursor(nextPosition);
 
       if (pageCursorFrameRef.current == null) {
         pageCursorFrameRef.current = requestAnimationFrame(flushPageCursor);
@@ -112,5 +122,5 @@ export function usePageCursorTracking({
     });
   }, [pageId, updateCursor]);
 
-  return { remotePageCursors, handlePagePointerMove, clearPagePointer };
+  return { localPageCursor, remotePageCursors, handlePagePointerMove, clearPagePointer };
 }

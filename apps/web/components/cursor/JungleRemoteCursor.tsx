@@ -11,6 +11,7 @@ import {
 interface JungleRemoteCursorProps {
   color: string;
   colorKey?: JungleCursorColorKey;
+  cursorChatMessage?: string | null;
   userId: string;
   userName?: string;
   variant?: JungleCursorVariant;
@@ -21,6 +22,7 @@ interface JungleRemoteCursorProps {
 export function JungleRemoteCursor({
   color,
   colorKey = "green",
+  cursorChatMessage,
   userId,
   userName,
   variant = "pointing",
@@ -39,6 +41,14 @@ export function JungleRemoteCursor({
         top: y - metrics.hotspotY,
       }}
     >
+      {cursorChatMessage ? (
+        <div
+          className="mb-1 max-w-56 rounded-2xl px-3 py-2 text-xs font-medium text-white shadow-lg"
+          style={{ backgroundColor: displayColor }}
+        >
+          {cursorChatMessage}
+        </div>
+      ) : null}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         alt=""

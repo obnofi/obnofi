@@ -10,6 +10,13 @@ export interface UserCursor {
   databaseCell: { rowId: string; colId: string } | null;
 }
 
+export interface CursorChatState {
+  text: string;
+  status: "drafting" | "sent";
+  expiresAt: number | null;
+  updatedAt: number;
+}
+
 export interface AwarenessState {
   userId: string;
   userName: string;
@@ -19,4 +26,5 @@ export interface AwarenessState {
   hasTextCursor?: boolean;
   userCursor: UserCursor | null;
   slashCommand?: { query: string } | null;
+  cursorChat?: CursorChatState | null;
 }

@@ -46,6 +46,7 @@ interface ProviderAwarenessState {
   user?: unknown;
   cursor?: unknown;
   userCursor?: UserCursor | null;
+  cursorChat?: unknown;
 }
 
 const defaultDocumentContext: CollaborationContextValue = {

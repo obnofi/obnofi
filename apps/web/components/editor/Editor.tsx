@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, type CSSProperties, type Ref, type RefObject } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo, type CSSProperties, type Ref, type RefObject } from "react";
 import { useEditor, EditorContent, type Editor as TiptapEditor } from "@tiptap/react";
 import { useCollaboration, userColor } from "@/lib/collaboration/CollaborationContext";
 import "tippy.js/dist/tippy.css";
@@ -14,17 +14,26 @@ import { SpeechInputIndicator } from "@/components/editor/SpeechInputIndicator";
 import { TextHighlightToolbar } from "@/components/editor/TextHighlightToolbar";
 import { RemotePageCursors } from "@/components/editor/RemotePageCursors";
 import { SlashCommandBroadcast } from "@/components/editor/SlashCommandBroadcast";
+import { CursorChat } from "@/components/canvas/CursorChat";
 import {
   MossNoteDock,
   type MossNoteDockHandle,
 } from "@/components/workspace/MossNoteDock";
 import { useEditorContentSync } from "@/hooks/useEditorContentSync";
+import { useCursorChat } from "@/hooks/useCursorChat";
 import { useGroveEditorExtensions } from "@/hooks/useGroveEditorExtensions";
 import { usePageCursorTracking } from "@/hooks/usePageCursorTracking";
 import { useJungleCursor } from "@/lib/cursor/jungleCursor";
 import type { PageHeadingFontSizes, PageHighlightColor } from "@obnofi/types";
 import type { MossNoteAnchor } from "@/lib/moss-notes";
 import type { ParrotListeningState } from "@/hooks/useSpeechRecognition";
+import type { Editor as TiptapEditorWithCommands } from "@tiptap/core";
+
+declare global {
+  interface Window {
+    __obnofiEditor?: TiptapEditorWithCommands | null;
+  }
+}
 
 interface EditorProps {
   content: object | null;
@@ -49,6 +58,41 @@ interface EditorProps {
   speechListeningState?: ParrotListeningState;
   mossNoteDockRef?: Ref<MossNoteDockHandle>;
   mossNoteSurfaceRef?: RefObject<HTMLElement>;
+}
+
+function isCursorChatShortcutBlocked(
+  activeElement: Element | null,
+  editorShell: HTMLDivElement | null
+) {
+  if (!activeElement) {
+    return false;
+  }
+
+  if (activeElement.getAttribute("data-testid") === "workspace-page-title") {
+    return false;
+  }
+
+  if (
+    activeElement.closest(
+      "input, textarea, select, button, dialog, [role='dialog'], [contenteditable='true'], [data-grove-dropdown-portal='true']"
+    )
+  ) {
+    return true;
+  }
+
+  if (editorShell?.contains(activeElement)) {
+    return true;
+  }
+
+  if (
+    activeElement.closest(
+      "[data-testid^='db-cell-'], [data-testid='workspace-editor-input']"
+    )
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 export function Editor({
@@ -232,6 +276,16 @@ export function Editor({
   }, [editor, onEditorReady]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.__obnofiEditor = editor ?? null;
+    return () => {
+      if (window.__obnofiEditor === editor) {
+        window.__obnofiEditor = null;
+      }
+    };
+  }, [editor]);
+
+  useEffect(() => {
     return () => {
       const shell = editorShellRef.current;
       if (!shell) return;
@@ -241,7 +295,7 @@ export function Editor({
     };
   }, []);
 
-  const { remotePageCursors, handlePagePointerMove, clearPagePointer } = usePageCursorTracking({
+  const { localPageCursor, remotePageCursors, handlePagePointerMove, clearPagePointer } = usePageCursorTracking({
     ydoc,
     provider,
     pageId,
@@ -250,6 +304,46 @@ export function Editor({
     updateCursor,
     editorShellRef,
   });
+  const {
+    draft: cursorChatDraft,
+    isOpen: isCursorChatOpen,
+    maxLength: cursorChatMaxLength,
+    message: cursorChatMessage,
+    openCursorChat,
+    resetCursorChat,
+    submitCursorChat,
+    updateDraft: updateCursorChatDraft,
+  } = useCursorChat(provider);
+
+  const localCursorChatPosition = useMemo(() => {
+    if (localPageCursor) return localPageCursor;
+    const shell = editorShellRef.current;
+    if (!shell) return null;
+    return {
+      x: Math.min(24, shell.clientWidth),
+      y: Math.min(24, shell.clientHeight),
+    };
+  }, [localPageCursor]);
+
+  useEffect(() => {
+    if (!editable || !provider || !pageId) {
+      return;
+    }
+
+    const handleGlobalCursorChatTrigger = (event: globalThis.KeyboardEvent) => {
+      if (event.defaultPrevented || event.repeat || event.key !== "/") return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (isCursorChatShortcutBlocked(document.activeElement, editorShellRef.current)) return;
+
+      event.preventDefault();
+      openCursorChat();
+    };
+
+    document.addEventListener("keydown", handleGlobalCursorChatTrigger);
+    return () => {
+      document.removeEventListener("keydown", handleGlobalCursorChatTrigger);
+    };
+  }, [editable, openCursorChat, pageId, provider]);
 
   if (!editor) return null;
 
@@ -293,6 +387,19 @@ export function Editor({
           <SlashCommandBroadcast
             awarenessStates={awarenessStates}
             localClientId={localClientId}
+          />
+        ) : null}
+        {localCursorChatPosition && (isCursorChatOpen || cursorChatMessage) ? (
+          <CursorChat
+            color={jungleCursor.color}
+            cursor={localCursorChatPosition}
+            draft={cursorChatDraft}
+            isEditing={isCursorChatOpen}
+            maxLength={cursorChatMaxLength}
+            message={cursorChatMessage}
+            onCancel={resetCursorChat}
+            onChange={updateCursorChatDraft}
+            onSubmit={submitCursorChat}
           />
         ) : null}
         <SpeechInputIndicator

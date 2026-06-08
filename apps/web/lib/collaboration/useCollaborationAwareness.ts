@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { WebsocketProvider } from "y-websocket";
-import type { AwarenessState as CursorAwarenessState, UserCursor } from "@/types/collaboration";
+import type {
+  AwarenessState as CursorAwarenessState,
+  CursorChatState,
+  UserCursor,
+} from "@/types/collaboration";
 import type {
   JungleCursorColorKey,
   JungleCursorVariant,
@@ -20,6 +24,7 @@ interface ProviderAwarenessState {
   cursor?: { anchor?: unknown; head?: unknown } | null;
   userCursor?: UserCursor | null;
   slashCommand?: { query: string } | null;
+  cursorChat?: CursorChatState | null;
 }
 
 export function useCollaborationAwareness(provider: WebsocketProvider | null): {
@@ -63,6 +68,21 @@ export function useCollaborationAwareness(provider: WebsocketProvider | null): {
           | undefined;
         const userCursor = awarenessState.userCursor as UserCursor | null | undefined;
         const slashCommand = awarenessState.slashCommand as { query: string } | null | undefined;
+        const cursorChat =
+          typeof awarenessState.cursorChat?.text === "string" &&
+          (awarenessState.cursorChat?.status === "drafting" ||
+            awarenessState.cursorChat?.status === "sent") &&
+          typeof awarenessState.cursorChat?.updatedAt === "number"
+            ? {
+                text: awarenessState.cursorChat.text,
+                status: awarenessState.cursorChat.status,
+                expiresAt:
+                  typeof awarenessState.cursorChat.expiresAt === "number"
+                    ? awarenessState.cursorChat.expiresAt
+                    : null,
+                updatedAt: awarenessState.cursorChat.updatedAt,
+              }
+            : null;
         const hasTextCursor = Boolean(
           awarenessState.cursor &&
             (awarenessState.cursor.anchor != null || awarenessState.cursor.head != null)
@@ -97,6 +117,7 @@ export function useCollaborationAwareness(provider: WebsocketProvider | null): {
             hasTextCursor,
             userCursor: userCursor ?? null,
             slashCommand: slashCommand ?? null,
+            cursorChat,
             image: awarenessImage,
           });
         }
