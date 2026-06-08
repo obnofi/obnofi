@@ -6,6 +6,8 @@ import {
   resolveWorkspaceForUser,
 } from "@/lib/workspace-resolution";
 
+import { logError } from "@/lib/logger";
+
 export async function GET(request: NextRequest) {
   try {
     const userId = await getAuthenticatedUserId(request);
@@ -44,7 +46,8 @@ export async function GET(request: NextRequest) {
       .filter((item) => item.databaseId !== null);
 
     return NextResponse.json(results);
-  } catch {
+  } catch (error) {
+    logError("GET /api/databases/search", error);
     return NextResponse.json(
       { error: "Failed to search databases" },
       { status: 500 }

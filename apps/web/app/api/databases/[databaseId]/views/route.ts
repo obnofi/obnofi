@@ -3,6 +3,8 @@ import { prisma } from "@obnofi/db";
 import { toView, toPrismaViewType } from "@/lib/prisma-transforms";
 
 // GET /api/databases/[databaseId]/views
+import { logError } from "@/lib/logger";
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ databaseId: string }> }
@@ -25,7 +27,8 @@ export async function GET(
     });
 
     return NextResponse.json(views.map(toView));
-  } catch {
+  } catch (error) {
+    logError("GET /api/databases/[databaseId]/views", error);
     return NextResponse.json(
       { error: "Failed to fetch views" },
       { status: 500 }
@@ -75,7 +78,8 @@ export async function POST(
     });
 
     return NextResponse.json(toView(view), { status: 201 });
-  } catch {
+  } catch (error) {
+    logError("POST /api/databases/[databaseId]/views", error);
     return NextResponse.json(
       { error: "Failed to create view" },
       { status: 500 }

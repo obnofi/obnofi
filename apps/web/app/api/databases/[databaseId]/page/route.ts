@@ -4,6 +4,8 @@ import { fromPrismaPageType } from "@/lib/prisma-transforms";
 
 // GET /api/databases/[databaseId]/page
 // Returns the page info associated with this database
+import { logError } from "@/lib/logger";
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ databaseId: string }> }
@@ -27,7 +29,8 @@ export async function GET(
       title: database.page.title,
       type: fromPrismaPageType(database.page.type),
     });
-  } catch {
+  } catch (error) {
+    logError("GET /api/databases/[databaseId]/page", error);
     return NextResponse.json(
       { error: "Failed to fetch page" },
       { status: 500 }

@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@obnofi/db";
 
+import { logError } from "@/lib/logger";
+
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ pageId: string; userId: string }> }
@@ -20,7 +22,8 @@ export async function DELETE(
     });
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    logError("DELETE /api/pages/[pageId]/collaborators/[userId]", error);
     return NextResponse.json({ error: "Failed to remove collaborator" }, { status: 500 });
   }
 }

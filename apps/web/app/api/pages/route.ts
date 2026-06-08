@@ -32,6 +32,8 @@ async function getNextSiblingOrder(workspaceId: string, parentId: string | null)
   return (lastSibling?.order ?? -PAGE_ORDER_STEP) + PAGE_ORDER_STEP;
 }
 
+import { logError } from "@/lib/logger";
+
 export async function GET(request: NextRequest) {
   try {
     const userId = await getAuthenticatedUserId(request);
@@ -55,7 +57,8 @@ export async function GET(request: NextRequest) {
     });
 
     return jsonWithPrivateReadCache(prismaPages.map(toPage));
-  } catch {
+  } catch (error) {
+    logError("GET /api/pages", error);
     return NextResponse.json(
       { error: "Failed to fetch pages" },
       { status: 500 }

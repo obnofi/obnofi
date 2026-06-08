@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
 import { jsonWithPrivateReadCache } from "@/lib/httpCache";
 
+import { logError } from "@/lib/logger";
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ pageId: string }> }
@@ -40,7 +42,8 @@ export async function GET(
     `;
 
     return jsonWithPrivateReadCache(ancestors);
-  } catch {
+  } catch (error) {
+    logError("GET /api/pages/[pageId]/ancestors", error);
     return NextResponse.json(
       { error: "Failed to fetch page ancestors" },
       { status: 500 }

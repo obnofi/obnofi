@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@obnofi/db";
 
+import { logError } from "@/lib/logger";
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ pageId: string }> }
@@ -34,7 +36,8 @@ export async function GET(
         user: c.user,
       }))
     );
-  } catch {
+  } catch (error) {
+    logError("GET /api/pages/[pageId]/collaborators", error);
     return NextResponse.json({ error: "Failed to fetch collaborators" }, { status: 500 });
   }
 }
@@ -87,7 +90,8 @@ export async function POST(
       createdAt: collaborator.createdAt.toISOString(),
       user: collaborator.user,
     });
-  } catch {
+  } catch (error) {
+    logError("POST /api/pages/[pageId]/collaborators", error);
     return NextResponse.json({ error: "Failed to add collaborator" }, { status: 500 });
   }
 }

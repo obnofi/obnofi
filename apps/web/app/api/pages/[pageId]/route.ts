@@ -13,6 +13,8 @@ import { jsonWithPrivateReadCache } from "@/lib/httpCache";
 import { validatePatchBody, buildPageUpdateData } from "@/lib/api/pageUpdateValidation";
 import { collectPageSubtreeIds, cascadeDeletePages } from "@/lib/api/pageDeleteUtils";
 
+import { logError } from "@/lib/logger";
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ pageId: string }> }
@@ -55,7 +57,8 @@ export async function GET(
     }
 
     return jsonWithPrivateReadCache(toPage(page));
-  } catch {
+  } catch (error) {
+    logError("GET /api/pages/[pageId]", error);
     return NextResponse.json({ error: "Failed to fetch page" }, { status: 500 });
   }
 }

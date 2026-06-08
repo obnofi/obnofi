@@ -6,6 +6,8 @@ import {
 } from "@/lib/database-utils";
 import { toProperty, toPrismaPropertyType } from "@/lib/prisma-transforms";
 
+import { logError } from "@/lib/logger";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -78,7 +80,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(mappedProperty, { status: 201 });
-  } catch {
+  } catch (error) {
+    logError("POST /api/columns", error);
     return NextResponse.json(
       { error: "Failed to create column" },
       { status: 500 }

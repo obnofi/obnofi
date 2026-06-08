@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { buildPublicPageResponse, getSharedPageRecord } from "@/lib/public-pages";
 
+import { logError } from "@/lib/logger";
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ shareId: string }> }
@@ -31,7 +33,8 @@ export async function POST(
     }
 
     return NextResponse.json(publicPage);
-  } catch {
+  } catch (error) {
+    logError("POST /api/public/pages/[shareId]/verify", error);
     return NextResponse.json(
       { error: "Failed to verify password" },
       { status: 500 }

@@ -3,6 +3,8 @@ import { nanoid } from "nanoid";
 import bcrypt from "bcryptjs";
 import { prisma } from "@obnofi/db";
 
+import { logError } from "@/lib/logger";
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ pageId: string }> }
@@ -50,7 +52,8 @@ export async function PATCH(
       shareId: updatedPage.shareId,
       isPublic: updatedPage.isPublic,
     });
-  } catch {
+  } catch (error) {
+    logError("PATCH /api/pages/[pageId]/share", error);
     return NextResponse.json(
       { error: "Failed to update share settings" },
       { status: 500 }

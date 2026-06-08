@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
 import { toPropertyValue } from "@/lib/prisma-transforms";
 
+import { logError } from "@/lib/logger";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -54,7 +56,8 @@ export async function PUT(request: NextRequest) {
     });
 
     return NextResponse.json(toPropertyValue(propertyValue));
-  } catch {
+  } catch (error) {
+    logError("PUT /api/property-values", error);
     return NextResponse.json(
       { error: "Failed to upsert property value" },
       { status: 500 }

@@ -7,6 +7,8 @@ import {
   toView,
 } from "@/lib/prisma-transforms";
 
+import { logError } from "@/lib/logger";
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ databaseId: string }> }
@@ -56,7 +58,8 @@ export async function GET(
     }
 
     return NextResponse.json(toDatabase(database));
-  } catch {
+  } catch (error) {
+    logError("GET /api/databases/[databaseId]", error);
     return NextResponse.json(
       { error: "Failed to fetch database" },
       { status: 500 }
@@ -84,7 +87,8 @@ export async function DELETE(
     await prisma.database.delete({ where: { id: databaseId } });
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    logError("DELETE /api/databases/[databaseId]", error);
     return NextResponse.json(
       { error: "Failed to delete database" },
       { status: 500 }

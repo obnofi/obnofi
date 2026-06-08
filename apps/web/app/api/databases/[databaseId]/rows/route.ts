@@ -11,6 +11,8 @@ import {
 
 const ROW_CREATE_SELECT = PAGE_SELECT_WITH_PROPERTY_VALUES satisfies Prisma.PageSelect;
 
+import { logError } from "@/lib/logger";
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ databaseId: string }> }
@@ -61,7 +63,8 @@ export async function POST(
       { ...mappedPage, propertyValues: mappedPropertyValues },
       { status: 201 }
     );
-  } catch {
+  } catch (error) {
+    logError("POST /api/databases/[databaseId]/rows", error);
     return NextResponse.json(
       { error: "Failed to create row" },
       { status: 500 }

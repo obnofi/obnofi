@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
 import { toProperty, toPrismaPropertyType } from "@/lib/prisma-transforms";
 
+import { logError } from "@/lib/logger";
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ columnId: string }> }
@@ -32,7 +34,8 @@ export async function PATCH(
     });
 
     return NextResponse.json(toProperty(updatedProperty));
-  } catch {
+  } catch (error) {
+    logError("PATCH /api/columns/[columnId]", error);
     return NextResponse.json(
       { error: "Failed to update column" },
       { status: 500 }
@@ -61,7 +64,8 @@ export async function DELETE(
     await prisma.property.delete({ where: { id: columnId } });
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    logError("DELETE /api/columns/[columnId]", error);
     return NextResponse.json(
       { error: "Failed to delete column" },
       { status: 500 }

@@ -6,6 +6,8 @@ import {
   toPrismaViewType,
 } from "@/lib/prisma-transforms";
 
+import { logError } from "@/lib/logger";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -67,7 +69,8 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(toDatabase(fullDb!), { status: 201 });
-  } catch {
+  } catch (error) {
+    logError("POST /api/databases", error);
     return NextResponse.json(
       { error: "Failed to create database" },
       { status: 500 }

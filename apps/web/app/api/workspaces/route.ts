@@ -3,6 +3,8 @@ import { prisma } from "@obnofi/db";
 import { getAuthenticatedUserId } from "@/lib/workspace-resolution";
 import { jsonWithPrivateReadCache } from "@/lib/httpCache";
 
+import { logError } from "@/lib/logger";
+
 export async function GET(request: NextRequest) {
   try {
     const userId = await getAuthenticatedUserId(request);
@@ -50,7 +52,8 @@ export async function GET(request: NextRequest) {
         updatedAt: workspace.updatedAt.toISOString(),
       }))
     );
-  } catch {
+  } catch (error) {
+    logError("GET /api/workspaces", error);
     return NextResponse.json(
       { error: "Failed to fetch workspaces" },
       { status: 500 }
