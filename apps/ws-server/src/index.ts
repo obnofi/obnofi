@@ -3,6 +3,7 @@ import websocket from '@fastify/websocket'
 import type { WebSocket } from 'ws'
 import { setupConnection } from './collaboration/connection.js'
 import { checkPageAccess } from './collaboration/access.js'
+import { flushAllDocs } from './collaboration/docManager.js'
 
 const fastify = Fastify({ logger: true })
 // Yjs 바이너리 업데이트는 압축 효과가 낮고 CPU 비용만 높아서 비활성화
@@ -85,3 +86,23 @@ fastify.listen({ port: 3001, host: '0.0.0.0' }).catch((err) => {
   fastify.log.error(err)
   process.exit(1)
 })
+
+// Graceful shutdown: 배포/재시작(SIGTERM, SIGINT) 시 디바운스 대기 중인 변경을 먼저 flush한 뒤 종료한다.
+// flush를 close보다 먼저 await 해서, 컨테이너가 꺼지는 순간 1초 디바운스 큐에 남아있던 사용자 글이 유실되지 않도록 한다.
+let shuttingDown = false
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return
+  shuttingDown = true
+  fastify.log.info({ signal }, 'graceful shutdown: flushing yjs docs')
+  try {
+    await flushAllDocs()
+    await fastify.close()
+  } catch (err) {
+    fastify.log.error(err)
+  } finally {
+    process.exit(0)
+  }
+}
+
+process.on('SIGTERM', () => { void shutdown('SIGTERM') })
+process.on('SIGINT', () => { void shutdown('SIGINT') })

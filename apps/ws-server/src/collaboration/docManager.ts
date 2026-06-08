@@ -18,7 +18,7 @@ const loadingDocs = new Map<string, Promise<DocEntry>>()
 export function safeSend(conn: WebSocket, msg: Uint8Array): void {
   if (conn.readyState !== 1 /* OPEN */) return
   // backpressure: 버퍼가 가득 찬 느린 클라이언트는 스킵
-  if ((conn as unknown as { bufferedAmount?: number }).bufferedAmount ?? 0 > MAX_BUFFERED_BYTES) return
+  if (((conn as unknown as { bufferedAmount?: number }).bufferedAmount ?? 0) > MAX_BUFFERED_BYTES) return
   conn.send(msg)
 }
 
@@ -83,6 +83,20 @@ export function getOrCreateDoc(docId: string): Promise<DocEntry> {
   const promise = createDoc(docId).finally(() => loadingDocs.delete(docId))
   loadingDocs.set(docId, promise)
   return promise
+}
+
+// 종료 시 디바운스 대기 중인 모든 문서를 즉시 영속화한다.
+// persistDoc은 평소 fire-and-forget이라, 여기서는 await로 완료를 보장해 배포 재시작 데이터 유실을 막는다.
+export async function flushAllDocs(): Promise<void> {
+  await Promise.allSettled(
+    [...docs.entries()].map(([docId, entry]) => {
+      if (entry.persistTimer) {
+        clearTimeout(entry.persistTimer)
+        entry.persistTimer = null
+      }
+      return persistDoc(docId, entry.doc)
+    })
+  )
 }
 
 export function closeConn(entry: DocEntry, conn: WebSocket, docId: string): void {
