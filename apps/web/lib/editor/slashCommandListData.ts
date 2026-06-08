@@ -44,6 +44,14 @@ export const SUBMENU_GROUPS: GroupConfig[] = [
     ],
   },
   {
+    id: "g-media",
+    category: "media",
+    title: "미디어",
+    description: "이미지, 동영상, 오디오, 파일, 북마크",
+    icon: "Image",
+    childIds: ["image", "video", "audio", "file", "bookmark"],
+  },
+  {
     id: "g-toggle-headings",
     category: "advanced",
     title: "토글 제목",
@@ -73,7 +81,15 @@ export const SUBMENU_GROUPS: GroupConfig[] = [
     title: "GitHub",
     description: "Repository, Gist, 이슈, PR",
     icon: "GitGraph",
-    childIds: ["githubEmbed", "githubGist", "githubIssue"],
+    childIds: ["githubEmbed", "githubGist", "githubIssue", "githubPull"],
+  },
+  {
+    id: "g-embed",
+    category: "embed",
+    title: "임베드",
+    description: "링크, Google Drive, Tweet",
+    icon: "Globe",
+    childIds: ["embed", "googleDrive", "tweet"],
   },
 ];
 

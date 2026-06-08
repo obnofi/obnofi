@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePageStore } from "@/store/pageStore";
+import type { Page } from "@obnofi/types";
 import { FileText } from "lucide-react";
 
 interface PageLinkModalProps {
@@ -9,6 +9,7 @@ interface PageLinkModalProps {
   onClose: () => void;
   onSelect: (pageId: string, pageTitle: string) => void;
   workspaceId: string;
+  mode?: "pageLink" | "pageMention";
 }
 
 export function PageLinkModal({
@@ -16,28 +17,44 @@ export function PageLinkModal({
   onClose,
   onSelect,
   workspaceId,
+  mode = "pageLink",
 }: PageLinkModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const { pages, fetchPages } = usePageStore();
+  const [availablePages, setAvailablePages] = useState<Page[]>([]);
 
   useEffect(() => {
     if (isOpen && workspaceId) {
-      // 이미 같은 워크스페이스의 페이지를 가져왔으면 다시 요청하지 않음
-      if (usePageStore.getState().initializedWorkspaceId === workspaceId) return;
-      fetchPages(workspaceId);
+      let cancelled = false;
+
+      const loadPages = async () => {
+        const response = await fetch(`/api/pages?workspaceId=${workspaceId}`);
+        if (!response.ok || cancelled) return;
+
+        const pages = (await response.json()) as Page[];
+        if (!cancelled) {
+          setAvailablePages(pages);
+        }
+      };
+
+      void loadPages();
+
+      return () => {
+        cancelled = true;
+      };
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, workspaceId]);
 
   useEffect(() => {
     if (!isOpen) {
       setSearchQuery("");
+      setAvailablePages([]);
     }
   }, [isOpen]);
 
-  const filteredPages = pages.filter((page) =>
+  const filteredPages = availablePages.filter((page) =>
     page.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const isPageMentionMode = mode === "pageMention";
 
   if (!isOpen) return null;
 
@@ -46,10 +63,12 @@ export function PageLinkModal({
       <div className="w-full max-w-md rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl">
         <div className="border-b border-[var(--color-border)] px-4 py-3">
           <h3 className="text-sm font-medium text-[var(--color-text-primary)]">
-            페이지 링크
+            {isPageMentionMode ? "페이지 멘션" : "페이지 링크"}
           </h3>
           <p className="text-xs text-[var(--color-text-secondary)]">
-            링크할 페이지를 선택하세요
+            {isPageMentionMode
+              ? "[[페이지명]]으로 삽입할 페이지를 선택하세요"
+              : "링크할 페이지를 선택하세요"}
           </p>
         </div>
 
@@ -57,6 +76,7 @@ export function PageLinkModal({
           <input
             type="text"
             placeholder="페이지 검색..."
+            data-testid={`page-selector-input-${mode}`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
@@ -73,6 +93,7 @@ export function PageLinkModal({
             filteredPages.map((page) => (
               <button
                 key={page.id}
+                data-testid={`page-selector-option-${mode}`}
                 onClick={() => {
                   onSelect(page.id, page.title);
                   onClose();

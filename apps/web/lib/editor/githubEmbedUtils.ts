@@ -1,8 +1,48 @@
 export type GitHubEmbedKind = "repository" | "issue" | "pull" | "gist" | "file" | "unknown";
+export type GitHubEmbedVariant =
+  | "githubEmbed"
+  | "githubGist"
+  | "githubIssue"
+  | "githubPull";
+
+type GitHubVariantConfig = {
+  title: string;
+  placeholder: string;
+  actionLabel: string;
+  allowedKinds: GitHubEmbedKind[];
+};
+
+export const GITHUB_EMBED_VARIANTS: Record<GitHubEmbedVariant, GitHubVariantConfig> = {
+  githubEmbed: {
+    title: "GitHub 임베드",
+    placeholder: "Repository, Issue, PR, Gist 링크 붙여넣기",
+    actionLabel: "임베드",
+    allowedKinds: ["repository", "file", "issue", "pull", "gist"],
+  },
+  githubGist: {
+    title: "GitHub Gist",
+    placeholder: "Gist 링크 붙여넣기",
+    actionLabel: "Gist 삽입",
+    allowedKinds: ["gist"],
+  },
+  githubIssue: {
+    title: "GitHub 이슈",
+    placeholder: "GitHub 이슈 링크 붙여넣기",
+    actionLabel: "이슈 삽입",
+    allowedKinds: ["issue"],
+  },
+  githubPull: {
+    title: "GitHub PR",
+    placeholder: "GitHub PR 링크 붙여넣기",
+    actionLabel: "PR 삽입",
+    allowedKinds: ["pull"],
+  },
+};
 
 export type GitHubEmbedAttrs = {
   url: string;
   kind: GitHubEmbedKind;
+  variant: GitHubEmbedVariant;
   owner: string;
   repo: string;
   number: string;
@@ -17,7 +57,10 @@ export function normalizeGitHubUrl(value: string) {
   return `https://${trimmed}`;
 }
 
-export function parseGitHubEmbedUrl(value: string): GitHubEmbedAttrs | null {
+export function parseGitHubEmbedUrl(
+  value: string,
+  variant: GitHubEmbedVariant = "githubEmbed"
+): GitHubEmbedAttrs | null {
   const normalized = normalizeGitHubUrl(value);
   if (!normalized) return null;
 
@@ -31,15 +74,19 @@ export function parseGitHubEmbedUrl(value: string): GitHubEmbedAttrs | null {
       const gistId = parts.length > 1 ? parts[1] : parts[0] ?? "";
       if (!gistId) return null;
 
-      return {
+      const attrs: GitHubEmbedAttrs = {
         url: parsed.toString(),
         kind: "gist",
+        variant,
         owner,
         repo: "",
         number: "",
         gistId,
         title: owner ? `${owner} / ${gistId}` : gistId,
       };
+      return GITHUB_EMBED_VARIANTS[variant].allowedKinds.includes(attrs.kind)
+        ? attrs
+        : null;
     }
 
     if (host !== "github.com" && host !== "www.github.com") {
@@ -50,38 +97,50 @@ export function parseGitHubEmbedUrl(value: string): GitHubEmbedAttrs | null {
     if (!owner || !repo) return null;
 
     if (section === "issues" && number) {
-      return {
+      const attrs: GitHubEmbedAttrs = {
         url: parsed.toString(),
         kind: "issue",
+        variant,
         owner,
         repo,
         number,
         gistId: "",
         title: `${owner}/${repo}#${number}`,
       };
+      return GITHUB_EMBED_VARIANTS[variant].allowedKinds.includes(attrs.kind)
+        ? attrs
+        : null;
     }
 
     if (section === "pull" && number) {
-      return {
+      const attrs: GitHubEmbedAttrs = {
         url: parsed.toString(),
         kind: "pull",
+        variant,
         owner,
         repo,
         number,
         gistId: "",
         title: `${owner}/${repo}#${number}`,
       };
+      return GITHUB_EMBED_VARIANTS[variant].allowedKinds.includes(attrs.kind)
+        ? attrs
+        : null;
     }
 
-    return {
+    const attrs: GitHubEmbedAttrs = {
       url: parsed.toString(),
       kind: section === "blob" || section === "tree" ? "file" : "repository",
+      variant,
       owner,
       repo,
       number: "",
       gistId: "",
       title: `${owner}/${repo}`,
     };
+    return GITHUB_EMBED_VARIANTS[variant].allowedKinds.includes(attrs.kind)
+      ? attrs
+      : null;
   } catch {
     return null;
   }

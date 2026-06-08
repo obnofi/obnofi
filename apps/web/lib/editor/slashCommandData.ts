@@ -14,6 +14,7 @@ export const SUPPORTED_BASIC_MARKDOWN_COMMAND_IDS = new Set([
   "bulletList",
   "orderedList",
   "taskList",
+  "toggleList",
   "blockquote",
   "divider",
 ]);
@@ -23,7 +24,7 @@ export const CATEGORIES = [
   { id: "media", label: "미디어" },
   { id: "code", label: "코드" },
   { id: "database", label: "데이터베이스" },
-  { id: "canvas", label: "캔버스 / 그래프" },
+  { id: "canvas", label: "Canvas" },
   { id: "developer", label: "개발자 특화" },
   { id: "advanced", label: "고급 블록" },
   { id: "page", label: "페이지" },

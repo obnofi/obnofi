@@ -1,22 +1,17 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import {
-  NodeViewWrapper,
-  type ReactNodeViewProps,
-} from "@tiptap/react";
+import { NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { usePageStore } from "@/store/pageStore";
 import { useEmbeddedPageState } from "@/hooks/useEmbeddedPageState";
-import {
-  preventInlineBlockDrag,
-  stopInlineBlockEventPropagation,
-} from "@/lib/editor/inlineBlockInteractions";
+import { preventInlineBlockDrag } from "@/lib/editor/inlineBlockInteractions";
+import type { CanvasBlockAttrs } from "@/components/editor/blocks/CanvasBlockView";
 
-const ClearingBoard = dynamic(
-  () => import("@/components/canvas/ClearingBoard").then((mod) => mod.ClearingBoard),
+const MindGroveBoard = dynamic(
+  () => import("@/components/mindmap/MindGroveBoard").then((mod) => mod.MindGroveBoard),
   {
     ssr: false,
     loading: () => (
@@ -27,14 +22,7 @@ const ClearingBoard = dynamic(
   }
 );
 
-export interface CanvasBlockAttrs {
-  pageId: string | null;
-  workspaceId: string | null;
-  parentPageId: string | null;
-  autoCreate: boolean;
-}
-
-export function CanvasBlockView(props: ReactNodeViewProps) {
+export function MindMapBlockView(props: ReactNodeViewProps) {
   const router = useRouter();
   const attrs = props.node.attrs as CanvasBlockAttrs;
   const { pageId, workspaceId, parentPageId, autoCreate } = attrs;
@@ -48,7 +36,7 @@ export function CanvasBlockView(props: ReactNodeViewProps) {
       : null
   );
 
-  const updateCanvasBlockAttrs = useCallback(
+  const updateMindMapBlockAttrs = useCallback(
     (nextAttrs: Partial<CanvasBlockAttrs>) => {
       const currentProps = propsRef.current;
 
@@ -85,9 +73,9 @@ export function CanvasBlockView(props: ReactNodeViewProps) {
     autoCreate,
     cachedPage: cachedPage ?? null,
     isEditorEditable: props.editor.isEditable,
-    pageType: "canvas",
-    emptyTitle: "Inline Clearing",
-    updateAttrs: updateCanvasBlockAttrs,
+    pageType: "mindmap",
+    emptyTitle: "Inline Mind Map",
+    updateAttrs: updateMindMapBlockAttrs,
   });
 
   return (
@@ -96,27 +84,24 @@ export function CanvasBlockView(props: ReactNodeViewProps) {
       contentEditable={false}
       data-inline-block="true"
       onDragStart={preventInlineBlockDrag}
-      onPointerDown={stopInlineBlockEventPropagation}
-      onMouseDown={stopInlineBlockEventPropagation}
-      onClick={stopInlineBlockEventPropagation}
     >
       <div
-        data-testid="inline-canvas-embed"
+        data-testid="inline-mindmap-embed"
         data-state={
           isLoading ? "loading" : embeddedPage ? "ready" : isCreating ? "creating" : "empty"
         }
-        className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 not-prose dark:border-zinc-800 dark:bg-zinc-900/70"
+        className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] not-prose"
       >
         <div
           data-export-ignore="true"
-          className="flex items-center justify-end gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800"
+          className="flex items-center justify-end gap-2 border-b border-[var(--color-border)] px-4 py-3"
         >
           {workspaceId && embeddedPage ? (
             <button
               type="button"
-              data-testid="inline-canvas-open"
+              data-testid="inline-mindmap-open"
               onClick={() => router.push(`/workspace/${workspaceId}?page=${embeddedPage.id}`)}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
             >
               Open
               <ExternalLink className="h-3.5 w-3.5" />
@@ -125,25 +110,20 @@ export function CanvasBlockView(props: ReactNodeViewProps) {
         </div>
 
         {isLoading ? (
-          <div data-testid="inline-canvas-loading" className="flex h-64 items-center justify-center">
+          <div data-testid="inline-mindmap-loading" className="flex h-64 items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-[#2E7D45]" />
           </div>
         ) : embeddedPage ? (
-          <div data-testid="inline-canvas-ready" className="h-[520px] min-h-[520px]">
-            <ClearingBoard
-              embedded={true}
-              realtimeEnabled={false}
-              roomSlug={embeddedPage.id}
-              title={embeddedPage.title || "Inline Clearing"}
-            />
+          <div data-testid="inline-mindmap-ready" className="h-[520px] min-h-[520px]">
+            <MindGroveBoard pageId={embeddedPage.id} initialContent={embeddedPage.content ?? null} />
           </div>
         ) : (
-          <div data-testid="inline-canvas-empty" className="px-4 py-8 text-sm text-zinc-500 dark:text-zinc-400">
+          <div data-testid="inline-mindmap-empty" className="px-4 py-8 text-sm text-[var(--color-text-secondary)]">
             {isCreating
-              ? "Creating Clearing..."
+              ? "Creating Mind Map..."
               : props.editor.isEditable
-              ? "Clearing is being prepared."
-              : "Clearing preview unavailable."}
+              ? "Mind Map is being prepared."
+              : "Mind Map preview unavailable."}
           </div>
         )}
       </div>

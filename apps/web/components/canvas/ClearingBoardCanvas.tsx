@@ -12,7 +12,8 @@ import { ClearingToolbar } from "@/components/toolbar/ClearingToolbar";
 import { isImageDrop } from "@/lib/imageUpload";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/canvas/clearingBoardConstants";
 import { useJungleCursor } from "@/lib/cursor/jungleCursor";
-import { useCanvasStore } from "@/store/useCanvasStore";
+import { shouldFocusInlineBlockSurface } from "@/lib/editor/inlineBlockInteractions";
+import { useCanvasStore, type CanvasTool, type Viewport } from "@/store/useCanvasStore";
 import { Waypoints } from "lucide-react";
 import type { Comment, Element, User } from "@obnofi/types/clearing";
 import type { ConnectorHandlePosition } from "@/components/elements/ConnectorHandles";
@@ -32,8 +33,8 @@ type ClearingBoardCanvasProps = {
   currentUserRef: RefObject<User | null>;
   currentRoomRef: RefObject<{ id: string } | null>;
   lastScenePointRef: RefObject<{ x: number; y: number }>;
-  viewport: { x: number; y: number; zoom: number; scale?: number };
-  tool: string;
+  viewport: Viewport;
+  tool: CanvasTool;
   lineStyle: string;
   elements: Element[];
   elementLookup: Record<string, Element>;
@@ -130,7 +131,8 @@ export function ClearingBoardCanvas({
 
       <div
         ref={boardRef}
-        className="absolute inset-0 overflow-hidden"
+        className="absolute inset-0 overflow-hidden outline-none"
+        tabIndex={embedded ? 0 : -1}
         style={{ cursor: jungleCursor.cursorCss }}
         onDragOver={(e) => { if (isImageDrop(e.dataTransfer)) e.preventDefault(); }}
         onDrop={(e) => {
@@ -144,7 +146,12 @@ export function ClearingBoardCanvas({
           if (selectedIds.length === 0) return;
           onContextMenu(e.clientX, e.clientY);
         }}
-        onPointerDown={onPointerDown}
+        onPointerDown={(event) => {
+          if (embedded && shouldFocusInlineBlockSurface(event.target)) {
+            event.currentTarget.focus({ preventScroll: true });
+          }
+          onPointerDown(event);
+        }}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerLeave}

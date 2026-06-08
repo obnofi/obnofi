@@ -121,6 +121,10 @@ export async function uploadGroveImageAsset(file: File, pageId: string) {
   return uploadPublicAsset(file, `grove-images/${pageId}`);
 }
 
+export async function uploadGroveMediaAsset(file: File, pageId: string) {
+  return uploadPublicAsset(file, `grove-media/${pageId}`);
+}
+
 export async function uploadPageCanopyAsset(file: File, pageId: string) {
   return uploadPublicAsset(file, `page-canopies/${pageId}`);
 }

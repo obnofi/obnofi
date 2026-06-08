@@ -7,9 +7,13 @@ import {
   BULLET_LIST_PATTERN,
   ORDERED_LIST_PATTERN,
   BLOCKQUOTE_PATTERN,
+  DETAILS_OPEN_PATTERN,
+  DETAILS_CLOSE_PATTERN,
+  DETAILS_SUMMARY_PATTERN,
 } from "./markdown/patterns";
 import { parseInlineMarkdown, type TiptapNode } from "./markdown/inlineParsers";
 import {
+  createParagraphNode,
   consumeCodeBlock,
   consumeTaskList,
   consumeBulletList,
@@ -40,13 +44,7 @@ function clampMarkdownSource(markdown: string) {
   return lines.slice(0, MAX_MARKDOWN_SOURCE_LINES).join("\n");
 }
 
-export function markdownToTiptap(markdown: string): object {
-  const normalized = clampMarkdownSource(markdown);
-  if (!normalized) {
-    return { type: "doc", content: [{ type: "paragraph" }] };
-  }
-
-  const lines = normalized.split("\n");
+function parseMarkdownBlocks(lines: string[]): TiptapNode[] {
   const content: TiptapNode[] = [];
   let index = 0;
 
@@ -83,6 +81,55 @@ export function markdownToTiptap(markdown: string): object {
       continue;
     }
 
+    if (DETAILS_OPEN_PATTERN.test(trimmedLine)) {
+      const openingLine = trimmedLine;
+      let nextIndex = index + 1;
+      let summary = "";
+
+      if (nextIndex < lines.length) {
+        const summaryMatch = lines[nextIndex].trim().match(DETAILS_SUMMARY_PATTERN);
+        if (summaryMatch) {
+          summary = summaryMatch[1].trim();
+          nextIndex += 1;
+        }
+      }
+
+      const bodyLines: string[] = [];
+      let depth = 1;
+
+      while (nextIndex < lines.length) {
+        const candidate = lines[nextIndex].trim();
+
+        if (DETAILS_OPEN_PATTERN.test(candidate)) {
+          depth += 1;
+        } else if (DETAILS_CLOSE_PATTERN.test(candidate)) {
+          depth -= 1;
+          if (depth === 0) {
+            nextIndex += 1;
+            break;
+          }
+        }
+
+        bodyLines.push(lines[nextIndex]);
+        nextIndex += 1;
+      }
+
+      const bodyContent = parseMarkdownBlocks(bodyLines).filter(
+        (node) => node.type !== "paragraph" || Array.isArray(node.content)
+      );
+
+      content.push({
+        type: "toggleBlock",
+        attrs: {
+          summary,
+          open: /\sopen(?:=|>|\s|$)/i.test(openingLine),
+        },
+        content: bodyContent.length > 0 ? bodyContent : [createParagraphNode("")],
+      });
+      index = nextIndex;
+      continue;
+    }
+
     // Block parsers are checked in explicit priority order so overlapping regexes stay predictable.
     if (TASK_LIST_PATTERN.test(line)) {
       const result = consumeTaskList(lines, index);
@@ -116,6 +163,18 @@ export function markdownToTiptap(markdown: string): object {
     content.push(result.node);
     index = result.nextIndex;
   }
+
+  return content;
+}
+
+export function markdownToTiptap(markdown: string): object {
+  const normalized = clampMarkdownSource(markdown);
+  if (!normalized) {
+    return { type: "doc", content: [{ type: "paragraph" }] };
+  }
+
+  const lines = normalized.split("\n");
+  const content = parseMarkdownBlocks(lines);
 
   return normalizeTiptapDocument({
     type: "doc",

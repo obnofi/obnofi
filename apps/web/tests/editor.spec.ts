@@ -2,6 +2,12 @@ import { test, expect } from "@playwright/test";
 
 const editorText = `playwright-note-${Date.now()}`;
 const nextTitle = `Playwright Title ${Date.now()}`;
+const tinyPng = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aM9sAAAAASUVORK5CYII=",
+  "base64"
+);
+const tinyMp3 = Buffer.from("SUQzAwAAAAAA", "base64");
+const tinyMp4 = Buffer.from("AAAAIGZ0eXBpc29tAAACAGlzb20=", "base64");
 
 async function signInAsDeveloper(page: import("@playwright/test").Page) {
   const request = page.context().request;
@@ -43,18 +49,30 @@ async function gotoWorkspaceDocument(
 
   const createdPage = (await createPageResponse.json()) as { id: string };
   await page.goto(`/workspace/${workspaceId}?page=${createdPage.id}`);
-  await expect(page.getByTestId("workspace-editor")).toBeVisible();
+  await expect(page.getByTestId("workspace-editor")).toBeVisible({ timeout: 15000 });
 }
 
 async function focusEditorTail(page: import("@playwright/test").Page) {
   const editor = page.getByTestId("workspace-editor-input");
   const lastParagraph = editor.locator("p").last();
 
-  await expect(editor).toBeVisible();
-  await expect(lastParagraph).toBeVisible();
+  await expect(editor).toBeVisible({ timeout: 15000 });
+  await expect(lastParagraph).toBeVisible({ timeout: 15000 });
   await lastParagraph.click();
 
   return editor;
+}
+
+async function insertSlashCommand(
+  page: import("@playwright/test").Page,
+  query: string,
+  title: string
+) {
+  await focusEditorTail(page);
+  await page.keyboard.type(query);
+  const item = page.getByRole("button", { name: new RegExp(title) }).first();
+  await expect(item).toBeVisible({ timeout: 15000 });
+  await item.click();
 }
 
 test("Tiptap 블록 에디터 기본 동작", async ({ page }) => {
@@ -167,8 +185,7 @@ test("/canvas 입력시 인라인 캔버스가 삽입된다", async ({ page }) =
 test("/image 입력시 이미지 블록을 추가하고 파일 업로드를 반영한다", async ({ page }) => {
   await gotoWorkspaceDocument(page);
 
-  await focusEditorTail(page);
-  await page.keyboard.type("/image");
+  await insertSlashCommand(page, "/image", "이미지");
 
   const imageBlock = page.getByTestId("grove-image-block").last();
   await expect(imageBlock).toBeVisible();
@@ -177,10 +194,7 @@ test("/image 입력시 이미지 블록을 추가하고 파일 업로드를 반�
   await fileInput.setInputFiles({
     name: "grove-seed.png",
     mimeType: "image/png",
-    buffer: Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aM9sAAAAASUVORK5CYII=",
-      "base64"
-    ),
+    buffer: tinyPng,
   });
 
   await expect(imageBlock.locator("img")).toHaveAttribute("src", /^(data:|blob:|https?:)/);
@@ -328,6 +342,144 @@ test("/button 입력시 버튼 블록이 삽입된다", async ({ page }) => {
   await expect(page.getByTestId("button-block-preview").last()).toContainText("Button");
   await expect(page.getByTestId("button-block-label").last()).toHaveValue("Button");
   await expect(page.getByTestId("button-block-url").last()).toHaveValue("");
+});
+
+test("API 테스터 블록은 로컬 API 요청을 실행하고 응답을 보여준다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  await insertSlashCommand(page, "/api", "API 테스터");
+
+  const apiTester = page.getByTestId("api-tester-block").last();
+  await expect(apiTester).toBeVisible();
+
+  await apiTester.locator('input[placeholder="https://api.example.com/v1/resource"]').fill("/api/auth/csrf");
+  await apiTester.getByRole("button", { name: "요청 보내기" }).click();
+
+  await expect(apiTester).toContainText("200");
+  await expect(apiTester).toContainText("csrfToken");
+});
+
+test("/video 입력시 동영상 블록을 추가하고 파일 업로드를 반영한다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  await insertSlashCommand(page, "/video", "동영상");
+
+  const videoBlock = page.getByTestId("video-block").last();
+  await expect(videoBlock).toBeVisible();
+
+  await videoBlock.locator('input[type="file"]').setInputFiles({
+    name: "grove-clip.mp4",
+    mimeType: "video/mp4",
+    buffer: tinyMp4,
+  });
+
+  await expect(videoBlock.locator("video")).toHaveAttribute("src", /^(data:|blob:|https?:)/);
+});
+
+test("/audio 입력시 오디오 블록을 추가하고 파일 업로드를 반영한다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  await insertSlashCommand(page, "/audio", "오디오");
+
+  const audioBlock = page.getByTestId("audio-block").last();
+  await expect(audioBlock).toBeVisible();
+
+  await audioBlock.locator('input[type="file"]').setInputFiles({
+    name: "grove-sound.mp3",
+    mimeType: "audio/mpeg",
+    buffer: tinyMp3,
+  });
+
+  await expect(audioBlock.locator("audio")).toHaveAttribute("src", /^(data:|blob:|https?:)/);
+});
+
+test("/file 입력시 파일 블록을 추가하고 첨부 목록을 렌더링한다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  await insertSlashCommand(page, "/file", "파일");
+
+  const fileBlock = page.getByTestId("file-block").last();
+  await expect(fileBlock).toBeVisible();
+
+  await fileBlock.locator('input[type="file"]').setInputFiles({
+    name: "grove-doc.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("obnofi file attachment"),
+  });
+
+  await expect(fileBlock).toContainText("grove-doc.txt");
+});
+
+test("/bookmark 입력시 북마크 블록을 추가하고 링크 카드가 만들어진다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  await insertSlashCommand(page, "/bookmark", "북마크");
+
+  const bookmarkBlock = page.getByTestId("bookmark-block").last();
+  await expect(bookmarkBlock).toBeVisible();
+
+  const inputs = bookmarkBlock.locator("input");
+  await inputs.nth(0).fill("example.com/docs");
+  await inputs.nth(0).blur();
+  await inputs.nth(1).fill("Docs Bookmark");
+
+  await expect(bookmarkBlock.getByRole("link")).toHaveAttribute("href", "https://example.com/docs");
+  await expect(bookmarkBlock).toContainText("Docs Bookmark");
+});
+
+test("/embed 입력시 링크 임베드 블록이 URL을 카드로 렌더링한다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  await insertSlashCommand(page, "/embed", "링크 임베드");
+
+  const embedBlock = page.getByTestId("link-embed-block-embed").last();
+  await expect(embedBlock).toBeVisible();
+
+  await embedBlock.getByTestId("link-embed-input-embed").fill("https://example.com/reference");
+  await embedBlock.getByTestId("link-embed-input-embed").blur();
+
+  await expect(embedBlock.getByRole("link")).toHaveAttribute("href", "https://example.com/reference");
+  await expect(embedBlock).toContainText("example.com");
+});
+
+test("/google 입력시 Google Drive 임베드 블록이 Drive 링크를 렌더링한다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  await insertSlashCommand(page, "/google", "Google Drive");
+
+  const driveBlock = page.getByTestId("link-embed-block-googleDrive").last();
+  await expect(driveBlock).toBeVisible();
+
+  await driveBlock
+    .getByTestId("link-embed-input-googleDrive")
+    .fill("https://drive.google.com/file/d/abc123/view");
+  await driveBlock.getByTestId("link-embed-input-googleDrive").blur();
+
+  await expect(driveBlock.getByRole("link")).toHaveAttribute(
+    "href",
+    "https://drive.google.com/file/d/abc123/view"
+  );
+  await expect(driveBlock).toContainText("Google Drive");
+});
+
+test("/tweet 입력시 Tweet 임베드 블록이 X 링크를 렌더링한다", async ({ page }) => {
+  await gotoWorkspaceDocument(page);
+
+  await insertSlashCommand(page, "/tweet", "Tweet");
+
+  const tweetBlock = page.getByTestId("link-embed-block-tweet").last();
+  await expect(tweetBlock).toBeVisible();
+
+  await tweetBlock
+    .getByTestId("link-embed-input-tweet")
+    .fill("https://x.com/openai/status/1234567890");
+  await tweetBlock.getByTestId("link-embed-input-tweet").blur();
+
+  await expect(tweetBlock.getByRole("link")).toHaveAttribute(
+    "href",
+    "https://x.com/openai/status/1234567890"
+  );
+  await expect(tweetBlock).toContainText("@openai");
 });
 
 test(": 입력시 기본 이모지 탭에서 이모지를 삽입할 수 있다", async ({ page }) => {

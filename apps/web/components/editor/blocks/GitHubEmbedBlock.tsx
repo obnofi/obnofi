@@ -9,15 +9,22 @@ import {
 } from "@tiptap/react";
 import { ExternalLink, GitGraph } from "lucide-react";
 import {
+  GITHUB_EMBED_VARIANTS,
   getGitHubEmbedMeta,
   parseGitHubEmbedUrl,
   type GitHubEmbedAttrs,
+  type GitHubEmbedVariant,
 } from "@/lib/editor/githubEmbedUtils";
 
 function GitHubEmbedBlockView(props: ReactNodeViewProps) {
   const attrs = props.node.attrs as GitHubEmbedAttrs;
+  const variant = attrs.variant ?? "githubEmbed";
+  const variantConfig = GITHUB_EMBED_VARIANTS[variant];
   const [draftUrl, setDraftUrl] = useState(attrs.url ?? "");
-  const parsedDraft = useMemo(() => parseGitHubEmbedUrl(draftUrl), [draftUrl]);
+  const parsedDraft = useMemo(
+    () => parseGitHubEmbedUrl(draftUrl, variant),
+    [draftUrl, variant]
+  );
   const hasUrl = Boolean(attrs.url);
   const isEditable = props.editor.isEditable;
   const meta = getGitHubEmbedMeta(attrs);
@@ -59,18 +66,20 @@ function GitHubEmbedBlockView(props: ReactNodeViewProps) {
             </span>
             <input
               aria-label="GitHub URL"
+              data-testid={`github-embed-input-${variant}`}
               className="grove-github-embed__input"
-              placeholder="GitHub 링크 붙여넣기"
+              placeholder={variantConfig.placeholder}
               value={draftUrl}
               onMouseDown={(event) => event.stopPropagation()}
               onChange={(event) => setDraftUrl(event.target.value)}
             />
             <button
               className="grove-github-embed__button"
+              data-testid={`github-embed-submit-${variant}`}
               type="submit"
               disabled={!parsedDraft}
             >
-              임베드
+              {variantConfig.actionLabel}
             </button>
           </form>
         ) : null}
@@ -90,6 +99,7 @@ export const GitHubEmbedBlock = Node.create({
     return {
       url: { default: "" },
       kind: { default: "unknown" },
+      variant: { default: "githubEmbed" },
       owner: { default: "" },
       repo: { default: "" },
       number: { default: "" },
@@ -118,20 +128,42 @@ export const GitHubEmbedBlock = Node.create({
       insertGitHubEmbedBlock:
         (attrs?: Partial<GitHubEmbedAttrs>) =>
         ({ commands }) => {
-          const parsedAttrs = attrs?.url ? parseGitHubEmbedUrl(attrs.url) : null;
+          const variant = attrs?.variant ?? "githubEmbed";
+          const parsedAttrs = attrs?.url ? parseGitHubEmbedUrl(attrs.url, variant) : null;
 
           return commands.insertContent({
             type: this.name,
-            attrs: parsedAttrs ?? attrs ?? {},
+            attrs: parsedAttrs ?? { variant, ...(attrs ?? {}) },
           });
         },
+      insertGitHubGistBlock:
+        () =>
+        ({ commands }) =>
+          commands.insertContent({
+            type: this.name,
+            attrs: { variant: "githubGist" },
+          }),
+      insertGitHubIssueBlock:
+        () =>
+        ({ commands }) =>
+          commands.insertContent({
+            type: this.name,
+            attrs: { variant: "githubIssue" },
+          }),
+      insertGitHubPullBlock:
+        () =>
+        ({ commands }) =>
+          commands.insertContent({
+            type: this.name,
+            attrs: { variant: "githubPull" },
+          }),
     };
   },
 
   addInputRules() {
     return [
       new InputRule({
-        find: /(?:^|\s)\/(?:github|gist|pr)$/,
+        find: /(?:^|\s)\/github$/,
         handler: ({ state, range, chain }) => {
           const from = range.from;
           const to = range.to;
@@ -142,7 +174,58 @@ export const GitHubEmbedBlock = Node.create({
             .deleteRange({ from: deleteFrom, to })
             .insertContent({
               type: this.name,
-              attrs: {},
+              attrs: { variant: "githubEmbed" satisfies GitHubEmbedVariant },
+            })
+            .run();
+        },
+      }),
+      new InputRule({
+        find: /(?:^|\s)\/gist$/,
+        handler: ({ state, range, chain }) => {
+          const from = range.from;
+          const to = range.to;
+          const prefix = state.doc.textBetween(Math.max(0, from - 1), from, "\n", "\0");
+          const deleteFrom = prefix === " " ? from - 1 : from;
+
+          chain()
+            .deleteRange({ from: deleteFrom, to })
+            .insertContent({
+              type: this.name,
+              attrs: { variant: "githubGist" satisfies GitHubEmbedVariant },
+            })
+            .run();
+        },
+      }),
+      new InputRule({
+        find: /(?:^|\s)\/issue$/,
+        handler: ({ state, range, chain }) => {
+          const from = range.from;
+          const to = range.to;
+          const prefix = state.doc.textBetween(Math.max(0, from - 1), from, "\n", "\0");
+          const deleteFrom = prefix === " " ? from - 1 : from;
+
+          chain()
+            .deleteRange({ from: deleteFrom, to })
+            .insertContent({
+              type: this.name,
+              attrs: { variant: "githubIssue" satisfies GitHubEmbedVariant },
+            })
+            .run();
+        },
+      }),
+      new InputRule({
+        find: /(?:^|\s)\/pr$/,
+        handler: ({ state, range, chain }) => {
+          const from = range.from;
+          const to = range.to;
+          const prefix = state.doc.textBetween(Math.max(0, from - 1), from, "\n", "\0");
+          const deleteFrom = prefix === " " ? from - 1 : from;
+
+          chain()
+            .deleteRange({ from: deleteFrom, to })
+            .insertContent({
+              type: this.name,
+              attrs: { variant: "githubPull" satisfies GitHubEmbedVariant },
             })
             .run();
         },
@@ -155,6 +238,9 @@ declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     githubEmbedBlock: {
       insertGitHubEmbedBlock: (attrs?: Partial<GitHubEmbedAttrs>) => ReturnType;
+      insertGitHubGistBlock: () => ReturnType;
+      insertGitHubIssueBlock: () => ReturnType;
+      insertGitHubPullBlock: () => ReturnType;
     };
   }
 }

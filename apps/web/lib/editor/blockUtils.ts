@@ -19,6 +19,7 @@ export const actionableParentNames = new Set([
   "groveColumn",
   "bulletList",
   "orderedList",
+  "toggleBlock",
 ]);
 
 export const actionableNodeNames = [
@@ -26,6 +27,7 @@ export const actionableNodeNames = [
   "heading",
   "listItem",
   "blockquote",
+  "toggleBlock",
   "horizontalRule",
   "codeBlock",
   "databaseNode",
@@ -33,6 +35,7 @@ export const actionableNodeNames = [
   "canvasEmbed",
   "buttonBlock",
   "linkedDatabaseEmbed",
+  "apiTesterBlock",
   "githubEmbedBlock",
   "groveImageBlock",
   "linkEmbedBlock",
@@ -40,7 +43,10 @@ export const actionableNodeNames = [
   "fileDropBlock",
   "groveTableBlock",
   "mathBlock",
+  "videoBlock",
+  "audioBlock",
   "subPageEmbed",
+  "bookmarkBlock",
   "columnLayout",
 ];
 

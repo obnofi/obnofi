@@ -1,45 +1,6 @@
 import type { SlashCommandItem } from "@/lib/editor/slashCommandTypes";
 
 export const extendedSlashCommands: SlashCommandItem[] = [
-  // ── 캔버스 / 그래프 (obnofi 전용) ────────────────────────────
-  {
-    id: "mindMap",
-    title: "마인드 맵",
-    description: "FigJam 스타일 노드 기반 Clearing을 인라인 블록으로 삽입",
-    icon: "Waypoints",
-    category: "canvas",
-    isObnofi: true,
-    keywords: ["mindmap", "mind map", "node", "vine", "마인드맵", "마인드 맵", "노드", "브레인스토밍"],
-  },
-  {
-    id: "canvas",
-    title: "Clearing",
-    description: "FigJam 스타일 무한 캔버스를 인라인 블록으로 삽입",
-    icon: "PenTool",
-    category: "canvas",
-    isObnofi: true,
-    keywords: ["canvas", "clearing", "figjam", "draw", "캔버스", "클리어링", "그리기"],
-  },
-  {
-    id: "dbDiagram",
-    title: "DB 다이어그램",
-    description: "SQL ↔ ERD 양방향 동기화 다이어그램",
-    icon: "Database",
-    category: "canvas",
-    isObnofi: true,
-    keywords: ["er", "diagram", "erd", "db", "diagram", "sql", "다이어그램", "데이터베이스"],
-  },
-  {
-    id: "graphView",
-    title: "그래프 뷰",
-    description: "페이지 연결 그래프",
-    icon: "Network",
-    category: "canvas",
-    isDisabled: true,
-    isObnofi: true,
-    keywords: ["graph", "network", "그래프"],
-  },
-
   // ── 개발자 특화 (obnofi 전용) ─────────────────────────────────
   {
     id: "apiTester",
@@ -47,7 +8,6 @@ export const extendedSlashCommands: SlashCommandItem[] = [
     description: "HTTP 요청 테스트",
     icon: "Zap",
     category: "developer",
-    isDisabled: true,
     isObnofi: true,
     keywords: ["api", "http", "rest", "테스터"],
   },
@@ -71,12 +31,21 @@ export const extendedSlashCommands: SlashCommandItem[] = [
   },
   {
     id: "githubIssue",
-    title: "GitHub 이슈 / PR",
-    description: "이슈 또는 PR 임베드",
+    title: "GitHub 이슈",
+    description: "이슈 링크 임베드",
     icon: "GitPullRequest",
     category: "developer",
     isObnofi: true,
-    keywords: ["issue", "pr", "github", "이슈"],
+    keywords: ["issue", "github", "이슈"],
+  },
+  {
+    id: "githubPull",
+    title: "GitHub PR",
+    description: "Pull request 링크 임베드",
+    icon: "GitPullRequest",
+    category: "developer",
+    isObnofi: true,
+    keywords: ["pr", "pull request", "github", "풀리퀘스트"],
   },
 
   // ── 고급 블록 ────────────────────────────────────────────────
@@ -190,6 +159,24 @@ export const extendedSlashCommands: SlashCommandItem[] = [
     keywords: ["page", "subpage", "하위", "페이지", "서브"],
   },
 
+  // ── Clearing / MindGrove ───────────────────────────────────
+  {
+    id: "canvas",
+    title: "Clearing",
+    description: "인라인 Clearing 보드 삽입",
+    icon: "Palette",
+    category: "canvas",
+    keywords: ["clearing", "canvas", "board", "화이트보드", "캔버스"],
+  },
+  {
+    id: "mindMap",
+    title: "Mind Map",
+    description: "인라인 Mind Map 삽입",
+    icon: "Network",
+    category: "canvas",
+    keywords: ["mindmap", "mind map", "map", "mindgrove", "마인드맵"],
+  },
+
   // ── 임베드 ──────────────────────────────────────────────────
   {
     id: "embed",
@@ -197,7 +184,6 @@ export const extendedSlashCommands: SlashCommandItem[] = [
     description: "URL을 임베드로 삽입",
     icon: "Globe",
     category: "embed",
-    isDisabled: true,
     keywords: ["embed", "url", "link", "임베드"],
   },
   {
@@ -206,7 +192,6 @@ export const extendedSlashCommands: SlashCommandItem[] = [
     description: "구글 드라이브 파일 임베드",
     icon: "HardDrive",
     category: "embed",
-    isDisabled: true,
     keywords: ["google", "drive", "구글"],
   },
   {
@@ -215,7 +200,6 @@ export const extendedSlashCommands: SlashCommandItem[] = [
     description: "트위터/X 게시물 임베드",
     icon: "MessageSquare",
     category: "embed",
-    isDisabled: true,
     keywords: ["tweet", "twitter", "x", "트위터"],
   },
 

@@ -91,13 +91,12 @@ export const coreSlashCommands: SlashCommandItem[] = [
   },
   {
     id: "toggleList",
-    title: "토글 목록",
-    description: "접을 수 있는 목록",
+    title: "토글",
+    description: "접고 펼칠 수 있는 블록",
     icon: "ChevronRight",
     category: "basic",
-    shortcut: "gt",
-    isDisabled: true,
-    keywords: ["toggle", "토글", "접기"],
+    shortcut: "details",
+    keywords: ["toggle", "details", "summary", "토글", "접기"],
   },
   {
     id: "blockquote",
@@ -160,7 +159,6 @@ export const coreSlashCommands: SlashCommandItem[] = [
     description: "동영상 업로드 또는 URL 삽입",
     icon: "Video",
     category: "media",
-    isDisabled: true,
     keywords: ["video", "movie", "동영상"],
   },
   {
@@ -169,7 +167,6 @@ export const coreSlashCommands: SlashCommandItem[] = [
     description: "오디오 파일 업로드",
     icon: "Music",
     category: "media",
-    isDisabled: true,
     keywords: ["audio", "sound", "오디오", "음악"],
   },
   {
@@ -178,7 +175,6 @@ export const coreSlashCommands: SlashCommandItem[] = [
     description: "파일 첨부",
     icon: "Paperclip",
     category: "media",
-    isDisabled: true,
     keywords: ["file", "attachment", "파일", "첨부"],
   },
   {
@@ -187,7 +183,6 @@ export const coreSlashCommands: SlashCommandItem[] = [
     description: "링크를 북마크로 저장",
     icon: "Bookmark",
     category: "media",
-    isDisabled: true,
     keywords: ["bookmark", "link", "북마크"],
   },
 

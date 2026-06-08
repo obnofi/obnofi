@@ -49,6 +49,7 @@ interface UseSlashCommandSelectOptions {
   onLinkDatabase?: () => void;
   onInsertButton?: () => void;
   onInsertPageLink?: () => void;
+  onInsertPageMention?: () => void;
 }
 
 export function useSlashCommandSelect({
@@ -59,6 +60,7 @@ export function useSlashCommandSelect({
   onLinkDatabase,
   onInsertButton,
   onInsertPageLink,
+  onInsertPageMention,
 }: UseSlashCommandSelectOptions) {
   const router = useRouter();
   const { createPage } = usePageStore();
@@ -105,6 +107,15 @@ export function useSlashCommandSelect({
             .toggleTaskList()
             .run();
           break;
+        case "toggleList":
+          (
+            chain as typeof chain & {
+              insertToggleBlock: (attrs?: { summary?: string; open?: boolean }) => typeof chain;
+            }
+          )
+            .insertToggleBlock()
+            .run();
+          break;
         case "blockquote":
           chain.toggleBlockquote().run();
           break;
@@ -125,12 +136,56 @@ export function useSlashCommandSelect({
             .insertGroveImageBlock()
             .run();
           break;
+        case "video":
+          (
+            chain as typeof chain & {
+              insertVideoBlock: () => typeof chain;
+            }
+          )
+            .insertVideoBlock()
+            .run();
+          break;
+        case "audio":
+          (
+            chain as typeof chain & {
+              insertAudioBlock: () => typeof chain;
+            }
+          )
+            .insertAudioBlock()
+            .run();
+          break;
+        case "file":
+          (
+            chain as typeof chain & {
+              insertFileDropBlock: () => typeof chain;
+            }
+          )
+            .insertFileDropBlock()
+            .run();
+          break;
+        case "bookmark":
+          (
+            chain as typeof chain & {
+              insertBookmarkBlock: () => typeof chain;
+            }
+          )
+            .insertBookmarkBlock()
+            .run();
+          break;
         case "dbTable":
           chain.insertDatabaseEmbed().run();
           break;
         case "canvas":
-        case "mindMap":
           chain.insertCanvasEmbed().run();
+          break;
+        case "mindMap":
+          (
+            chain as typeof chain & {
+              insertMindMapEmbed: () => typeof chain;
+            }
+          )
+            .insertMindMapEmbed()
+            .run();
           break;
         case "dbDiagram":
           (chain as typeof chain & { insertDbDiagram: () => typeof chain })
@@ -138,14 +193,75 @@ export function useSlashCommandSelect({
             .run();
           break;
         case "githubEmbed":
-        case "githubGist":
-        case "githubIssue":
           (
             chain as typeof chain & {
               insertGitHubEmbedBlock: () => typeof chain;
             }
           )
             .insertGitHubEmbedBlock()
+            .run();
+          break;
+        case "githubGist":
+          (
+            chain as typeof chain & {
+              insertGitHubGistBlock: () => typeof chain;
+            }
+          )
+            .insertGitHubGistBlock()
+            .run();
+          break;
+        case "githubIssue":
+          (
+            chain as typeof chain & {
+              insertGitHubIssueBlock: () => typeof chain;
+            }
+          )
+            .insertGitHubIssueBlock()
+            .run();
+          break;
+        case "githubPull":
+          (
+            chain as typeof chain & {
+              insertGitHubPullBlock: () => typeof chain;
+            }
+          )
+            .insertGitHubPullBlock()
+            .run();
+          break;
+        case "apiTester":
+          (
+            chain as typeof chain & {
+              insertApiTesterBlock: () => typeof chain;
+            }
+          )
+            .insertApiTesterBlock()
+            .run();
+          break;
+        case "embed":
+          (
+            chain as typeof chain & {
+              insertLinkEmbedBlock: () => typeof chain;
+            }
+          )
+            .insertLinkEmbedBlock()
+            .run();
+          break;
+        case "googleDrive":
+          (
+            chain as typeof chain & {
+              insertGoogleDriveBlock: () => typeof chain;
+            }
+          )
+            .insertGoogleDriveBlock()
+            .run();
+          break;
+        case "tweet":
+          (
+            chain as typeof chain & {
+              insertTweetBlock: () => typeof chain;
+            }
+          )
+            .insertTweetBlock()
             .run();
           break;
         case "columns2":
@@ -166,9 +282,12 @@ export function useSlashCommandSelect({
           onLinkDatabase?.();
           break;
         case "pageLink":
-        case "pageMention":
           chain.run();
           onInsertPageLink?.();
+          return;
+        case "pageMention":
+          chain.run();
+          onInsertPageMention?.();
           return;
         case "template-meeting":
           chain.run();
@@ -222,6 +341,7 @@ export function useSlashCommandSelect({
       onLinkDatabase,
       onInsertButton,
       onInsertPageLink,
+      onInsertPageMention,
     ]
   );
 }

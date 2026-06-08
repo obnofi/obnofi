@@ -76,6 +76,7 @@ export function Editor({
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [isButtonModalOpen, setIsButtonModalOpen] = useState(false);
   const [isPageLinkModalOpen, setIsPageLinkModalOpen] = useState(false);
+  const [isPageMentionModalOpen, setIsPageMentionModalOpen] = useState(false);
   const editorRef = useRef<TiptapEditor | null>(null);
   const editorShellRef = useRef<HTMLDivElement | null>(null);
   const onUpdateRef = useRef(onUpdate);
@@ -102,6 +103,7 @@ export function Editor({
   const handleOpenLinkModal = useCallback(() => setIsLinkModalOpen(true), []);
   const handleOpenButtonModal = useCallback(() => setIsButtonModalOpen(true), []);
   const handleOpenPageLinkModal = useCallback(() => setIsPageLinkModalOpen(true), []);
+  const handleOpenPageMentionModal = useCallback(() => setIsPageMentionModalOpen(true), []);
 
   const handleSlashCommandChange = useCallback(
     (query: string | null) => {
@@ -129,6 +131,7 @@ export function Editor({
     onLinkDatabase: handleOpenLinkModal,
     onInsertButton: handleOpenButtonModal,
     onInsertPageLink: handleOpenPageLinkModal,
+    onInsertPageMention: handleOpenPageMentionModal,
     onSlashCommandChange: provider ? handleSlashCommandChange : undefined,
   });
 
@@ -159,6 +162,16 @@ export function Editor({
       });
     },
     [workspaceId]
+  );
+
+  const handlePageMentionInsert = useCallback(
+    (selectedPageId: string, selectedPageTitle: string) => {
+      editorRef.current?.commands.insertPageMention({
+        pageId: selectedPageId,
+        pageTitle: selectedPageTitle,
+      });
+    },
+    []
   );
 
   const getMossNoteAnchor = useCallback((): MossNoteAnchor => {
@@ -315,6 +328,13 @@ export function Editor({
         onClose={() => setIsPageLinkModalOpen(false)}
         onSelect={handlePageLinkInsert}
         workspaceId={workspaceId ?? ""}
+      />
+      <PageLinkModal
+        isOpen={isPageMentionModalOpen}
+        onClose={() => setIsPageMentionModalOpen(false)}
+        onSelect={handlePageMentionInsert}
+        workspaceId={workspaceId ?? ""}
+        mode="pageMention"
       />
     </>
   );

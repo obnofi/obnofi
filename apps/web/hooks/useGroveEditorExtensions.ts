@@ -6,6 +6,7 @@ import { PersistentCursorPresenceExtension } from "@/components/editor/extension
 import { LinePresenceExtension } from "@/components/editor/extensions/LinePresenceExtension";
 import { DatabaseBlock } from "@/components/editor/extensions/DatabaseBlock";
 import { CanvasBlock } from "@/components/editor/extensions/CanvasBlock";
+import { MindMapBlock } from "@/components/editor/extensions/MindMapBlock";
 import { ButtonBlock } from "@/components/editor/extensions/ButtonBlock";
 import { CodeBlock } from "@/components/editor/extensions/CodeBlock";
 import {
@@ -27,14 +28,23 @@ import { BlockActionsExtension } from "@/components/editor/extensions/BlockActio
 import { TextHighlightMark } from "@/components/editor/extensions/TextHighlightMark";
 import { TaskItem, TaskList } from "@/components/editor/extensions/TaskList";
 import {
+  ApiTesterBlock,
+  AudioBlock,
+  BookmarkBlock,
   FileDropBlock,
   GroveImageBlock,
   GitHubEmbedBlock,
   GroveTableBlock,
   LinkEmbedBlock,
+  ToggleBlock,
+  VideoBlock,
   WebClipBlock,
 } from "@/components/editor/extensions/GroveInsertionBlocks";
-import { useJungleCursor } from "@/lib/cursor/jungleCursor";
+import {
+  useJungleCursor,
+  type JungleCursorColorKey,
+  type JungleCursorVariant,
+} from "@/lib/cursor/jungleCursor";
 import type * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
 
@@ -53,14 +63,15 @@ interface GroveEditorExtensionsOptions {
   onLinkDatabase: () => void;
   onInsertButton: () => void;
   onInsertPageLink: () => void;
+  onInsertPageMention: () => void;
   onSlashCommandChange?: (query: string | null) => void;
   codeBlockExtension?: typeof CodeBlock;
   collaborationUser?: {
     name: string;
     color: string;
     image: string | null;
-    cursorColorKey?: string | null;
-    cursorVariant?: string | null;
+    cursorColorKey?: JungleCursorColorKey | null;
+    cursorVariant?: JungleCursorVariant | null;
   };
 }
 
@@ -79,6 +90,7 @@ export function createGroveEditorExtensions({
   onLinkDatabase,
   onInsertButton,
   onInsertPageLink,
+  onInsertPageMention,
   onSlashCommandChange,
   codeBlockExtension = CodeBlock,
   collaborationUser,
@@ -89,6 +101,7 @@ export function createGroveEditorExtensions({
     TextHighlightMark,
     TaskList,
     TaskItem,
+    ToggleBlock,
     ...(ydoc && provider
       ? [
           Collaboration.configure({ document: ydoc }),
@@ -115,6 +128,7 @@ export function createGroveEditorExtensions({
       : []),
     DatabaseBlock.configure({ workspaceId, pageId }),
     CanvasBlock.configure({ workspaceId, pageId }),
+    MindMapBlock.configure({ workspaceId, pageId }),
     ButtonBlock,
     codeBlockExtension,
     GroveColumn,
@@ -123,7 +137,11 @@ export function createGroveEditorExtensions({
     LinkedDatabaseBlock.configure({ workspaceId, pageId }),
     GroveTableBlock,
     GroveImageBlock.configure({ pageId }),
-    FileDropBlock,
+    VideoBlock.configure({ pageId }),
+    AudioBlock.configure({ pageId }),
+    FileDropBlock.configure({ pageId }),
+    BookmarkBlock,
+    ApiTesterBlock,
     LinkEmbedBlock,
     GitHubEmbedBlock,
     WebClipBlock,
@@ -142,6 +160,7 @@ export function createGroveEditorExtensions({
             onLinkDatabase,
             onInsertButton,
             onInsertPageLink: onInsertPageLink,
+            onInsertPageMention,
             onSlashCommandChange,
           }),
         ]
@@ -158,8 +177,8 @@ export function useGroveEditorExtensions(options: GroveEditorExtensionsOptions) 
       name: options.sessionUserName ?? "Anonymous",
       color: jungleCursor.color ?? options.userColor(options.sessionUserEmail ?? ""),
       image: options.sessionUserImage ?? null,
-      cursorColorKey: jungleCursor.colorKey,
-      cursorVariant: jungleCursor.variant,
+      cursorColorKey: jungleCursor.colorKey as JungleCursorColorKey,
+      cursorVariant: jungleCursor.variant as JungleCursorVariant,
     },
   });
 }

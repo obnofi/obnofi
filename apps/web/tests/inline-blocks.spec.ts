@@ -17,9 +17,10 @@ async function gotoWorkspaceDocument(page: import("@playwright/test").Page) {
   const workspaceId = page.url().match(/\/workspace\/([^/?]+)/)?.[1];
   expect(workspaceId).toBeTruthy();
 
+  const title = `Inline Block Test ${Date.now()}`;
   const createPageResponse = await page.context().request.post("/api/pages", {
     data: {
-      title: `Inline Block Test ${Date.now()}`,
+      title,
       type: "document",
       workspaceId,
       content: { type: "doc", content: [{ type: "paragraph" }] },
@@ -30,6 +31,30 @@ async function gotoWorkspaceDocument(page: import("@playwright/test").Page) {
   const createdPage = (await createPageResponse.json()) as { id: string };
   await page.goto(`/workspace/${workspaceId}?page=${createdPage.id}`);
   await expect(page.getByTestId("workspace-editor")).toBeVisible({ timeout: 15000 });
+
+  return {
+    workspaceId: workspaceId!,
+    pageId: createdPage.id,
+    title,
+  };
+}
+
+async function createWorkspacePageFixture(
+  page: import("@playwright/test").Page,
+  workspaceId: string,
+  input: { title: string; type?: "document" | "canvas" | "database" | "mindmap" }
+) {
+  const createPageResponse = await page.context().request.post("/api/pages", {
+    data: {
+      title: input.title,
+      type: input.type ?? "document",
+      workspaceId,
+      content: { type: "doc", content: [{ type: "paragraph" }] },
+    },
+  });
+
+  expect(createPageResponse.ok()).toBeTruthy();
+  return (await createPageResponse.json()) as { id: string; title: string };
 }
 
 async function createWorkspaceDatabaseFixture(
@@ -211,6 +236,103 @@ test("인라인 Database: New 버튼으로 행 추가되고 타이틀 버튼이 
   // 행 타이틀 버튼이 렌더돼야 함
   const titleBtn = dbEmbed.locator("tbody tr button").first();
   await expect(titleBtn).toBeVisible();
+});
+
+test("인라인 Mind Map: 전용 블록이 생성되고 Open 버튼이 동작한다", async ({ page }) => {
+  test.setTimeout(120000);
+  await gotoWorkspaceDocument(page);
+  await focusEditorTail(page);
+  await page.keyboard.type("/mindmap");
+
+  const mindMapEmbed = page.getByTestId("inline-mindmap-embed");
+  await expect(mindMapEmbed).toHaveAttribute("data-state", "ready", { timeout: 60000 });
+  await expect(page.getByTestId("inline-canvas-embed")).toHaveCount(0);
+
+  const openButton = page.getByTestId("inline-mindmap-open");
+  await expect(openButton).toBeVisible();
+  await openButton.click();
+  await expect(page).not.toHaveURL("about:blank");
+});
+
+test("페이지 멘션: 선택한 페이지가 [[페이지명]] 인라인 멘션으로 삽입된다", async ({ page }) => {
+  test.setTimeout(120000);
+  const workspace = await gotoWorkspaceDocument(page);
+  const currentPageTitle = workspace.title;
+
+  await focusEditorTail(page);
+  await page.keyboard.type("/mention");
+  const pageMentionItem = page.getByRole("button", { name: /페이지 멘션/ }).first();
+  await expect(pageMentionItem).toBeVisible({ timeout: 15000 });
+  await page.keyboard.press("Escape");
+
+  await page.evaluate(
+    ({ pageId, pageTitle }) => {
+      const editor = (window as typeof window & {
+        __obnofiEditor?: {
+          commands: {
+            insertPageMention: (attrs: { pageId: string; pageTitle: string }) => void;
+          };
+        };
+      }).__obnofiEditor;
+
+      if (!editor) {
+        throw new Error("Editor bridge unavailable");
+      }
+
+      editor.commands.insertPageMention({ pageId, pageTitle });
+    },
+    { pageId: workspace.pageId, pageTitle: currentPageTitle! }
+  );
+
+  const mention = page.locator("a[data-page-link='true']").filter({
+    hasText: `[[${currentPageTitle!}]]`,
+  });
+  await expect(mention).toBeVisible();
+  await expect(mention).toHaveAttribute("href", new RegExp(`page=${workspace.pageId}$`));
+});
+
+test("GitHub Gist 슬래시 항목은 gist 링크만 허용한다", async ({ page }) => {
+  test.setTimeout(120000);
+  await gotoWorkspaceDocument(page);
+  await focusEditorTail(page);
+  await page.keyboard.type("/gist");
+
+  const gistInput = page.getByTestId("github-embed-input-githubGist");
+  await expect(gistInput).toBeVisible({ timeout: 15000 });
+
+  await gistInput.fill("https://github.com/vercel/next.js");
+  await expect(page.getByTestId("github-embed-submit-githubGist")).toBeDisabled();
+
+  await gistInput.fill("https://gist.github.com/octocat/9257657");
+  await expect(page.getByTestId("github-embed-submit-githubGist")).toBeEnabled();
+  await page.getByTestId("github-embed-submit-githubGist").click();
+  await expect(page.getByTestId("github-embed-block")).toContainText("gist.github.com/octocat");
+});
+
+test("GitHub 이슈와 PR 슬래시 항목은 각 URL 타입만 허용한다", async ({ page }) => {
+  test.setTimeout(120000);
+  await gotoWorkspaceDocument(page);
+  await focusEditorTail(page);
+  await page.keyboard.type("/issue");
+  const issueInput = page.getByTestId("github-embed-input-githubIssue");
+  await expect(issueInput).toBeVisible({ timeout: 15000 });
+  await issueInput.fill("https://github.com/vercel/next.js/pull/1");
+  await expect(page.getByTestId("github-embed-submit-githubIssue")).toBeDisabled();
+  await issueInput.fill("https://github.com/vercel/next.js/issues/1");
+  await expect(page.getByTestId("github-embed-submit-githubIssue")).toBeEnabled();
+  await page.getByTestId("github-embed-submit-githubIssue").click();
+  await expect(page.getByTestId("github-embed-block").last()).toContainText("Issue #1");
+
+  await focusEditorTail(page);
+  await page.keyboard.type("/pr");
+  const pullInput = page.getByTestId("github-embed-input-githubPull");
+  await expect(pullInput).toBeVisible({ timeout: 15000 });
+  await pullInput.fill("https://github.com/vercel/next.js/issues/2");
+  await expect(page.getByTestId("github-embed-submit-githubPull")).toBeDisabled();
+  await pullInput.fill("https://github.com/vercel/next.js/pull/2");
+  await expect(page.getByTestId("github-embed-submit-githubPull")).toBeEnabled();
+  await page.getByTestId("github-embed-submit-githubPull").click();
+  await expect(page.getByTestId("github-embed-block").last()).toContainText("Pull request #2");
 });
 
 test("Database row 상세 탭은 캐시된 row 정보로 열리고 database를 다시 요청하지 않는다", async ({ page }) => {

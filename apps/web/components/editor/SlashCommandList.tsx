@@ -24,6 +24,7 @@ interface SlashCommandListProps {
   onLinkDatabase?: () => void;
   onInsertButton?: () => void;
   onInsertPageLink?: () => void;
+  onInsertPageMention?: () => void;
 }
 
 export function SlashCommandList({
@@ -36,6 +37,7 @@ export function SlashCommandList({
   onLinkDatabase,
   onInsertButton,
   onInsertPageLink,
+  onInsertPageMention,
 }: SlashCommandListProps) {
   const isFiltering = query.trim().length > 0;
 
@@ -65,6 +67,7 @@ export function SlashCommandList({
     onLinkDatabase,
     onInsertButton,
     onInsertPageLink,
+    onInsertPageMention,
   });
 
   // Reset selection when items list changes

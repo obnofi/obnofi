@@ -6,6 +6,9 @@ export const BLOCKQUOTE_PATTERN = /^[ ]{0,3}>\s?(.*)$/;
 export const HEADING_PATTERN = /^(#{1,6})\s+(.*)$/;
 export const HORIZONTAL_RULE_PATTERN = /^(?:---|\*\*\*|___)\s*$/;
 export const CODE_FENCE_PATTERN = /^```/;
+export const DETAILS_OPEN_PATTERN = /^<details(?:\s+open)?[^>]*>\s*$/i;
+export const DETAILS_CLOSE_PATTERN = /^<\/details>\s*$/i;
+export const DETAILS_SUMMARY_PATTERN = /^<summary>(.*?)<\/summary>\s*$/i;
 
 export const CODE_BLOCK_LANGUAGE_ALIASES: Record<string, string> = {
   htm: "html",

@@ -1,22 +1,22 @@
 "use client";
 
-import { useId, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useId, useRef, useState, type ChangeEvent } from "react";
 import { Node, mergeAttributes } from "@tiptap/core";
 import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
   type ReactNodeViewProps,
 } from "@tiptap/react";
-import { FileText, Link2, Upload } from "lucide-react";
+import { Link2, Music2, Upload } from "lucide-react";
 import { uploadGroveMediaAsset } from "@/lib/supabase";
-import { normalizeUrl } from "@/components/toolbar/LinkEmbedModal";
 
-type FileDropAttrs = {
-  files: Array<{ name: string; size: number; type: string; url?: string }>;
+type AudioBlockAttrs = {
+  src: string;
+  title: string;
   pageId: string | null;
 };
 
-interface FileDropOptions {
+interface AudioBlockOptions {
   pageId?: string;
 }
 
@@ -24,41 +24,28 @@ function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () =>
-      reject(reader.error ?? new Error("파일을 읽지 못했습니다."));
+    reader.onerror = () => reject(reader.error ?? new Error("오디오 파일을 읽지 못했습니다."));
     reader.readAsDataURL(file);
   });
 }
 
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function FileDropEmptyState() {
-  return (
-    <div className="grove-insert-block__empty">
-      <FileText className="h-5 w-5" />
-      <span>파일을 첨부하세요</span>
-    </div>
-  );
-}
-
-function FileDropBlockView(props: ReactNodeViewProps) {
-  const attrs = props.node.attrs as FileDropAttrs;
-  const files = attrs.files ?? [];
+function AudioBlockView(props: ReactNodeViewProps) {
+  const attrs = props.node.attrs as AudioBlockAttrs;
   const isEditable = props.editor.isEditable;
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [pendingUrl, setPendingUrl] = useState(attrs.src);
   const [isUploading, setIsUploading] = useState(false);
-  const [pendingUrl, setPendingUrl] = useState("");
   const [uploadError, setUploadError] = useState("");
+
+  useEffect(() => {
+    setPendingUrl(attrs.src);
+  }, [attrs.src]);
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     event.stopPropagation();
     const file = event.target.files?.[0];
-    if (!file) {
+    if (!file || !file.type.startsWith("audio/")) {
       event.target.value = "";
       return;
     }
@@ -67,71 +54,46 @@ function FileDropBlockView(props: ReactNodeViewProps) {
     setUploadError("");
 
     try {
-      const url = attrs.pageId
+      const src = attrs.pageId
         ? await uploadGroveMediaAsset(file, attrs.pageId).catch(() => readFileAsDataUrl(file))
         : await readFileAsDataUrl(file);
 
       props.updateAttributes({
-        files: [
-          ...files,
-          { name: file.name, size: file.size, type: file.type, url },
-        ],
+        src,
+        title: attrs.title || file.name.replace(/\.[^.]+$/, ""),
       });
+      setPendingUrl(src);
     } catch {
-      setUploadError("파일을 첨부하지 못했습니다.");
+      setUploadError("오디오를 올리지 못했습니다.");
     } finally {
       setIsUploading(false);
       event.target.value = "";
     }
   };
 
-  const handleAttachUrl = () => {
-    const normalizedUrl = normalizeUrl(pendingUrl);
-    if (!normalizedUrl) return;
-
-    const name = normalizedUrl.split("/").filter(Boolean).pop() ?? normalizedUrl;
-    props.updateAttributes({
-      files: [...files, { name, size: 0, type: "url", url: normalizedUrl }],
-    });
-    setPendingUrl("");
-  };
-
   return (
     <NodeViewWrapper
       className="not-prose my-4"
+      data-testid="audio-block"
       contentEditable={false}
       onMouseDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
     >
-      <div className="grove-insert-block" data-testid="file-block">
+      <div className="grove-media-block grove-media-block--audio">
         <div className="grove-insert-block__header">
-          <FileText className="h-4 w-4" />
-          <span>파일</span>
+          <Music2 className="h-4 w-4" />
+          <span>{attrs.title || "오디오"}</span>
         </div>
-        {files.length ? (
-          <div className="grove-file-list">
-            {files.map((file, index) => (
-              file.url ? (
-                <a
-                  className="grove-file-list__item"
-                  key={`${file.name}-${index}`}
-                  href={file.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <span className="truncate">{file.name}</span>
-                  <span>{file.size > 0 ? formatFileSize(file.size) : "열기"}</span>
-                </a>
-              ) : (
-                <div className="grove-file-list__item" key={`${file.name}-${index}`}>
-                  <span className="truncate">{file.name}</span>
-                  <span>{formatFileSize(file.size)}</span>
-                </div>
-              )
-            ))}
-          </div>
+
+        {attrs.src ? (
+          <audio className="grove-media-block__audio" controls src={attrs.src}>
+            브라우저가 audio 태그를 지원하지 않습니다.
+          </audio>
         ) : (
-          <FileDropEmptyState />
+          <div className="grove-media-block__empty">
+            <Music2 className="h-5 w-5" />
+            <span>오디오를 추가하세요</span>
+          </div>
         )}
 
         {isEditable ? (
@@ -140,6 +102,7 @@ function FileDropBlockView(props: ReactNodeViewProps) {
               ref={fileInputRef}
               id={inputId}
               type="file"
+              accept="audio/*"
               className="hidden"
               onChange={(event) => void handleFileChange(event)}
             />
@@ -152,7 +115,7 @@ function FileDropBlockView(props: ReactNodeViewProps) {
                 disabled={isUploading}
               >
                 <Upload className="h-4 w-4" />
-                <span>{isUploading ? "업로드 중..." : "파일 업로드"}</span>
+                <span>{isUploading ? "업로드 중..." : attrs.src ? "오디오 교체" : "오디오 업로드"}</span>
               </button>
               <label className="grove-image-block__url" htmlFor={`${inputId}-url`}>
                 <Link2 className="h-4 w-4" />
@@ -163,15 +126,18 @@ function FileDropBlockView(props: ReactNodeViewProps) {
                   placeholder="https://..."
                   onMouseDown={(event) => event.stopPropagation()}
                   onChange={(event) => setPendingUrl(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      handleAttachUrl();
-                    }
-                  }}
+                  onBlur={() => props.updateAttributes({ src: pendingUrl.trim() })}
                 />
               </label>
             </div>
+            <input
+              type="text"
+              value={attrs.title}
+              placeholder="제목"
+              className="grove-image-block__caption"
+              onMouseDown={(event) => event.stopPropagation()}
+              onChange={(event) => props.updateAttributes({ title: event.target.value })}
+            />
             {uploadError ? <p className="grove-image-block__error">{uploadError}</p> : null}
           </div>
         ) : null}
@@ -180,51 +146,48 @@ function FileDropBlockView(props: ReactNodeViewProps) {
   );
 }
 
-export const FileDropBlock = Node.create<FileDropOptions>({
-  name: "fileDropBlock",
+export const AudioBlock = Node.create<AudioBlockOptions>({
+  name: "audioBlock",
   group: "block",
   atom: true,
   selectable: true,
   draggable: true,
 
   addOptions() {
-    return {
-      pageId: undefined,
-    };
+    return { pageId: undefined };
   },
 
   addAttributes() {
     return {
-      files: { default: [] },
+      src: { default: "" },
+      title: { default: "" },
       pageId: { default: this.options.pageId ?? null },
     };
   },
 
   parseHTML() {
-    return [{ tag: "div[data-type='file-drop-block']" }];
+    return [{ tag: "div[data-type='audio-block']" }];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return [
-      "div",
-      mergeAttributes(HTMLAttributes, { "data-type": "file-drop-block" }),
-    ];
+    return ["div", mergeAttributes(HTMLAttributes, { "data-type": "audio-block" })];
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(FileDropBlockView);
+    return ReactNodeViewRenderer(AudioBlockView);
   },
 
   addCommands() {
     return {
-      insertFileDropBlock:
-        (attrs?: FileDropAttrs) =>
+      insertAudioBlock:
+        (attrs?: Partial<AudioBlockAttrs>) =>
         ({ commands }) =>
           commands.insertContent([
             {
               type: this.name,
               attrs: {
-                files: attrs?.files ?? [],
+                src: attrs?.src ?? "",
+                title: attrs?.title ?? "",
                 pageId: attrs?.pageId ?? this.options.pageId ?? null,
               },
             },
@@ -236,8 +199,8 @@ export const FileDropBlock = Node.create<FileDropOptions>({
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
-    fileDropBlock: {
-      insertFileDropBlock: (attrs?: FileDropAttrs) => ReturnType;
+    audioBlock: {
+      insertAudioBlock: (attrs?: Partial<AudioBlockAttrs>) => ReturnType;
     };
   }
 }

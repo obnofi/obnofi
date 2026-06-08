@@ -14,6 +14,7 @@ export function createSlashSuggestion(
   onLinkDatabase?: () => void,
   onInsertButton?: () => void,
   onInsertPageLink?: () => void,
+  onInsertPageMention?: () => void,
   onSlashCommandChange?: (query: string | null) => void
 ) {
   return () => {
@@ -35,6 +36,7 @@ export function createSlashSuggestion(
             onLinkDatabase,
             onInsertButton,
             onInsertPageLink,
+            onInsertPageMention,
           },
           editor: props.editor,
         });
@@ -78,6 +80,7 @@ export function createSlashSuggestion(
           onLinkDatabase,
           onInsertButton,
           onInsertPageLink,
+          onInsertPageMention,
         });
 
         const clientRect = props.clientRect?.();

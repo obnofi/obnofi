@@ -28,6 +28,7 @@ export function PublicReadonlyEditor({ content }: PublicReadonlyEditorProps) {
       onLinkDatabase: () => {},
       onInsertButton: () => {},
       onInsertPageLink: () => {},
+      onInsertPageMention: () => {},
       userColor: () => "#2B593F",
       codeBlockExtension: readonlyCodeBlock,
     }),
@@ -51,7 +52,7 @@ export function PublicReadonlyEditor({ content }: PublicReadonlyEditorProps) {
       return;
     }
 
-    editor.commands.setContent(nextContent, false);
+    editor.commands.setContent(nextContent, { emitUpdate: false });
   }, [content, editor]);
 
   if (!editor) {

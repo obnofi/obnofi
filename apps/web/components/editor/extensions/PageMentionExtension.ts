@@ -44,7 +44,7 @@ export const PageLinkMark = Mark.create<{ workspaceId?: string }>({
     return [
       new InputRule({
         find: /\[\[([^\]]+)\]\]$/,
-        handler: ({ state, range, match }) => {
+        handler: ({ state, range, match, chain }) => {
           const name = match[1].trim();
           const { pages } = usePageStore.getState();
           const page = pages.find(
@@ -53,14 +53,53 @@ export const PageLinkMark = Mark.create<{ workspaceId?: string }>({
 
           if (!page) return null;
 
-          const mark = state.schema.marks.pageLinkMark.create({
-            pageId: page.id,
-            workspaceId: workspaceId ?? null,
-          });
-
-          state.tr.addMark(range.from, range.to, mark);
+          chain()
+            .setTextSelection({ from: range.from, to: range.to })
+            .setMark("pageLinkMark", {
+              pageId: page.id,
+              workspaceId: workspaceId ?? null,
+            })
+            .run();
         },
       }),
     ];
   },
+
+  addCommands() {
+    return {
+      insertPageMention:
+        ({
+          pageId,
+          pageTitle,
+        }: {
+          pageId: string;
+          pageTitle: string;
+        }) =>
+        ({ commands }) =>
+          commands.insertContent({
+            type: "text",
+            text: `[[${pageTitle}]]`,
+            marks: [
+              {
+                type: this.name,
+                attrs: {
+                  pageId,
+                  workspaceId: this.options.workspaceId ?? null,
+                },
+              },
+            ],
+          }),
+    };
+  },
 });
+
+declare module "@tiptap/core" {
+  interface Commands<ReturnType> {
+    pageLinkMark: {
+      insertPageMention: (attrs: {
+        pageId: string;
+        pageTitle: string;
+      }) => ReturnType;
+    };
+  }
+}
