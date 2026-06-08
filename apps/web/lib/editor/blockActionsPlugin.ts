@@ -166,6 +166,11 @@ export function createBlockActionsPlugin() {
 
           const pluginState = blockActionsPluginKey.getState(view.state);
           if (pluginState?.hoveredBlockId) {
+            // When relatedTarget is null (e.g. Playwright CDP mouse events), fall back
+            // to checking whether the cursor is still within the hover buffer zone.
+            if (isWithinBlockHoverBuffer(view, pluginState.hoveredBlockId, event)) {
+              return false;
+            }
             dispatchBlockActionsMeta(view, { hoveredBlockId: null });
           }
 
