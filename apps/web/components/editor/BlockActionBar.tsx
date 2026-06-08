@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/react";
 import { GripVertical } from "lucide-react";
 import {
@@ -18,8 +19,10 @@ interface BlockActionBarProps {
 
 type ActionBarPosition = {
   blockId: string;
-  left: number;
-  top: number;
+  /** viewport-relative x (for position: fixed) */
+  x: number;
+  /** viewport-relative y center of block (for position: fixed) */
+  y: number;
 };
 
 function readBlockActionState(editor: Editor) {
@@ -69,13 +72,12 @@ export function BlockActionBar({ editor, container }: BlockActionBarProps) {
         return;
       }
 
-      const containerRect = container.getBoundingClientRect();
       const blockRect = block.getBoundingClientRect();
 
       setPosition({
         blockId: hoveredBlockId,
-        left: blockRect.left - containerRect.left - 42,
-        top: blockRect.top - containerRect.top + blockRect.height / 2,
+        x: blockRect.left - 42,
+        y: blockRect.top + blockRect.height / 2,
       });
     };
 
@@ -97,18 +99,20 @@ export function BlockActionBar({ editor, container }: BlockActionBarProps) {
     [container, draggedBlockId, position, hoveredBlockId]
   );
 
-  if (!isVisible || !position || !hoveredBlockId) {
+  if (!isVisible || !position || !hoveredBlockId || typeof document === "undefined") {
     return null;
   }
 
-  return (
+  const bar = (
     <div
       data-block-action-bar="true"
       data-export-ignore="true"
       className="grove-block-action-bar"
       style={{
-        left: position.left,
-        top: position.top,
+        position: "fixed",
+        left: position.x,
+        top: position.y,
+        zIndex: 9999,
       }}
       onMouseEnter={() => {
         setHoveredBlockId(position.blockId);
@@ -177,4 +181,6 @@ export function BlockActionBar({ editor, container }: BlockActionBarProps) {
       </button>
     </div>
   );
+
+  return createPortal(bar, document.body);
 }
