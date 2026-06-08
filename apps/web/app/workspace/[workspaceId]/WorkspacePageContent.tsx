@@ -6,6 +6,8 @@ import type { Editor as TiptapEditor } from "@tiptap/react";
 import { Loader2 } from "lucide-react";
 import { Page, PageType } from "@obnofi/types";
 import { GroveInsertionToolbar } from "@/components/toolbar/GroveInsertionToolbar";
+import { MobileNotice } from "@/components/mobile/MobileNotice";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import type { MossNoteDockHandle } from "@/components/workspace/MossNoteDock";
 import type { ParrotListeningState } from "@/hooks/useSpeechRecognition";
 import { DocumentPageBody } from "./DocumentPageBody";
@@ -102,6 +104,7 @@ export function WorkspacePageContent({
   onToggleSpeech,
 }: WorkspacePageContentProps) {
   const [toolbarEditor, setToolbarEditor] = useState<TiptapEditor | null>(null);
+  const isMobile = useIsMobile();
 
   const handleEditorReady = useCallback(
     (editor: TiptapEditor) => {
@@ -110,6 +113,15 @@ export function WorkspacePageContent({
     },
     [onEditorReady]
   );
+
+  // 모바일에서는 문서 페이지 글쓰기만 지원. 캔버스/DB/마인드맵은 차단.
+  if (isMobile && activePage.type !== "document") {
+    return (
+      <div className="relative flex-1 overflow-hidden bg-[var(--color-background)]">
+        <MobileNotice message="캔버스, 데이터베이스, 마인드맵은 데스크톱에서 이용해 주세요. 모바일에서는 문서 글쓰기만 지원합니다." />
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex-1 overflow-hidden bg-[var(--color-background)]">

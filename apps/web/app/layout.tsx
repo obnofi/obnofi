@@ -4,6 +4,7 @@ import "./globals.css";
 import { SessionProvider } from "@/components/auth/SessionProvider";
 import { JungleCursorSync } from "@/components/cursor/JungleCursorSync";
 import { JungleCornerDecorations } from "@/components/JungleCornerDecorations";
+import { MobileRouteGuard } from "@/components/mobile/MobileRouteGuard";
 
 export const metadata: Metadata = {
   title: "Obnofi",
@@ -69,7 +70,7 @@ export default function RootLayout({
         <SessionProvider>
           <JungleCursorSync />
           <JungleCornerDecorations />
-          {children}
+          <MobileRouteGuard>{children}</MobileRouteGuard>
         </SessionProvider>
       </body>
     </html>
