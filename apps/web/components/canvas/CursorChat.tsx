@@ -27,16 +27,19 @@ export function CursorChat({
     <div
       className="pointer-events-none absolute z-50"
       style={{
-        left: cursor.x + 14,
-        top: cursor.y - 6,
+        left: cursor.x + 10,
+        top: cursor.y + 18,
       }}
     >
       {isEditing ? (
-        <div className="pointer-events-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2 shadow-lg">
+        <div
+          className="pointer-events-auto inline-flex max-w-[180px] rounded-[9px] px-2 py-1 text-white shadow-lg"
+          style={{ backgroundColor: color }}
+        >
           <input
             name="cursor-chat-message"
             autoFocus
-            className="w-48 bg-transparent text-sm text-[var(--color-text-primary)] outline-none"
+            className="w-[160px] bg-transparent text-[11px] font-bold leading-none text-white outline-none placeholder:text-white/75"
             placeholder="Say something..."
             value={draft ?? ""}
             onBlur={onCancel}
@@ -53,9 +56,6 @@ export function CursorChat({
               }
             }}
           />
-          <div className="mt-1 text-right text-[11px] text-[var(--color-text-secondary)]">
-            {(draft ?? "").length}/{maxLength}
-          </div>
         </div>
       ) : message ? (
         <div

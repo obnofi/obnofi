@@ -68,6 +68,7 @@ test("cursor chat: slash opens bubble, draft syncs live, Esc clears without pers
     await expect(pageA.getByText(`${CURSOR_CHAT_MAX_LENGTH}/${CURSOR_CHAT_MAX_LENGTH}`)).toBeVisible();
 
     await expect(pageB.getByText("x".repeat(CURSOR_CHAT_MAX_LENGTH), { exact: true })).toBeVisible();
+    await expect(pageB.getByText("Developer", { exact: true })).toHaveCount(0);
 
     await pageA.keyboard.press("Escape");
 
@@ -107,6 +108,7 @@ test("cursor chat: submitted message expires after 5 seconds and does not enter 
     await expect(inputA).toHaveCount(0);
     await expect(pageA.getByText(message, { exact: true })).toBeVisible();
     await expect(pageB.getByText(message, { exact: true })).toBeVisible();
+    await expect(pageB.getByText("Developer", { exact: true })).toHaveCount(0);
     await expect(editorA).not.toContainText(message);
     await expect(editorB).not.toContainText(message);
 

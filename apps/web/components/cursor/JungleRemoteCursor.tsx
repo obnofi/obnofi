@@ -31,6 +31,7 @@ export function JungleRemoteCursor({
 }: JungleRemoteCursorProps) {
   const metrics = getJungleCursorRenderMetrics(variant);
   const displayColor = resolveJungleCursorColor(colorKey, color);
+  const shouldShowName = !cursorChatMessage;
 
   return (
     <div
@@ -57,12 +58,14 @@ export function JungleRemoteCursor({
         src={getJungleCursorAssetPath(variant, colorKey)}
         style={{ width: metrics.width, height: metrics.height }}
       />
-      <span
-        className="mt-1 inline-flex max-w-[180px] rounded-[9px] border border-white px-2 py-1 text-[11px] font-bold leading-none text-white shadow-sm"
-        style={{ backgroundColor: displayColor }}
-      >
-        {userName}
-      </span>
+      {shouldShowName ? (
+        <span
+          className="mt-1 inline-flex max-w-[180px] rounded-[9px] border border-white px-2 py-1 text-[11px] font-bold leading-none text-white shadow-sm"
+          style={{ backgroundColor: displayColor }}
+        >
+          {userName}
+        </span>
+      ) : null}
     </div>
   );
 }
