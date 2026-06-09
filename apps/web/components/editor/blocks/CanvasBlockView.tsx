@@ -32,12 +32,13 @@ export interface CanvasBlockAttrs {
   workspaceId: string | null;
   parentPageId: string | null;
   autoCreate: boolean;
+  isInlinePage: boolean;
 }
 
 export function CanvasBlockView(props: ReactNodeViewProps) {
   const router = useRouter();
   const attrs = props.node.attrs as CanvasBlockAttrs;
-  const { pageId, workspaceId, parentPageId, autoCreate } = attrs;
+  const { pageId, workspaceId, parentPageId, autoCreate, isInlinePage } = attrs;
   const propsRef = useRef(props);
   propsRef.current = props;
 
@@ -78,11 +79,12 @@ export function CanvasBlockView(props: ReactNodeViewProps) {
     []
   );
 
-  const { embeddedPage, isCreating, isLoading } = useEmbeddedPageState({
+  const { embeddedPage, isCreating, isLoading, renameEmbeddedPage } = useEmbeddedPageState({
     pageId,
     workspaceId,
     parentPageId,
     autoCreate,
+    isInlinePage,
     cachedPage: cachedPage ?? null,
     isEditorEditable: props.editor.isEditable,
     pageType: "canvas",
@@ -135,6 +137,7 @@ export function CanvasBlockView(props: ReactNodeViewProps) {
               realtimeEnabled={false}
               roomSlug={embeddedPage.id}
               title={embeddedPage.title || "Inline Clearing"}
+              onTitleChange={renameEmbeddedPage}
             />
           </div>
         ) : (

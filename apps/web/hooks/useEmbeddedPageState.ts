@@ -11,17 +11,23 @@ interface UseEmbeddedPageStateOptions {
   workspaceId: string | null;
   parentPageId: string | null;
   autoCreate: boolean;
+  isInlinePage: boolean;
   cachedPage: Page | null | undefined;
   isEditorEditable: boolean;
   pageType: PageType;
   emptyTitle: string;
-  updateAttrs: (next: { pageId?: string | null; autoCreate?: boolean }) => boolean;
+  updateAttrs: (next: {
+    pageId?: string | null;
+    autoCreate?: boolean;
+    isInlinePage?: boolean;
+  }) => boolean;
 }
 
 interface UseEmbeddedPageStateResult {
   embeddedPage: Page | null;
   isCreating: boolean;
   isLoading: boolean;
+  renameEmbeddedPage: (nextTitle: string) => Promise<void>;
 }
 
 export function useEmbeddedPageState({
@@ -29,6 +35,7 @@ export function useEmbeddedPageState({
   workspaceId,
   parentPageId,
   autoCreate,
+  isInlinePage,
   cachedPage,
   isEditorEditable,
   pageType,
@@ -98,7 +105,7 @@ export function useEmbeddedPageState({
 
     isCreatingRef.current = true;
     setIsCreating(true);
-    updateAttrs({ autoCreate: false });
+    updateAttrs({ autoCreate: false, isInlinePage });
 
     const response = await fetch("/api/pages", {
       method: "POST",
@@ -115,7 +122,7 @@ export function useEmbeddedPageState({
     setIsCreating(false);
 
     if (!response.ok) {
-      updateAttrs({ autoCreate: true });
+      updateAttrs({ autoCreate: true, isInlinePage });
       return;
     }
 
@@ -123,8 +130,8 @@ export function useEmbeddedPageState({
     embeddedPageCache.set(createdPage.id, createdPage);
     hasLoaded.current = true;
     setEmbeddedPage(createdPage);
-    updateAttrs({ pageId: createdPage.id, autoCreate: false });
-  }, [emptyTitle, pageType, parentPageId, updateAttrs, workspaceId]);
+    updateAttrs({ pageId: createdPage.id, autoCreate: false, isInlinePage });
+  }, [emptyTitle, isInlinePage, pageType, parentPageId, updateAttrs, workspaceId]);
 
   useEffect(() => {
     if (!isEditorEditable || !autoCreate || pageId) return;
@@ -193,5 +200,30 @@ export function useEmbeddedPageState({
     };
   }, [autoCreate, emptyTitle, pageId, pageType, parentPageId, updateAttrs, workspaceId]);
 
-  return { embeddedPage, isCreating, isLoading };
+  const renameEmbeddedPage = useCallback(
+    async (nextTitle: string) => {
+      const targetId = embeddedPage?.id ?? pageId;
+      if (!targetId) return;
+
+      const trimmed = nextTitle.trim();
+      if (!trimmed) return;
+
+      setEmbeddedPage((prev) => (prev ? { ...prev, title: trimmed } : prev));
+      const cached = embeddedPageCache.get(targetId);
+      if (cached) embeddedPageCache.set(targetId, { ...cached, title: trimmed });
+
+      try {
+        await fetch(`/api/pages/${targetId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: trimmed }),
+        });
+      } catch {
+        // 낙관적 업데이트 값을 유지한다 — 네트워크 실패해도 UI는 새 제목 표시
+      }
+    },
+    [embeddedPage, pageId]
+  );
+
+  return { embeddedPage, isCreating, isLoading, renameEmbeddedPage };
 }

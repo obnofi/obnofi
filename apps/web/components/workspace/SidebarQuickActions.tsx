@@ -5,7 +5,7 @@ import { Search, Settings, Plus, Orbit, Trees } from "lucide-react";
 import { ImportFromUrlControl } from "@/components/workspace/ImportFromUrlControl";
 import { AntGlyph } from "@/components/icons/AntGlyph";
 import { typeIcons } from "@/components/workspace/sidebarConstants";
-import { creatablePageTypes, creatablePageLabels } from "@/lib/pageCreation";
+import { sidebarCreatablePageTypes, creatablePageLabels } from "@/lib/pageCreation";
 import type { PageType } from "@obnofi/types";
 
 interface SidebarQuickActionsProps {
@@ -67,7 +67,7 @@ export function SidebarQuickActions({
         </button>
         {showNewPageMenu && (
           <div className="absolute top-full left-0 right-0 z-[99999] mt-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] py-1 shadow-lg">
-            {creatablePageTypes.map((type) => (
+            {sidebarCreatablePageTypes.map((type) => (
               <button
                 key={type}
                 onClick={() => onCreatePage(type)}

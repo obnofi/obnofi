@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Trash2 } from "lucide-react";
 import {
-  creatablePageTypes,
+  sidebarCreatablePageTypes,
   creatablePageLabels,
 } from "@/lib/pageCreation";
 import { typeIcons } from "@/components/workspace/sidebarConstants";
@@ -104,7 +104,7 @@ export function CreatePageMenuPortal({
       className="fixed min-w-[220px] rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-1 shadow-lg"
       style={{ top: adjustedPosition.top, left: adjustedPosition.left, zIndex: 99999 }}
     >
-      {creatablePageTypes.map((type) => (
+      {sidebarCreatablePageTypes.map((type) => (
         <button
           key={type}
           type="button"

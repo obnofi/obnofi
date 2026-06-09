@@ -2,6 +2,10 @@ import type { PageType } from "@obnofi/types";
 
 export const creatablePageTypes = ["document", "canvas", "database", "mindmap"] as const satisfies ReadonlyArray<PageType>;
 
+export const sidebarCreatablePageTypes = creatablePageTypes.filter(
+  (type) => type !== "mindmap"
+) as ReadonlyArray<Exclude<(typeof creatablePageTypes)[number], "mindmap">>;
+
 export const createPageTitles: Record<PageType, string> = {
   document: "New Page",
   canvas: "New Clearing",

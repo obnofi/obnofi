@@ -123,17 +123,141 @@ export interface PageTreeNode extends Page {
   children: PageTreeNode[];
 }
 
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
+type InlineOwnedEmbedType =
+  | "canvasEmbed"
+  | "databaseEmbed"
+  | "databaseNode"
+  | "mindMapEmbed"
+  | "subPageEmbed";
+
+const INLINE_EMBED_PAGE_TYPES: Partial<Record<InlineOwnedEmbedType, Page["type"]>> = {
+  canvasEmbed: "canvas",
+  databaseEmbed: "database",
+  databaseNode: "database",
+  mindMapEmbed: "mindmap",
+  subPageEmbed: "document",
+};
+
+const INLINE_SURFACE_DEFAULT_TITLES: Partial<Record<Page["type"], string[]>> = {
+  canvas: ["Inline Clearing"],
+  database: ["Grove Catalog"],
+  mindmap: ["Inline Mind Map"],
+};
+
+function collectInlineOwnedPageIdsFromNode(
+  value: JsonValue,
+  ownerPage: Page,
+  pageMap: Map<string, Page>,
+  result: Set<string>
+) {
+  if (!value) {
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item) =>
+      collectInlineOwnedPageIdsFromNode(item, ownerPage, pageMap, result)
+    );
+    return;
+  }
+
+  if (typeof value !== "object") {
+    return;
+  }
+
+  const record = value as Record<string, JsonValue>;
+  const embedType = record.type;
+  const attrs =
+    record.attrs && typeof record.attrs === "object"
+      ? (record.attrs as Record<string, JsonValue>)
+      : null;
+
+  if (attrs && typeof embedType === "string") {
+    const embeddedPageId =
+      typeof attrs.pageId === "string" ? attrs.pageId : null;
+    const parentPageId =
+      typeof attrs.parentPageId === "string" ? attrs.parentPageId : null;
+    const explicitlyInline = attrs.isInlinePage === true;
+
+    if (embeddedPageId) {
+      const embeddedPage = pageMap.get(embeddedPageId);
+      const expectedPageType =
+        INLINE_EMBED_PAGE_TYPES[embedType as InlineOwnedEmbedType];
+      const matchesLegacyInlineOwnership =
+        parentPageId === ownerPage.id &&
+        embeddedPage?.parentId === ownerPage.id &&
+        embeddedPage.type === expectedPageType;
+
+      if (explicitlyInline || matchesLegacyInlineOwnership) {
+        result.add(embeddedPageId);
+      }
+    }
+  }
+
+  Object.values(record).forEach((entry) =>
+    collectInlineOwnedPageIdsFromNode(entry, ownerPage, pageMap, result)
+  );
+}
+
+export function getSidebarPages(pages: Page[]): Page[] {
+  const pageMap = new Map(pages.map((page) => [page.id, page]));
+  const referencedInlinePageIds = new Set<string>();
+
+  pages.forEach((page) => {
+    collectInlineOwnedPageIdsFromNode(
+      page.content as JsonValue,
+      page,
+      pageMap,
+      referencedInlinePageIds
+    );
+  });
+
+  return pages.filter((page) => {
+    if (referencedInlinePageIds.has(page.id)) {
+      return true;
+    }
+
+    if (!page.parentId) {
+      return true;
+    }
+
+    const parentPage = pageMap.get(page.parentId);
+    if (!parentPage) {
+      return true;
+    }
+
+    const defaultTitles = INLINE_SURFACE_DEFAULT_TITLES[page.type];
+    const looksLikeInlineSurface =
+      Array.isArray(defaultTitles) && defaultTitles.includes(page.title);
+
+    if (!looksLikeInlineSurface) {
+      return true;
+    }
+
+    return false;
+  });
+}
+
 export function buildPageTree(pages: Page[]): PageTreeNode[] {
+  const sidebarPages = getSidebarPages(pages);
   const pageMap = new Map<string, PageTreeNode>();
   const roots: PageTreeNode[] = [];
 
   // Initialize all pages with empty children array
-  pages.forEach((page) => {
+  sidebarPages.forEach((page) => {
     pageMap.set(page.id, { ...page, children: [] });
   });
 
   // Build tree structure
-  pages.forEach((page) => {
+  sidebarPages.forEach((page) => {
     const node = pageMap.get(page.id)!;
     if (page.parentId && pageMap.has(page.parentId)) {
       const parent = pageMap.get(page.parentId)!;

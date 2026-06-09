@@ -15,6 +15,7 @@ interface SubPageBlockAttrs {
   pageId: string | null;
   workspaceId: string | null;
   parentPageId: string | null;
+  isInlinePage: boolean;
 }
 
 const TYPE_ICONS = {
@@ -91,6 +92,7 @@ export const SubPageBlock = Node.create({
       pageId: { default: null },
       workspaceId: { default: null },
       parentPageId: { default: null },
+      isInlinePage: { default: false },
     };
   },
 
@@ -116,6 +118,7 @@ export const SubPageBlock = Node.create({
           pageId: string;
           workspaceId: string;
           parentPageId: string;
+          isInlinePage?: boolean;
         }) =>
         ({ commands }) =>
           commands.insertContent({ type: this.name, attrs }),
@@ -130,6 +133,7 @@ declare module "@tiptap/core" {
         pageId: string;
         workspaceId: string;
         parentPageId: string;
+        isInlinePage?: boolean;
       }) => ReturnType;
     };
   }

@@ -52,6 +52,7 @@ export function DatabaseBlockView(props: ReactNodeViewProps) {
           pageId: nextPage?.id ?? null,
           databaseId: nextPage?.databaseId ?? null,
           autoCreate: false,
+          isInlinePage: false,
         });
       },
       onCreate: () => {

@@ -19,6 +19,7 @@ interface DatabaseNodeAttrs {
   workspaceId: string | null;
   parentPageId: string | null;
   autoCreate: boolean;
+  isInlinePage: boolean;
   viewType: GroveSurfaceView;
   columns: Array<{ id: string; name: string; type: PropertyType; width?: number }>;
   rows: string[];
@@ -33,6 +34,7 @@ function createDatabaseBlockAttrs(options: DatabaseBlockExtensionOptions): Datab
     workspaceId: options.workspaceId ?? null,
     parentPageId: options.pageId ?? null,
     autoCreate: true,
+    isInlinePage: true,
     viewType: "table",
     columns: [],
     rows: [],
@@ -62,6 +64,7 @@ export const DatabaseBlock = Node.create<DatabaseBlockExtensionOptions>({
       workspaceId: { default: null },
       parentPageId: { default: null },
       autoCreate: { default: false },
+      isInlinePage: { default: false },
       viewType: { default: "table" },
       columns: { default: [] },
       rows: { default: [] },

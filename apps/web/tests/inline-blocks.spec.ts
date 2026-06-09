@@ -39,24 +39,6 @@ async function gotoWorkspaceDocument(page: import("@playwright/test").Page) {
   };
 }
 
-async function createWorkspacePageFixture(
-  page: import("@playwright/test").Page,
-  workspaceId: string,
-  input: { title: string; type?: "document" | "canvas" | "database" | "mindmap" }
-) {
-  const createPageResponse = await page.context().request.post("/api/pages", {
-    data: {
-      title: input.title,
-      type: input.type ?? "document",
-      workspaceId,
-      content: { type: "doc", content: [{ type: "paragraph" }] },
-    },
-  });
-
-  expect(createPageResponse.ok()).toBeTruthy();
-  return (await createPageResponse.json()) as { id: string; title: string };
-}
-
 async function createWorkspaceDatabaseFixture(
   page: import("@playwright/test").Page
 ) {
@@ -236,6 +218,27 @@ test("인라인 Database: New 버튼으로 행 추가되고 타이틀 버튼이 
   // 행 타이틀 버튼이 렌더돼야 함
   const titleBtn = dbEmbed.locator("tbody tr button").first();
   await expect(titleBtn).toBeVisible();
+});
+
+test("고아 인라인 Canvas 페이지는 사이드바 Files에 노출되지 않는다", async ({ page }) => {
+  test.setTimeout(120000);
+  const workspace = await gotoWorkspaceDocument(page);
+  const sidebarItemsBefore = await page.locator("[data-testid^='sidebar-page-']").count();
+
+  const createPageResponse = await page.context().request.post("/api/pages", {
+    data: {
+      title: "Inline Clearing",
+      type: "canvas",
+      workspaceId: workspace.workspaceId,
+      parentId: workspace.pageId,
+    },
+  });
+  expect(createPageResponse.ok()).toBeTruthy();
+
+  await page.reload();
+  await expect(page.getByTestId("workspace-editor")).toBeVisible({ timeout: 15000 });
+  await expect(page.locator("[data-testid^='sidebar-page-']")).toHaveCount(sidebarItemsBefore);
+  await expect(page.getByTestId("workspace-sidebar")).not.toContainText("Inline Clearing");
 });
 
 test("인라인 Mind Map: 전용 블록이 생성되고 Open 버튼이 동작한다", async ({ page }) => {

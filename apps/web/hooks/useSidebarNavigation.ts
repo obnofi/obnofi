@@ -6,10 +6,10 @@ import { useSession } from "next-auth/react";
 import { usePageStore } from "@/store/pageStore";
 import { useCollaboration } from "@/lib/collaboration/CollaborationContext";
 import { createPageTitles } from "@/lib/pageCreation";
+import { getSidebarPages } from "@/lib/page/pageUtils";
 import {
   clamp,
   flattenVisiblePageTree,
-  collectDescendantIds,
   DEFAULT_SIDEBAR_WIDTH,
   MIN_SIDEBAR_WIDTH,
   MAX_SIDEBAR_WIDTH,
@@ -23,10 +23,6 @@ export function useSidebarNavigation(workspaceId: string) {
   const router = useRouter();
   const { data: session } = useSession();
   const collaboration = useCollaboration();
-  const awarenessStates = Array.isArray(collaboration.awarenessStates)
-    ? collaboration.awarenessStates
-    : [];
-  const updateCursor = collaboration.updateCursor ?? (() => {});
   const localUserId = collaboration.localUserId ?? null;
 
   const [expandedPages, setExpandedPages] = useState<Set<string>>(new Set());
@@ -45,6 +41,9 @@ export function useSidebarNavigation(workspaceId: string) {
 
   // ── Audience map ────────────────────────────────────────────────────────────
   const pageAudienceById = useMemo(() => {
+    const awarenessStates = Array.isArray(collaboration.awarenessStates)
+      ? collaboration.awarenessStates
+      : [];
     const audienceMap = new Map<string, Array<{ userId: string; userName: string }>>();
     awarenessStates.forEach((state) => {
       if (state.userId === localUserId || !state.userCursor?.pageId) return;
@@ -53,14 +52,15 @@ export function useSidebarNavigation(workspaceId: string) {
       audienceMap.set(state.userCursor.pageId, currentAudience);
     });
     return audienceMap;
-  }, [awarenessStates, localUserId]);
+  }, [collaboration.awarenessStates, localUserId]);
 
   // ── Cursor tracking ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!effectiveCurrentPageId) return;
+    const updateCursor = collaboration.updateCursor ?? (() => {});
     updateCursor({ type: "page", pageId: effectiveCurrentPageId, canvasPosition: null, databaseCell: null });
     return () => { updateCursor(null); };
-  }, [effectiveCurrentPageId, updateCursor]);
+  }, [collaboration.updateCursor, effectiveCurrentPageId]);
 
   // ── Restore sidebar persistence ─────────────────────────────────────────────
   useEffect(() => {
@@ -154,12 +154,14 @@ export function useSidebarNavigation(workspaceId: string) {
     [pageTree, expandedPages]
   );
 
+  const sidebarPages = useMemo(() => getSidebarPages(pages), [pages]);
+
   const recentPages = useMemo(
     () =>
-      [...pages]
+      [...sidebarPages]
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
         .slice(0, 4),
-    [pages]
+    [sidebarPages]
   );
 
   const currentWorkspace = workspaces.find((ws) => ws.id === workspaceId) ?? null;

@@ -21,6 +21,7 @@ export interface DatabaseNodeAttrs {
   workspaceId: string | null;
   parentPageId: string | null;
   autoCreate: boolean;
+  isInlinePage: boolean;
   viewType: GroveSurfaceView;
   columns: Array<{ id: string; name: string; type: PropertyType; width?: number }>;
   rows: string[];
@@ -105,6 +106,7 @@ export function useDatabaseBlockData(
       pageId: optimisticPage.id,
       databaseId: optimisticDatabaseId,
       autoCreate: false,
+      isInlinePage: true,
     });
 
     try {
@@ -139,6 +141,7 @@ export function useDatabaseBlockData(
         pageId: createdPage.id,
         databaseId: createdPage.databaseId ?? null,
         autoCreate: false,
+        isInlinePage: true,
       });
     } catch {
       removeCachedPage(optimisticPage.id);
@@ -150,6 +153,7 @@ export function useDatabaseBlockData(
         pageId: null,
         databaseId: null,
         autoCreate: false,
+        isInlinePage: true,
       });
     } finally {
       isCreatingRef.current = false;

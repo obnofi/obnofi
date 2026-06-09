@@ -38,6 +38,9 @@ export const CanvasBlock = Node.create<CanvasBlockExtensionOptions>({
       autoCreate: {
         default: false,
       },
+      isInlinePage: {
+        default: false,
+      },
     };
   },
 
@@ -71,6 +74,7 @@ export const CanvasBlock = Node.create<CanvasBlockExtensionOptions>({
                 workspaceId: this.options.workspaceId ?? null,
                 parentPageId: this.options.pageId ?? null,
                 autoCreate: true,
+                isInlinePage: true,
               },
             },
             { type: "paragraph" },
@@ -99,6 +103,7 @@ export const CanvasBlock = Node.create<CanvasBlockExtensionOptions>({
                   workspaceId: this.options.workspaceId ?? null,
                   parentPageId: this.options.pageId ?? null,
                   autoCreate: true,
+                  isInlinePage: true,
                 },
               },
               { type: "paragraph" },

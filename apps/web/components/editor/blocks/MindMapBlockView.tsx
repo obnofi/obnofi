@@ -25,7 +25,7 @@ const MindGroveBoard = dynamic(
 export function MindMapBlockView(props: ReactNodeViewProps) {
   const router = useRouter();
   const attrs = props.node.attrs as CanvasBlockAttrs;
-  const { pageId, workspaceId, parentPageId, autoCreate } = attrs;
+  const { pageId, workspaceId, parentPageId, autoCreate, isInlinePage } = attrs;
   const propsRef = useRef(props);
   propsRef.current = props;
 
@@ -71,6 +71,7 @@ export function MindMapBlockView(props: ReactNodeViewProps) {
     workspaceId,
     parentPageId,
     autoCreate,
+    isInlinePage,
     cachedPage: cachedPage ?? null,
     isEditorEditable: props.editor.isEditable,
     pageType: "mindmap",

@@ -3,8 +3,26 @@
 import { useEffect, useState } from "react";
 import { patchGroveCell } from "@/lib/groveCatalogApi";
 import { patchCachedPageTitle } from "@/lib/page/pageStoreSync";
+import { isOptimisticPageId } from "@/lib/page/pageUtils";
 import { useGroveCatalogStore } from "@/store/useGroveCatalogStore";
 import type { Database, Page, PropertyValue, PropertyValueData } from "@obnofi/types";
+
+// 아직 서버에 생성되지 않은 낙관적 row(Specimen)를 GroveCatalog 캐시에서 찾아 반환.
+function findOptimisticGroveRow(rowId: string): {
+  page: Page;
+  database: Database;
+} | null {
+  const { grovePages } = useGroveCatalogStore.getState();
+
+  for (const grovePage of Object.values(grovePages)) {
+    const row = grovePage.database.rows.find((candidate) => candidate.id === rowId);
+    if (row) {
+      return { page: row, database: grovePage.database };
+    }
+  }
+
+  return null;
+}
 
 interface AncestorPage {
   id: string;
@@ -38,6 +56,21 @@ export function useGroveSideTabPage(pageId: string | null, isOpen: boolean) {
 
     let isActive = true;
     setIsLoadingPage(true);
+
+    // 낙관적 row는 서버에 아직 없으므로 fetch 시 404. 캐시에서 바로 채워 낙관적 표시.
+    if (isOptimisticPageId(pageId)) {
+      const cachedRow = findOptimisticGroveRow(pageId);
+
+      setPage(cachedRow?.page ?? null);
+      setAncestors([]);
+      setDatabase(cachedRow?.database ?? null);
+      setRowPropertyValues(cachedRow?.page.propertyValues ?? []);
+      setIsLoadingPage(false);
+
+      return () => {
+        isActive = false;
+      };
+    }
 
     Promise.all([
       fetch(`/api/pages/${pageId}`),

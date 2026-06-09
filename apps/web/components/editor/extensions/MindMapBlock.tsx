@@ -30,6 +30,7 @@ export const MindMapBlock = Node.create<MindMapBlockExtensionOptions>({
       workspaceId: { default: null },
       parentPageId: { default: null },
       autoCreate: { default: false },
+      isInlinePage: { default: false },
     };
   },
 
@@ -63,6 +64,7 @@ export const MindMapBlock = Node.create<MindMapBlockExtensionOptions>({
                 workspaceId: this.options.workspaceId ?? null,
                 parentPageId: this.options.pageId ?? null,
                 autoCreate: true,
+                isInlinePage: true,
               },
             },
             { type: "paragraph" },
@@ -90,6 +92,7 @@ export const MindMapBlock = Node.create<MindMapBlockExtensionOptions>({
                   workspaceId: this.options.workspaceId ?? null,
                   parentPageId: this.options.pageId ?? null,
                   autoCreate: true,
+                  isInlinePage: true,
                 },
               },
               { type: "paragraph" },

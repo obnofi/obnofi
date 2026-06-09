@@ -322,6 +322,7 @@ export function useSlashCommandSelect({
                 pageId: newPage.id,
                 workspaceId,
                 parentPageId: pageId,
+                isInlinePage: true,
               });
               router.push(`/workspace/${workspaceId}?page=${newPage.id}`);
             }
