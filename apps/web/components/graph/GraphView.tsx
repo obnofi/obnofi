@@ -60,7 +60,7 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
     }
   }, [queryPageId, setFocusedNote]);
 
-  const { pages, isLoading, error, reload } = useGraphPages(
+  const { pages, jungleGraph, isLoading, error, reload } = useGraphPages(
     workspaceId,
     queryPageId,
     setFocusedNote
@@ -68,6 +68,7 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
 
   const graphData = useGraphData({
     pages,
+    jungleGraph,
     focusedNoteId,
     localDepth,
     isLocalMode,

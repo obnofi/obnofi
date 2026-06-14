@@ -14,6 +14,10 @@ export type { GraphLinkNode, GraphLinkEdge } from "@/lib/graph/graphDataUtils";
 
 interface UseGraphDataParams {
   pages: Page[];
+  jungleGraph?: {
+    allNodes: GraphLinkNode[];
+    allEdges: GraphLinkEdge[];
+  } | null;
   focusedNoteId: string | null;
   localDepth: number;
   isLocalMode: boolean;
@@ -29,15 +33,21 @@ interface UseGraphDataResult {
 
 export function useGraphData({
   pages,
+  jungleGraph,
   focusedNoteId,
   localDepth,
   isLocalMode,
   showOrphans,
 }: UseGraphDataParams): UseGraphDataResult {
-  const parsed = useMemo(
-    () => createGraphFromPages(pages, focusedNoteId),
-    [pages, focusedNoteId]
-  );
+  const parsed = useMemo(() => {
+    const source = jungleGraph ?? createGraphFromPages(pages, null);
+    const allNodes = source.allNodes.map((node) => {
+      const isCurrentNote = node.id === focusedNoteId;
+      return node.isCurrentNote === isCurrentNote ? node : { ...node, isCurrentNote };
+    });
+
+    return { allNodes, allEdges: source.allEdges };
+  }, [jungleGraph, pages, focusedNoteId]);
 
   const filtered = useMemo(() => {
     const base = !isLocalMode

@@ -21,6 +21,7 @@ export interface GraphLinkEdge {
   source: string;
   target: string;
   isUnresolved: boolean;
+  isBidirectional: boolean;
   linkCount: number;
   thickness: number;
   kind: GraphEdgeKind;
@@ -48,9 +49,9 @@ const EMBED_NODE_TYPES = new Set([
 ]);
 
 const EDGE_KIND_PRIORITY: Record<GraphEdgeKind, number> = {
-  hierarchy: 1,
+  hierarchy: 3,
   embed: 2,
-  reference: 3,
+  reference: 1,
 };
 
 function normalizeLinkTarget(value: string) {
@@ -170,6 +171,7 @@ export function createGraphFromPages(
   const nodeMap = new Map<string, GraphLinkNode>();
   const edgeWeights = new Map<string, number>();
   const edgeKinds = new Map<string, GraphEdgeKind>();
+  const edgeDirections = new Map<string, { forward: boolean; reverse: boolean }>();
   const titleToPageId = new Map<string, string>();
   const pageIds = new Set<string>();
   const unresolvedLabels = new Map<string, string>();
@@ -205,12 +207,22 @@ export function createGraphFromPages(
     if (sourceId === targetId) {
       return;
     }
-    const key = `${sourceId}::${targetId}`;
+    const isForward = sourceId.localeCompare(targetId) <= 0;
+    const edgeSource = isForward ? sourceId : targetId;
+    const edgeTarget = isForward ? targetId : sourceId;
+    const key = `${edgeSource}::${edgeTarget}`;
     edgeWeights.set(key, (edgeWeights.get(key) ?? 0) + 1);
     const existingKind = edgeKinds.get(key);
     if (!existingKind || EDGE_KIND_PRIORITY[kind] > EDGE_KIND_PRIORITY[existingKind]) {
       edgeKinds.set(key, kind);
     }
+    const directions = edgeDirections.get(key) ?? { forward: false, reverse: false };
+    if (isForward) {
+      directions.forward = true;
+    } else {
+      directions.reverse = true;
+    }
+    edgeDirections.set(key, directions);
     outgoingCounts.set(sourceId, (outgoingCounts.get(sourceId) ?? 0) + 1);
     incomingCounts.set(targetId, (incomingCounts.get(targetId) ?? 0) + 1);
 
@@ -287,10 +299,12 @@ export function createGraphFromPages(
 
   const allEdges = Array.from(edgeWeights.entries()).map(([key, linkCount]) => {
     const [source, target] = key.split("::");
+    const directions = edgeDirections.get(key) ?? { forward: false, reverse: false };
     return {
       source,
       target,
       isUnresolved: target.startsWith("unresolved:"),
+      isBidirectional: directions.forward && directions.reverse,
       linkCount,
       thickness: scaleValue(linkCount, maxEdgeWeight, MIN_EDGE_WIDTH, MAX_EDGE_WIDTH),
       kind: edgeKinds.get(key) ?? "reference",

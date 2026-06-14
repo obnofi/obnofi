@@ -2,6 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Page } from "@obnofi/types";
+import type { GraphLinkEdge, GraphLinkNode } from "@/lib/graph/graphDataUtils";
+
+interface JungleGraphResponse {
+  allNodes: GraphLinkNode[];
+  allEdges: GraphLinkEdge[];
+}
 
 function describeFailure(status: number): string {
   if (status === 401) {
@@ -22,6 +28,7 @@ export function useGraphPages(
   setFocusedNote: (id: string) => void
 ) {
   const [pages, setPages] = useState<Page[]>([]);
+  const [jungleGraph, setJungleGraph] = useState<JungleGraphResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
@@ -42,7 +49,7 @@ export function useGraphPages(
 
       try {
         const response = await fetch(
-          `/api/pages?workspaceId=${encodeURIComponent(workspaceId)}&includeContent=true`,
+          `/api/graph/jungle?workspaceId=${encodeURIComponent(workspaceId)}`,
           { signal: controller.signal, credentials: "include" }
         );
 
@@ -50,15 +57,16 @@ export function useGraphPages(
           throw new Error(describeFailure(response.status));
         }
 
-        const nextPages = (await response.json()) as Page[];
+        const nextGraph = (await response.json()) as JungleGraphResponse;
         if (!mounted) {
           return;
         }
 
-        setPages(nextPages);
-        if (!queryPageId && nextPages[0] && !hasSetInitialNote.current) {
+        setJungleGraph(nextGraph);
+        setPages([]);
+        if (!queryPageId && nextGraph.allNodes[0] && !hasSetInitialNote.current) {
           hasSetInitialNote.current = true;
-          setFocusedNote(nextPages[0].id);
+          setFocusedNote(nextGraph.allNodes[0].id);
         }
       } catch (loadError) {
         if (!mounted || (loadError as Error)?.name === "AbortError") {
@@ -86,5 +94,5 @@ export function useGraphPages(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, reloadToken]);
 
-  return { pages, isLoading, error, reload };
+  return { pages, jungleGraph, isLoading, error, reload };
 }

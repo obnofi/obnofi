@@ -148,9 +148,6 @@ export const GraphNode = memo(function GraphNode({
         >
           {nodeData.label}
         </span>
-        <span className="mt-1 block text-[10px] font-medium text-[var(--color-text-placeholder)]">
-          {nodeData.connectionCount} links
-        </span>
       </div>
     </div>
   );

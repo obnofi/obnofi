@@ -21,6 +21,7 @@ type GraphFlowNode = Node<GraphCanvasNodeData, "graphNode">;
 type GraphFlowEdge = Edge<{
   thickness: number;
   isUnresolved: boolean;
+  isBidirectional: boolean;
   isActive: boolean;
   isDimmed: boolean;
   kind: GraphEdgeKind;
@@ -151,12 +152,13 @@ export function useGraphFlowNodes({
         target: edge.target,
         type: "graphEdge",
         selectable: false,
-        markerEnd: showArrows
+        markerEnd: showArrows && !edge.isBidirectional
           ? { type: MarkerType.ArrowClosed, width: 14, height: 14 }
           : undefined,
         data: {
           thickness: edge.thickness,
           isUnresolved: edge.isUnresolved,
+          isBidirectional: edge.isBidirectional,
           kind: edge.kind,
           isActive: touchesActive,
           isDimmed: highlightDimmed || searchDimmed,

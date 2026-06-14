@@ -211,6 +211,25 @@ curl -s "http://localhost:3000/api/databases/search" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+## Graph
+
+### `GET /api/graph/jungle`
+
+워크스페이스 Graph View용 compact 그래프 데이터를 조회합니다. 페이지 본문 전체를 클라이언트로 보내지 않고 서버에서 링크를 스캔한 뒤 노드/엣지만 반환합니다.
+
+| 파라미터 | 필수 | 설명 |
+|---|---|---|
+| `workspaceId` | 예 | 그래프를 조회할 워크스페이스 ID |
+
+성공 응답:
+
+```json
+{
+  "allNodes": [],
+  "allEdges": []
+}
+```
+
 ## MossNotes
 
 MossNote는 페이지/데이터베이스 페이지에 붙는 스티키 메모입니다. 기존 `Comment` 모델을 사용하며 `content.type = "mossNote"`로 구분합니다. 문서 페이지에서는 선택된 텍스트에 연결된 메모를 만들 수 있고, 선택이 없으면 페이지 전체에 붙습니다.
