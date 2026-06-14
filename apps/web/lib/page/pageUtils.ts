@@ -208,6 +208,27 @@ function collectInlineOwnedPageIdsFromNode(
 }
 
 export function getSidebarPages(pages: Page[]): Page[] {
+  if (pages.every((page) => page.content == null)) {
+    const pageMap = new Map(pages.map((page) => [page.id, page]));
+
+    return pages.filter((page) => {
+      if (!page.parentId) {
+        return true;
+      }
+
+      const parentPage = pageMap.get(page.parentId);
+      if (!parentPage) {
+        return true;
+      }
+
+      const defaultTitles = INLINE_SURFACE_DEFAULT_TITLES[page.type];
+      const looksLikeInlineSurface =
+        Array.isArray(defaultTitles) && defaultTitles.includes(page.title);
+
+      return !looksLikeInlineSurface;
+    });
+  }
+
   const pageMap = new Map(pages.map((page) => [page.id, page]));
   const referencedInlinePageIds = new Set<string>();
 

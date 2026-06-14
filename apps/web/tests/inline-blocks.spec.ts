@@ -92,6 +92,38 @@ async function focusEditorTail(page: import("@playwright/test").Page) {
   return editor;
 }
 
+async function waitForChildPageId(
+  page: import("@playwright/test").Page,
+  workspaceId: string,
+  parentId: string,
+  title: string
+) {
+  const request = page.context().request;
+  const deadline = Date.now() + 30000;
+
+  while (Date.now() < deadline) {
+    const response = await request.get(`/api/pages?workspaceId=${workspaceId}`);
+    expect(response.ok()).toBeTruthy();
+    const pages = (await response.json()) as Array<{
+      id: string;
+      title: string;
+      parentId: string | null;
+    }>;
+
+    const match = pages.find((candidate) => (
+      candidate.parentId === parentId && candidate.title === title
+    ));
+
+    if (match) {
+      return match.id;
+    }
+
+    await page.waitForTimeout(250);
+  }
+
+  throw new Error(`Timed out waiting for child page "${title}"`);
+}
+
 // ─── Database (Undergrowth) ───────────────────────────────────────────────────
 
 test("인라인 Database: 텍스트 셀 input이 포커스된다", async ({ page }) => {
@@ -194,6 +226,104 @@ test("인라인 Canvas: 내부 클릭이 에디터 노드 선택을 유발하지
   await expect(canvasEmbed).toBeVisible();
 });
 
+test("인라인 Canvas: 마인드맵 입력 중 높이가 계속 커지지 않는다", async ({ page }) => {
+  test.setTimeout(120000);
+  await gotoWorkspaceDocument(page);
+  await focusEditorTail(page);
+  await page.keyboard.type("/canvas");
+
+  const canvasEmbed = page.getByTestId("inline-canvas-embed");
+  await expect(canvasEmbed).toHaveAttribute("data-state", "ready", { timeout: 60000 });
+
+  const canvas = page.getByTestId("inline-canvas");
+  await expect(canvas.getByText("Research cluster")).toBeVisible({ timeout: 15000 });
+  const mindMapTool = canvas.locator('button[title="Mind map"]').first();
+  await expect(mindMapTool).toBeVisible();
+  await mindMapTool.click();
+
+  const canvasBox = await canvas.boundingBox();
+  expect(canvasBox).not.toBeNull();
+  const targetX = canvasBox!.x + canvasBox!.width - 140;
+  const targetY = canvasBox!.y + 140;
+
+  const vineEditor = canvas.locator('[contenteditable="true"]').last();
+  let editorReady = false;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.mouse.click(targetX, targetY);
+    const readyCount = await vineEditor.count();
+    if (readyCount > 0) {
+      editorReady = true;
+      break;
+    }
+    await page.waitForTimeout(400);
+  }
+
+  expect(editorReady).toBeTruthy();
+  await expect(vineEditor).toBeFocused({ timeout: 10000 });
+  await expect(canvas.getByText("Mind map")).toHaveCount(0);
+
+  await vineEditor.type("Seed");
+
+  const firstHeight = await vineEditor.evaluate((element) => {
+    let current: HTMLElement | null = element as HTMLElement;
+    while (current) {
+      const style = current.getAttribute("style") ?? "";
+      if (style.includes("left:") && style.includes("top:") && style.includes("width:") && style.includes("height:")) {
+        return current.getBoundingClientRect().height;
+      }
+      current = current.parentElement;
+    }
+    return (element as HTMLElement).getBoundingClientRect().height;
+  });
+
+  await vineEditor.type("lings");
+
+  const secondHeight = await vineEditor.evaluate((element) => {
+    let current: HTMLElement | null = element as HTMLElement;
+    while (current) {
+      const style = current.getAttribute("style") ?? "";
+      if (style.includes("left:") && style.includes("top:") && style.includes("width:") && style.includes("height:")) {
+        return current.getBoundingClientRect().height;
+      }
+      current = current.parentElement;
+    }
+    return (element as HTMLElement).getBoundingClientRect().height;
+  });
+
+  expect(secondHeight).toBeLessThanOrEqual(firstHeight + 2);
+  await page.locator("body").click({ position: { x: 20, y: 20 } });
+  await expect(canvas.getByText("Seedlings")).toBeVisible();
+});
+
+test("인라인 Canvas: 마인드맵 노드에 크기 조절 핸들이 표시된다", async ({ page }) => {
+  test.setTimeout(120000);
+  await gotoWorkspaceDocument(page);
+  await focusEditorTail(page);
+  await page.keyboard.type("/canvas");
+
+  const canvas = page.getByTestId("inline-canvas");
+  await expect(page.getByTestId("inline-canvas-embed")).toHaveAttribute("data-state", "ready", { timeout: 60000 });
+  await expect(canvas.getByText("Research cluster")).toBeVisible({ timeout: 15000 });
+
+  await canvas.locator('button[title="Mind map"]').first().click();
+  const canvasBox = await canvas.boundingBox();
+  expect(canvasBox).not.toBeNull();
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.mouse.click(canvasBox!.x + canvasBox!.width - 140, canvasBox!.y + 140);
+    if (await canvas.getByRole("button", { name: "Resize from se" }).count()) {
+      break;
+    }
+    await page.waitForTimeout(400);
+  }
+
+  const resizeHandle = canvas.getByRole("button", { name: "Resize from se" }).last();
+  await expect(resizeHandle).toBeVisible();
+
+  await expect(canvas.getByRole("button", { name: "Resize from nw" }).last()).toBeVisible();
+  await expect(canvas.getByRole("button", { name: "Resize from se" }).last()).toBeVisible();
+});
+
 // ─── 편집 가능성 심화 검증 ────────────────────────────────────────────────────
 
 test("인라인 Database: New 버튼으로 행 추가되고 타이틀 버튼이 렌더된다", async ({ page }) => {
@@ -239,6 +369,123 @@ test("고아 인라인 Canvas 페이지는 사이드바 Files에 노출되지 �
   await expect(page.getByTestId("workspace-editor")).toBeVisible({ timeout: 15000 });
   await expect(page.locator("[data-testid^='sidebar-page-']")).toHaveCount(sidebarItemsBefore);
   await expect(page.getByTestId("workspace-sidebar")).not.toContainText("Inline Clearing");
+});
+
+test("백스페이스로 인라인 canvas/database를 삭제하면 실제 페이지도 삭제된다", async ({ page }) => {
+  test.setTimeout(120000);
+  const workspace = await gotoWorkspaceDocument(page);
+
+  await focusEditorTail(page);
+  await page.keyboard.type("/canvas");
+
+  const canvasEmbed = page.getByTestId("inline-canvas-embed").last();
+  await expect(canvasEmbed).toHaveAttribute("data-state", "ready", { timeout: 60000 });
+  const canvasPageId = await waitForChildPageId(
+    page,
+    workspace.workspaceId,
+    workspace.pageId,
+    "Inline Clearing"
+  );
+
+  await page.keyboard.press("Backspace");
+  await expect(canvasEmbed).toHaveCount(0);
+  await expect
+    .poll(async () => {
+      const response = await page.context().request.get(`/api/pages/${canvasPageId}`);
+      return response.status();
+    }, { timeout: 15000 })
+    .toBe(404);
+
+  await focusEditorTail(page);
+  await page.keyboard.type("/database");
+
+  const databaseEmbed = page.getByTestId("inline-database-embed").last();
+  await expect(databaseEmbed).toHaveAttribute("data-state", "ready", { timeout: 60000 });
+  const databasePageId = await waitForChildPageId(
+    page,
+    workspace.workspaceId,
+    workspace.pageId,
+    "Grove Catalog"
+  );
+
+  await page.keyboard.press("Backspace");
+  await expect(databaseEmbed).toHaveCount(0);
+  await expect
+    .poll(async () => {
+      const response = await page.context().request.get(`/api/pages/${databasePageId}`);
+      return response.status();
+    }, { timeout: 15000 })
+    .toBe(404);
+});
+
+test("백스페이스로 인라인 page를 삭제하면 실제 페이지도 삭제된다", async ({ page }) => {
+  test.setTimeout(180000);
+  const workspace = await gotoWorkspaceDocument(page);
+
+  const childPageResponse = await page.context().request.post("/api/pages", {
+    data: {
+      title: `Embedded Grove Seed ${Date.now()}`,
+      type: "document",
+      workspaceId: workspace.workspaceId,
+      parentId: workspace.pageId,
+    },
+  });
+  expect(childPageResponse.ok()).toBeTruthy();
+  const childPage = (await childPageResponse.json()) as { id: string; title: string };
+
+  await page.reload();
+  await expect(page.getByTestId("workspace-editor")).toBeVisible({ timeout: 15000 });
+  await focusEditorTail(page);
+  await page.evaluate(
+    ({ childPageId, workspaceId, parentPageId }) => {
+      const editor = (window as typeof window & {
+        __obnofiEditor?: {
+          chain: () => {
+            focus: () => {
+              insertContent: (content: unknown) => { run: () => void };
+            };
+          };
+        };
+      }).__obnofiEditor;
+
+      if (!editor) {
+        throw new Error("Editor bridge unavailable");
+      }
+
+      editor
+        .chain()
+        .focus()
+        .insertContent([
+          {
+            type: "subPageEmbed",
+            attrs: {
+              pageId: childPageId,
+              workspaceId,
+              parentPageId,
+              isInlinePage: true,
+            },
+          },
+          { type: "paragraph" },
+        ])
+        .run();
+    },
+    {
+      childPageId: childPage.id,
+      workspaceId: workspace.workspaceId,
+      parentPageId: workspace.pageId,
+    }
+  );
+  await focusEditorTail(page);
+
+  await page.keyboard.press("Backspace");
+  await page.keyboard.press("Backspace");
+  await expect(page.getByText(childPage.title)).toHaveCount(0);
+  await expect
+    .poll(async () => {
+      const response = await page.context().request.get(`/api/pages/${childPage.id}`);
+      return response.status();
+    }, { timeout: 15000 })
+    .toBe(404);
 });
 
 test("인라인 Mind Map: 전용 블록이 생성되고 Open 버튼이 동작한다", async ({ page }) => {
@@ -453,6 +700,27 @@ test("인라인 Canvas: 보드 배경 클릭이 에러 없이 동작한다", asy
   // ProseMirror 노드 선택 없어야 함
   const selectedNode = page.getByTestId("workspace-editor-input").locator(".ProseMirror-selectednode");
   await expect(selectedNode).toHaveCount(0);
+});
+
+test("인라인 Mind Map: 다음 문단에서 Backspace로 임베드를 삭제할 수 있다", async ({ page }) => {
+  test.setTimeout(120000);
+  await gotoWorkspaceDocument(page);
+  await focusEditorTail(page);
+  await page.keyboard.type("/mind map");
+
+  const mindMapEmbed = page.getByTestId("inline-mindmap-embed").last();
+  await expect(mindMapEmbed).toHaveAttribute("data-state", "ready", { timeout: 60000 });
+  await expect(page.getByTestId("inline-mindmap-embed")).toHaveCount(1);
+
+  const mindMapBox = await mindMapEmbed.boundingBox();
+  expect(mindMapBox).not.toBeNull();
+  await page.mouse.click(mindMapBox!.x + 32, mindMapBox!.y + 80);
+
+  const editorParagraphs = page.getByTestId("workspace-editor-input").locator("p");
+  await editorParagraphs.last().click();
+  await page.keyboard.press("Backspace");
+
+  await expect(page.getByTestId("inline-mindmap-embed")).toHaveCount(0);
 });
 
 // ─── DB Diagram ───────────────────────────────────────────────────────────────

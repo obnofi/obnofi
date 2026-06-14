@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Plus, Clock } from "lucide-react";

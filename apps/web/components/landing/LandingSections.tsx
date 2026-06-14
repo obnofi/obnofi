@@ -6,7 +6,6 @@ import {
   FileText,
   Database,
   Layers,
-  Check,
   Users,
   LayoutGrid,
   PenTool,

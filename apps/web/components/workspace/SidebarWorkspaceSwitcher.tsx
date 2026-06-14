@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef, useEffect } from "react";
 import { ChevronDown, ChevronLeft } from "lucide-react";
 import { WorkspaceGlyph } from "@/components/workspace/WorkspaceGlyph";
 import type { WorkspaceOption } from "@/lib/sidebarPageTree";

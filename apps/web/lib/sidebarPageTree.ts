@@ -1,8 +1,6 @@
 import { arrayMove } from "@dnd-kit/sortable";
 import type { PageTreeNode } from "@/store/pageStore";
 import type { Page, PageType } from "@obnofi/types";
-import { FileText, Palette, Database } from "lucide-react";
-import type { ReactNode } from "react";
 
 // Constants
 export const PAGE_TREE_INDENT = 14;

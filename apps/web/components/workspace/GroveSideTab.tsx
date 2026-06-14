@@ -144,6 +144,7 @@ export function GroveSideTab({ workspaceId }: { workspaceId: string }) {
                       }
                       emptyMessage="Database not found"
                       compact={true}
+                      jungleLimit={500}
                       maxContentHeightClass="h-[70vh]"
                       editableTitle={false}
                     />
