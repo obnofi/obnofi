@@ -12,6 +12,7 @@ import {
   Highlighter,
   PenTool as PenToolIcon,
   Waypoints,
+  Crosshair,
 } from "lucide-react";
 import type { CanvasTool, LineStyle } from "@/store/useCanvasStore";
 import type { Element } from "@obnofi/types/clearing";
@@ -26,6 +27,7 @@ import {
   EmojiStampGroup,
   UndoRedoGroup,
 } from "./ClearingToolbarParts";
+import { ToolbarHoverLabel } from "./ToolbarHoverLabel";
 
 export function ClearingToolbar({
   activeTool,
@@ -109,140 +111,168 @@ export function ClearingToolbar({
   return (
     <div className="pointer-events-auto flex max-w-[calc(100vw-32px)] items-center gap-2 overflow-visible rounded-[26px] border border-[var(--color-border)] bg-[var(--color-surface)]/92 px-3 py-3 shadow-[0_18px_50px_rgba(15,23,42,0.14)] backdrop-blur-xl">
       <div className="flex items-center gap-1">
-        <button
-          className={toolButtonClass(activeTool === "select")}
-          onClick={() => onSetTool("select")}
-          title="Select"
-          type="button"
-        >
-          <MousePointer2 className="h-4 w-4" />
-        </button>
+        <ToolbarHoverLabel label="Select">
+          <button
+            className={toolButtonClass(activeTool === "select")}
+            onClick={() => onSetTool("select")}
+            title="Select"
+            type="button"
+          >
+            <MousePointer2 className="h-4 w-4" />
+          </button>
+        </ToolbarHoverLabel>
 
         {/* Pen/Marker picker */}
-        <div className="relative">
-          <button
-            className={`${toolButtonClass(activeTool === "pen" || activeTool === "marker")} pr-1`}
-            title={activeTool === "marker" ? "Marker" : "Pen"}
-            type="button"
-            onClick={handlePenButtonClick}
-          >
-            {activeTool === "marker" ? (
-              <Highlighter className="h-4 w-4" />
-            ) : (
-              <PenToolIcon className="h-4 w-4" />
-            )}
-            <svg className="ml-0.5 h-2.5 w-2.5 opacity-50" viewBox="0 0 10 6" fill="currentColor">
-              <path d="M0 0l5 6 5-6z" />
-            </svg>
-          </button>
+        <ToolbarHoverLabel label={activeTool === "marker" ? "Marker" : "Pen"}>
+          <div className="relative">
+            <button
+              className={`${toolButtonClass(activeTool === "pen" || activeTool === "marker")} pr-1`}
+              title={activeTool === "marker" ? "Marker" : "Pen"}
+              type="button"
+              onClick={handlePenButtonClick}
+            >
+              {activeTool === "marker" ? (
+                <Highlighter className="h-4 w-4" />
+              ) : (
+                <PenToolIcon className="h-4 w-4" />
+              )}
+              <svg className="ml-0.5 h-2.5 w-2.5 opacity-50" viewBox="0 0 10 6" fill="currentColor">
+                <path d="M0 0l5 6 5-6z" />
+              </svg>
+            </button>
 
-          {penDropdownOpen && (
-            <PenDropdown
-              activeTool={activeTool}
-              strokeColor={strokeColor}
-              strokeWidth={strokeWidth}
-              onSetTool={onSetTool}
-              onColorSelect={onDrawingColorChange}
-              onStrokeWidthSelect={onStrokeWidthChange}
-              onClose={() => setPenDropdownOpen(false)}
-            />
-          )}
-        </div>
+            {penDropdownOpen && (
+              <PenDropdown
+                activeTool={activeTool}
+                strokeColor={strokeColor}
+                strokeWidth={strokeWidth}
+                onSetTool={onSetTool}
+                onColorSelect={onDrawingColorChange}
+                onStrokeWidthSelect={onStrokeWidthChange}
+                onClose={() => setPenDropdownOpen(false)}
+              />
+            )}
+          </div>
+        </ToolbarHoverLabel>
       </div>
 
       <Divider />
 
       <div className="flex items-center gap-1">
-        <button
-          className={iconButtonClass()}
-          onClick={() => onAddElement("sticky")}
-          title="Sticky"
-          type="button"
-        >
-          <StickyNote className="h-4 w-4" />
-        </button>
+        <ToolbarHoverLabel label="Sticky">
+          <button
+            className={iconButtonClass()}
+            onClick={() => onAddElement("sticky")}
+            title="Sticky"
+            type="button"
+          >
+            <StickyNote className="h-4 w-4" />
+          </button>
+        </ToolbarHoverLabel>
 
         {/* Shape picker */}
-        <div className="relative">
+        <ToolbarHoverLabel label={activeShapeOption.label}>
+          <div className="relative">
+            <button
+              className={`${toolButtonClass(isShapeActive)} pr-1`}
+              title={activeShapeOption.label}
+              type="button"
+              onClick={handleShapeButtonClick}
+            >
+              <ShapeIcon className="h-4 w-4" />
+              <svg className="ml-0.5 h-2.5 w-2.5 opacity-50" viewBox="0 0 10 6" fill="currentColor">
+                <path d="M0 0l5 6 5-6z" />
+              </svg>
+            </button>
+
+            {shapeDropdownOpen && (
+              <ShapeDropdown
+                activeTool={activeTool}
+                onSelect={(tool) => {
+                  setLastShapeTool(tool);
+                  onSetTool(tool);
+                  setShapeDropdownOpen(false);
+                }}
+                onClose={() => setShapeDropdownOpen(false)}
+              />
+            )}
+          </div>
+        </ToolbarHoverLabel>
+
+        <ToolbarHoverLabel label="Mind map">
           <button
-            className={`${toolButtonClass(isShapeActive)} pr-1`}
-            title={activeShapeOption.label}
+            className={toolButtonClass(activeTool === "vine")}
+            onClick={() => onSetTool("vine")}
+            title="Mind map"
             type="button"
-            onClick={handleShapeButtonClick}
           >
-            <ShapeIcon className="h-4 w-4" />
-            <svg className="ml-0.5 h-2.5 w-2.5 opacity-50" viewBox="0 0 10 6" fill="currentColor">
-              <path d="M0 0l5 6 5-6z" />
-            </svg>
+            <Waypoints className="h-4 w-4" />
           </button>
+        </ToolbarHoverLabel>
 
-          {shapeDropdownOpen && (
-            <ShapeDropdown
-              activeTool={activeTool}
-              onSelect={(tool) => {
-                setLastShapeTool(tool);
-                onSetTool(tool);
-                setShapeDropdownOpen(false);
-              }}
-              onClose={() => setShapeDropdownOpen(false)}
-            />
-          )}
-        </div>
+        {/* Firefly — 레이저 포인터 (R 누른 채 흔들거나 클릭) */}
+        <ToolbarHoverLabel label="Laser pointer">
+          <button
+            className={toolButtonClass(activeTool === "laser")}
+            onClick={() => onSetTool("laser")}
+            title="Laser pointer (hold R + shake)"
+            type="button"
+          >
+            <Crosshair className="h-4 w-4" />
+          </button>
+        </ToolbarHoverLabel>
 
-        <button
-          className={toolButtonClass(activeTool === "vine")}
-          onClick={() => onSetTool("vine")}
-          title="Mind map"
-          type="button"
-        >
-          <Waypoints className="h-4 w-4" />
-        </button>
+        <ToolbarHoverLabel label="Text">
+          <button
+            className={toolButtonClass(activeTool === "text")}
+            onClick={() => onSetTool("text")}
+            title="Text"
+            type="button"
+          >
+            <Type className="h-4 w-4" />
+          </button>
+        </ToolbarHoverLabel>
 
-        <button
-          className={toolButtonClass(activeTool === "text")}
-          onClick={() => onSetTool("text")}
-          title="Text"
-          type="button"
-        >
-          <Type className="h-4 w-4" />
-        </button>
-
-        <button
-          className={toolButtonClass(activeTool === "section")}
-          onClick={() => onSetTool("section")}
-          title="Section"
-          type="button"
-        >
-          <Layers3 className="h-4 w-4" />
-        </button>
+        <ToolbarHoverLabel label="Section">
+          <button
+            className={toolButtonClass(activeTool === "section")}
+            onClick={() => onSetTool("section")}
+            title="Section"
+            type="button"
+          >
+            <Layers3 className="h-4 w-4" />
+          </button>
+        </ToolbarHoverLabel>
 
         {/* Link/Connector picker */}
-        <div className="relative">
-          <button
-            className={`${toolButtonClass(isLinkActive)} pr-1`}
-            title={activeLinkOption.label}
-            type="button"
-            onClick={handleLinkButtonClick}
-          >
-            <LinkIcon className="h-4 w-4" />
-            <svg className="ml-0.5 h-2.5 w-2.5 opacity-50" viewBox="0 0 10 6" fill="currentColor">
-              <path d="M0 0l5 6 5-6z" />
-            </svg>
-          </button>
+        <ToolbarHoverLabel label={activeLinkOption.label}>
+          <div className="relative">
+            <button
+              className={`${toolButtonClass(isLinkActive)} pr-1`}
+              title={activeLinkOption.label}
+              type="button"
+              onClick={handleLinkButtonClick}
+            >
+              <LinkIcon className="h-4 w-4" />
+              <svg className="ml-0.5 h-2.5 w-2.5 opacity-50" viewBox="0 0 10 6" fill="currentColor">
+                <path d="M0 0l5 6 5-6z" />
+              </svg>
+            </button>
 
-          {linkDropdownOpen && (
-            <LinkDropdown
-              lineStyle={lineStyle}
-              isLinkActive={isLinkActive}
-              onSelect={(style) => {
-                onLineStyleChange(style);
-                onSetTool("connector");
-                setLinkDropdownOpen(false);
-              }}
-              onClose={() => setLinkDropdownOpen(false)}
-            />
-          )}
-        </div>
+            {linkDropdownOpen && (
+              <LinkDropdown
+                lineStyle={lineStyle}
+                isLinkActive={isLinkActive}
+                onSelect={(style) => {
+                  onLineStyleChange(style);
+                  onSetTool("connector");
+                  setLinkDropdownOpen(false);
+                }}
+                onClose={() => setLinkDropdownOpen(false)}
+              />
+            )}
+          </div>
+        </ToolbarHoverLabel>
       </div>
 
       <Divider />
@@ -250,22 +280,26 @@ export function ClearingToolbar({
       {!compact ? <Divider /> : null}
 
       <div className="flex items-center gap-1">
-        <button
-          className={iconButtonClass()}
-          onClick={onOpenImagePicker}
-          title={isUploadingImage ? "Uploading image" : "Image"}
-          type="button"
-        >
-          <ImageIcon className="h-4 w-4" />
-        </button>
-        <button
-          className={toolButtonClass(activeTool === "comment")}
-          onClick={onAddComment}
-          title="Comment"
-          type="button"
-        >
-          <MessageSquarePlus className="h-4 w-4" />
-        </button>
+        <ToolbarHoverLabel label="Image">
+          <button
+            className={iconButtonClass()}
+            onClick={onOpenImagePicker}
+            title={isUploadingImage ? "Uploading image" : "Image"}
+            type="button"
+          >
+            <ImageIcon className="h-4 w-4" />
+          </button>
+        </ToolbarHoverLabel>
+        <ToolbarHoverLabel label="Comment">
+          <button
+            className={toolButtonClass(activeTool === "comment")}
+            onClick={onAddComment}
+            title="Comment"
+            type="button"
+          >
+            <MessageSquarePlus className="h-4 w-4" />
+          </button>
+        </ToolbarHoverLabel>
       </div>
 
       {!compact ? <Divider /> : null}
@@ -283,14 +317,16 @@ export function ClearingToolbar({
 
       <Divider />
 
-      <button
-        className={iconButtonClass()}
-        onClick={onResetViewport}
-        title="Reset viewport"
-        type="button"
-      >
-        <RefreshCw className="h-4 w-4" />
-      </button>
+      <ToolbarHoverLabel label="Reset viewport">
+        <button
+          className={iconButtonClass()}
+          onClick={onResetViewport}
+          title="Reset viewport"
+          type="button"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </button>
+      </ToolbarHoverLabel>
     </div>
   );
 }

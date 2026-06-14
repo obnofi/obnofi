@@ -2,6 +2,7 @@
 
 import { Redo2, Undo2 } from "lucide-react";
 import type { CanvasTool, LineStyle } from "@/store/useCanvasStore";
+import { ToolbarHoverLabel } from "./ToolbarHoverLabel";
 import {
   EMOJI_ICONS,
   LINK_OPTIONS,
@@ -228,15 +229,16 @@ export function EmojiStampGroup({ onEmojiStampSelect }: EmojiStampGroupProps) {
   return (
     <div className="flex items-center gap-1">
       {EMOJI_ICONS.map(({ id, Icon, label }) => (
-        <button
-          key={id}
-          className="flex h-11 w-11 items-center justify-center rounded-2xl border border-transparent text-[var(--color-text-primary)] transition hover:border-[var(--color-border)] hover:bg-[var(--color-hover)]"
-          onClick={() => onEmojiStampSelect(id)}
-          title={`Stamp ${label}`}
-          type="button"
-        >
-          <Icon className="h-5 w-5" />
-        </button>
+        <ToolbarHoverLabel key={id} label={label}>
+          <button
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-transparent text-[var(--color-text-primary)] transition hover:border-[var(--color-border)] hover:bg-[var(--color-hover)]"
+            onClick={() => onEmojiStampSelect(id)}
+            title={`Stamp ${label}`}
+            type="button"
+          >
+            <Icon className="h-5 w-5" />
+          </button>
+        </ToolbarHoverLabel>
       ))}
     </div>
   );
@@ -254,32 +256,36 @@ interface UndoRedoGroupProps {
 export function UndoRedoGroup({ canUndo, canRedo, onUndo, onRedo }: UndoRedoGroupProps) {
   return (
     <div className="flex items-center gap-1">
-      <button
-        className={`flex h-11 w-11 items-center justify-center rounded-2xl border border-transparent text-[var(--color-text-primary)] transition ${
-          canUndo
-            ? "hover:border-[var(--color-border)] hover:bg-[var(--color-hover)]"
-            : "cursor-not-allowed opacity-30"
-        }`}
-        disabled={!canUndo}
-        onClick={onUndo}
-        title="Undo (⌘Z)"
-        type="button"
-      >
-        <Undo2 className="h-4 w-4" />
-      </button>
-      <button
-        className={`flex h-11 w-11 items-center justify-center rounded-2xl border border-transparent text-[var(--color-text-primary)] transition ${
-          canRedo
-            ? "hover:border-[var(--color-border)] hover:bg-[var(--color-hover)]"
-            : "cursor-not-allowed opacity-30"
-        }`}
-        disabled={!canRedo}
-        onClick={onRedo}
-        title="Redo (⌘⇧Z)"
-        type="button"
-      >
-        <Redo2 className="h-4 w-4" />
-      </button>
+      <ToolbarHoverLabel label="Undo">
+        <button
+          className={`flex h-11 w-11 items-center justify-center rounded-2xl border border-transparent text-[var(--color-text-primary)] transition ${
+            canUndo
+              ? "hover:border-[var(--color-border)] hover:bg-[var(--color-hover)]"
+              : "cursor-not-allowed opacity-30"
+          }`}
+          disabled={!canUndo}
+          onClick={onUndo}
+          title="Undo (⌘Z)"
+          type="button"
+        >
+          <Undo2 className="h-4 w-4" />
+        </button>
+      </ToolbarHoverLabel>
+      <ToolbarHoverLabel label="Redo">
+        <button
+          className={`flex h-11 w-11 items-center justify-center rounded-2xl border border-transparent text-[var(--color-text-primary)] transition ${
+            canRedo
+              ? "hover:border-[var(--color-border)] hover:bg-[var(--color-hover)]"
+              : "cursor-not-allowed opacity-30"
+          }`}
+          disabled={!canRedo}
+          onClick={onRedo}
+          title="Redo (⌘⇧Z)"
+          type="button"
+        >
+          <Redo2 className="h-4 w-4" />
+        </button>
+      </ToolbarHoverLabel>
     </div>
   );
 }

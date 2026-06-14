@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import type { Editor } from "@tiptap/react";
-import { StickyNote } from "lucide-react";
+import { Crosshair, StickyNote } from "lucide-react";
 import { SpeechRecognitionButton } from "@/components/editor/SpeechRecognitionButton";
 import { OwlChatPanel } from "@/components/editor/OwlChatPanel";
 import { setJungleCursorVariant, useJungleCursor } from "@/lib/cursor/jungleCursor";
+import { useCanvasStore } from "@/store/useCanvasStore";
 import type { ParrotListeningState } from "@/hooks/useSpeechRecognition";
+import { ToolbarHoverLabel } from "./ToolbarHoverLabel";
 
 interface GroveInsertionToolbarProps {
   editor?: Editor | null;
@@ -69,6 +71,8 @@ export function GroveInsertionToolbar({
   const [isSpeechToolbarSettling, setIsSpeechToolbarSettling] = useState(false);
   const canInsert = Boolean(editor?.isEditable);
   const jungleCursor = useJungleCursor();
+  const laserActive = useCanvasStore((state) => state.tool === "laser");
+  const setCanvasTool = useCanvasStore((state) => state.setTool);
   const wasListeningRef = useRef(isListening);
 
   useEffect(() => {
@@ -161,32 +165,43 @@ export function GroveInsertionToolbar({
       disabled: !onToggleMossNote,
       icon: <StickyNote className="h-4 w-4 shrink-0" />,
     },
+    {
+      // Firefly — 레이저 포인터. 켜면 커서 이동 시 표시 (R + 흔들기 없이도).
+      id: "laser",
+      label: "Laser",
+      tooltip: "레이저 포인터 (R 누른 채 흔들거나 클릭)",
+      onClick: () => setCanvasTool(laserActive ? "select" : "laser"),
+      active: laserActive,
+      icon: <Crosshair className="h-4 w-4 shrink-0" />,
+    },
   ];
 
   return (
     <div
       data-export-ignore="true"
-      className="pointer-events-none absolute bottom-8 left-1/2 z-30 w-full max-w-[calc(100%-32px)] -translate-x-1/2 px-2"
+      className="pointer-events-none absolute bottom-8 left-1/2 z-[1200] w-full max-w-[calc(100%-32px)] -translate-x-1/2 px-2"
     >
       <div
         className={[
-          "pointer-events-auto mx-auto flex max-w-full items-center overflow-hidden transition-all duration-300 ease-out",
+          "pointer-events-auto mx-auto flex max-w-full items-center overflow-visible transition-all duration-300 ease-out",
           isSpeechToolbarListening
             ? "w-fit justify-center border-transparent bg-transparent px-0 py-0 shadow-none backdrop-blur-0"
             : isSpeechToolbarSettlingOnly
               ? "h-16 w-16 justify-center rounded-full border border-[var(--color-accent)] bg-[var(--color-surface)]/95 px-1 py-1 shadow-[0_18px_50px_rgba(15,23,42,0.14)] backdrop-blur-xl"
-              : "w-fit gap-1 overflow-x-auto rounded-[26px] border border-[var(--color-border)] bg-[var(--color-surface)]/95 px-2 py-2 shadow-[0_18px_50px_rgba(15,23,42,0.14)] backdrop-blur-xl",
+              : "w-fit gap-1 overflow-x-auto overflow-y-visible rounded-[26px] border border-[var(--color-border)] bg-[var(--color-surface)]/95 px-2 py-2 shadow-[0_18px_50px_rgba(15,23,42,0.14)] backdrop-blur-xl",
         ].join(" ")}
       >
         {isSpeechToolbarListening ? (
           onToggleSpeech ? (
-            <SpeechRecognitionButton
-              isListening={isListening}
-              isSupported={isSpeechSupported}
-              listeningState={speechListeningState}
-              speechLevel={speechLevel}
-              onToggle={() => onToggleSpeech?.()}
-            />
+            <ToolbarHoverLabel label="Parrot">
+              <SpeechRecognitionButton
+                isListening={isListening}
+                isSupported={isSpeechSupported}
+                listeningState={speechListeningState}
+                speechLevel={speechLevel}
+                onToggle={() => onToggleSpeech?.()}
+              />
+            </ToolbarHoverLabel>
           ) : null
         ) : isSpeechToolbarSettlingOnly ? (
           <span
@@ -196,59 +211,64 @@ export function GroveInsertionToolbar({
         ) : (
           <>
             <div className="flex items-center">
-              <button
-                type="button"
-                data-testid="toolbar-cursor"
-                aria-pressed={jungleCursor.variant === "highlighting"}
-                aria-label="Cursor"
-                onClick={() =>
-                  setJungleCursorVariant(
-                    jungleCursor.variant === "highlighting" ? "pointing" : "highlighting"
-                  )
-                }
-                title="하이라이트 커서"
-                className={[
-                  "flex h-11 min-w-11 items-center justify-center rounded-2xl px-3 text-sm text-[var(--color-text-primary)] transition",
-                  "hover:bg-[var(--color-hover)]",
-                ].join(" ")}
-              >
-                <ToolbarAnimalIcon
-                  alt="Cursor"
-                  active={jungleCursor.variant === "highlighting"}
-                  onSrc="/toolbar/cursor-highlighting.png"
-                  offSrc="/toolbar/cursor-off.png"
-                />
-              </button>
+              <ToolbarHoverLabel label="Cursor">
+                <button
+                  type="button"
+                  data-testid="toolbar-cursor"
+                  aria-pressed={jungleCursor.variant === "highlighting"}
+                  aria-label="Cursor"
+                  onClick={() =>
+                    setJungleCursorVariant(
+                      jungleCursor.variant === "highlighting" ? "pointing" : "highlighting"
+                    )
+                  }
+                  title="하이라이트 커서"
+                  className={[
+                    "flex h-11 min-w-11 items-center justify-center rounded-2xl px-3 text-sm text-[var(--color-text-primary)] transition",
+                    "hover:bg-[var(--color-hover)]",
+                  ].join(" ")}
+                >
+                  <ToolbarAnimalIcon
+                    alt="Cursor"
+                    active={jungleCursor.variant === "highlighting"}
+                    onSrc="/toolbar/cursor-highlighting.png"
+                    offSrc="/toolbar/cursor-off.png"
+                  />
+                </button>
+              </ToolbarHoverLabel>
             </div>
             {onToggleSpeech ? (
-              <SpeechRecognitionButton
-                isListening={isListening}
-                isSupported={isSpeechSupported}
-                listeningState={speechListeningState}
-                speechLevel={speechLevel}
-                onToggle={() => onToggleSpeech?.()}
-              />
+              <ToolbarHoverLabel label="Parrot">
+                <SpeechRecognitionButton
+                  isListening={isListening}
+                  isSupported={isSpeechSupported}
+                  listeningState={speechListeningState}
+                  speechLevel={speechLevel}
+                  onToggle={() => onToggleSpeech?.()}
+                />
+              </ToolbarHoverLabel>
             ) : null}
             {items.map(({ id, label, tooltip, icon, onClick, disabled, active, iconOnlyToggle }) => (
-              <button
-                key={id}
-                type="button"
-                data-testid={`toolbar-${id}`}
-                aria-pressed={active}
-                aria-label={label}
-                disabled={disabled}
-                onClick={onClick}
-                title={tooltip}
-                className={[
-                  "flex h-11 min-w-11 items-center justify-center gap-2 rounded-2xl px-3 text-sm text-[var(--color-text-primary)] transition",
-                  active && !iconOnlyToggle
-                    ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)] shadow-[inset_0_0_0_1px_var(--color-accent)]"
-                    : "hover:bg-[var(--color-hover)]",
-                  disabled ? "cursor-not-allowed opacity-40 hover:bg-transparent" : "",
-                ].join(" ")}
-              >
-                {icon}
-              </button>
+              <ToolbarHoverLabel key={id} label={label}>
+                <button
+                  type="button"
+                  data-testid={`toolbar-${id}`}
+                  aria-pressed={active}
+                  aria-label={label}
+                  disabled={disabled}
+                  onClick={onClick}
+                  title={tooltip}
+                  className={[
+                    "flex h-11 min-w-11 items-center justify-center gap-2 rounded-2xl px-3 text-sm text-[var(--color-text-primary)] transition",
+                    active && !iconOnlyToggle
+                      ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)] shadow-[inset_0_0_0_1px_var(--color-accent)]"
+                      : "hover:bg-[var(--color-hover)]",
+                    disabled ? "cursor-not-allowed opacity-40 hover:bg-transparent" : "",
+                  ].join(" ")}
+                >
+                  {icon}
+                </button>
+              </ToolbarHoverLabel>
             ))}
           </>
         )}

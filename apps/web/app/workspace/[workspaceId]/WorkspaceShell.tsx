@@ -28,6 +28,11 @@ export function WorkspaceShell({
       pageType={currentPage?.type ?? null}
     >
       <div className="flex h-screen bg-[var(--color-background)]">
+        <div
+          id="toolbar-tooltip-root"
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 z-[100000]"
+        />
         <WorkspaceSidebar workspaceId={workspaceId} />
         <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
           {children}
