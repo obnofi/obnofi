@@ -7,7 +7,10 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { usePageStore } from "@/store/pageStore";
 import { useEmbeddedPageState } from "@/hooks/useEmbeddedPageState";
-import { preventInlineBlockDrag } from "@/lib/editor/inlineBlockInteractions";
+import {
+  preventInlineBlockDrag,
+  stopInlineBlockEventPropagation,
+} from "@/lib/editor/inlineBlockInteractions";
 import type { CanvasBlockAttrs } from "@/components/editor/blocks/CanvasBlockView";
 
 const MindGroveBoard = dynamic(
@@ -85,6 +88,9 @@ export function MindMapBlockView(props: ReactNodeViewProps) {
       contentEditable={false}
       data-inline-block="true"
       onDragStart={preventInlineBlockDrag}
+      onPointerDown={stopInlineBlockEventPropagation}
+      onMouseDown={stopInlineBlockEventPropagation}
+      onClick={stopInlineBlockEventPropagation}
     >
       <div
         data-testid="inline-mindmap-embed"
@@ -93,22 +99,24 @@ export function MindMapBlockView(props: ReactNodeViewProps) {
         }
         className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] not-prose"
       >
-        <div
-          data-export-ignore="true"
-          className="flex items-center justify-end gap-2 border-b border-[var(--color-border)] px-4 py-3"
-        >
-          {workspaceId && embeddedPage ? (
-            <button
-              type="button"
-              data-testid="inline-mindmap-open"
-              onClick={() => router.push(`/workspace/${workspaceId}?page=${embeddedPage.id}`)}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
-            >
-              Open
-              <ExternalLink className="h-3.5 w-3.5" />
-            </button>
-          ) : null}
-        </div>
+        {props.editor.isEditable ? (
+          <div
+            data-export-ignore="true"
+            className="flex items-center justify-end gap-2 border-b border-[var(--color-border)] px-4 py-3"
+          >
+            {workspaceId && embeddedPage ? (
+              <button
+                type="button"
+                data-testid="inline-mindmap-open"
+                onClick={() => router.push(`/workspace/${workspaceId}?page=${embeddedPage.id}`)}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
+              >
+                Open
+                <ExternalLink className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         {isLoading ? (
           <div data-testid="inline-mindmap-loading" className="flex h-64 items-center justify-center">
@@ -116,7 +124,11 @@ export function MindMapBlockView(props: ReactNodeViewProps) {
           </div>
         ) : embeddedPage ? (
           <div data-testid="inline-mindmap-ready" className="h-[520px] min-h-[520px]">
-            <MindGroveBoard pageId={embeddedPage.id} initialContent={embeddedPage.content ?? null} />
+            <MindGroveBoard
+              pageId={embeddedPage.id}
+              initialContent={embeddedPage.content ?? null}
+              readOnly={!props.editor.isEditable}
+            />
           </div>
         ) : (
           <div data-testid="inline-mindmap-empty" className="px-4 py-8 text-sm text-[var(--color-text-secondary)]">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -34,9 +34,10 @@ const defaultEdgeOptions = {
 interface MindGroveBoardInnerProps {
   pageId: string;
   initialContent: object | null;
+  readOnly?: boolean;
 }
 
-function MindGroveBoardInner({ pageId, initialContent }: MindGroveBoardInnerProps) {
+function MindGroveBoardInner({ pageId, initialContent, readOnly = false }: MindGroveBoardInnerProps) {
   const content = initialContent as { nodes?: Parameters<typeof useNodesState>[0]; edges?: Parameters<typeof useEdgesState>[0] } | null;
 
   const [nodes, setNodes, onNodesChange] = useNodesState(content?.nodes ?? []);
@@ -46,11 +47,13 @@ function MindGroveBoardInner({ pageId, initialContent }: MindGroveBoardInnerProp
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestNodes = useRef(nodes);
   const latestEdges = useRef(edges);
+  const boardContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => { latestNodes.current = nodes; }, [nodes]);
   useEffect(() => { latestEdges.current = edges; }, [edges]);
 
   const scheduleSave = useCallback(() => {
+    if (readOnly) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       void fetch(`/api/pages/${pageId}`, {
@@ -91,7 +94,7 @@ function MindGroveBoardInner({ pageId, initialContent }: MindGroveBoardInnerProp
           id,
           type: "mindgrove",
           position: { x, y },
-          data: { label: "노드" },
+          data: { label: "" },
         },
       ]);
     },
@@ -100,6 +103,7 @@ function MindGroveBoardInner({ pageId, initialContent }: MindGroveBoardInnerProp
 
   const handlePaneDoubleClick = useCallback(
     (e: React.MouseEvent) => {
+      if (readOnly) return;
       if (!rfInstance.current) return;
       const bounds = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const { x, y, zoom } = rfInstance.current.getViewport();
@@ -108,76 +112,111 @@ function MindGroveBoardInner({ pageId, initialContent }: MindGroveBoardInnerProp
     [addNode]
   );
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
-      if (e.key === "Delete" || e.key === "Backspace") {
-        setNodes((nds) => nds.filter((n) => !n.selected));
-        setEdges((eds) => eds.filter((ed) => !ed.selected));
-      }
-    },
-    [setNodes, setEdges]
-  );
+  const deleteSelectedElements = useCallback(() => {
+    setNodes((nds) => nds.filter((n) => !n.selected));
+    setEdges((eds) => eds.filter((ed) => !ed.selected));
+  }, [setEdges, setNodes]);
 
-  useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
+  const handleBoardPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (readOnly) return;
+
+    const target = event.target as HTMLElement | null;
+    if (
+      !target ||
+      target.closest("input, textarea, button, a, [contenteditable='true']")
+    ) {
+      return;
+    }
+
+    boardContainerRef.current?.focus();
+  }, [readOnly]);
+
+  const handleBoardKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (readOnly) return;
+
+    const target = event.target as HTMLElement | null;
+    if (
+      target?.tagName === "INPUT" ||
+      target?.tagName === "TEXTAREA" ||
+      target?.isContentEditable
+    ) {
+      return;
+    }
+
+    if (event.key === "Delete" || event.key === "Backspace") {
+      event.preventDefault();
+      event.stopPropagation();
+      deleteSelectedElements();
+    }
+  }, [deleteSelectedElements, readOnly]);
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      onInit={(instance) => { rfInstance.current = instance; }}
-      onDoubleClick={handlePaneDoubleClick}
-      defaultEdgeOptions={defaultEdgeOptions}
-      fitView
-      fitViewOptions={{ padding: 0.3 }}
-      minZoom={0.15}
-      maxZoom={2.5}
-      deleteKeyCode={null}
+    <div
+      ref={boardContainerRef}
+      className="h-full w-full"
+      tabIndex={readOnly ? -1 : 0}
+      onPointerDown={handleBoardPointerDown}
+      onKeyDown={handleBoardKeyDown}
     >
-      <Background gap={20} size={0.7} color="var(--color-border)" />
-      <Controls />
-      <MiniMap
-        pannable
-        zoomable
-        className="!bg-[var(--color-surface)]"
-        nodeStrokeWidth={0}
-      />
-      <Panel position="top-left">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => addNode()}
-            className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] shadow-sm transition-colors hover:text-[var(--color-text-primary)]"
-          >
-            <PlusCircle className="h-3.5 w-3.5" />
-            노드 추가
-          </button>
-          <span className="text-[11px] text-[var(--color-text-placeholder)]">
-            빈 곳 더블클릭으로도 추가 · 노드 더블클릭으로 편집
-          </span>
-        </div>
-      </Panel>
-    </ReactFlow>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={readOnly ? undefined : onConnect}
+        onInit={(instance) => { rfInstance.current = instance; }}
+        onDoubleClick={handlePaneDoubleClick}
+        nodesDraggable={!readOnly}
+        nodesConnectable={!readOnly}
+        elementsSelectable={!readOnly}
+        defaultEdgeOptions={defaultEdgeOptions}
+        fitView
+        fitViewOptions={{ padding: 0.3 }}
+        minZoom={0.15}
+        maxZoom={2.5}
+        deleteKeyCode={null}
+      >
+        <Background gap={20} size={0.7} color="var(--color-border)" />
+        <Controls />
+        <MiniMap
+          pannable
+          zoomable
+          className="!bg-[var(--color-surface)]"
+          nodeStrokeWidth={0}
+        />
+        {!readOnly ? (
+          <Panel position="top-left">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => addNode()}
+                className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] shadow-sm transition-colors hover:text-[var(--color-text-primary)]"
+              >
+                <PlusCircle className="h-3.5 w-3.5" />
+                노드 추가
+              </button>
+              <span className="text-[11px] text-[var(--color-text-placeholder)]">
+                빈 곳 더블클릭으로도 추가 · 노드 더블클릭으로 편집
+              </span>
+            </div>
+          </Panel>
+        ) : null}
+      </ReactFlow>
+    </div>
   );
 }
 
 interface MindGroveBoardProps {
   pageId: string;
   initialContent: object | null;
+  readOnly?: boolean;
 }
 
-export function MindGroveBoard({ pageId, initialContent }: MindGroveBoardProps) {
+export function MindGroveBoard({ pageId, initialContent, readOnly = false }: MindGroveBoardProps) {
   return (
     <ReactFlowProvider>
       <div className="h-full w-full">
-        <MindGroveBoardInner pageId={pageId} initialContent={initialContent} />
+        <MindGroveBoardInner pageId={pageId} initialContent={initialContent} readOnly={readOnly} />
       </div>
     </ReactFlowProvider>
   );
