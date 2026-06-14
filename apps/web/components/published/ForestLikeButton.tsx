@@ -56,7 +56,7 @@ export function ForestLikeButton({
       type="button"
       onClick={handleToggle}
       disabled={isPending}
-      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] transition ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] transition ${
         viewerHasLiked
           ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)]"
           : "text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"

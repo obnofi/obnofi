@@ -127,6 +127,292 @@ function getMockPublishedPagesStore() {
   if (!globalForPublishedPages.__obnofiPublishedPagesMockStoreV2) {
     globalForPublishedPages.__obnofiPublishedPagesMockStoreV2 = [
       createMockPublishedSnapshotRow({
+        id: "forest-openai-codex-workflows",
+        title: "Codex for every role, tool, and workflow",
+        description: "OpenAI 블로그의 2026년 6월 2일 글을 바탕으로, 역할별 코딩 에이전트 활용 패턴을 정리한 Grove mock입니다.",
+        tags: ["openai", "codex", "workflow"],
+        likeCount: 31,
+        createdAt: "2026-06-12T09:20:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "crawl-page-openai-codex",
+        workspaceId: "crawl-workspace-openai",
+        snapshotContent: {
+          title: "Codex for every role, tool, and workflow",
+          icon: "🧭",
+          coverImage: null,
+          updatedAt: "2026-06-12T09:00:00.000Z",
+          pageType: "document",
+          content: {
+            type: "doc",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "에이전트를 팀 단위로 배치하는 패턴" }],
+              },
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "공식 글에서 강조한 핵심은 Codex를 특정 직군의 도구가 아니라, 설계·구현·검증 흐름 전체에 걸쳐 붙이는 방식이었다.",
+                  },
+                ],
+              },
+              {
+                type: "bulletList",
+                content: [
+                  {
+                    type: "listItem",
+                    content: [{ type: "paragraph", content: [{ type: "text", text: "리서치 담당 에이전트와 구현 담당 에이전트를 분리한다." }] }],
+                  },
+                  {
+                    type: "listItem",
+                    content: [{ type: "paragraph", content: [{ type: "text", text: "검증 단계에서는 로그와 테스트 출력을 읽는 별도 리뷰 루프가 필요하다." }] }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        user: {
+          id: "crawl-user-openai",
+          name: "OpenAI News",
+          email: "news@openai.example",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-openai-memory",
+        title: "Dreaming: Better memory for a more helpful ChatGPT",
+        description: "OpenAI 뉴스의 2026년 6월 4일 글을 바탕으로, 기억 유지가 작업 연속성에 주는 영향을 요약한 목문서입니다.",
+        tags: ["openai", "memory", "chatgpt"],
+        likeCount: 18,
+        createdAt: "2026-06-12T08:40:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "crawl-page-openai-memory",
+        workspaceId: "crawl-workspace-openai",
+        snapshotContent: {
+          title: "Dreaming: Better memory for a more helpful ChatGPT",
+          icon: "🫧",
+          coverImage: null,
+          updatedAt: "2026-06-12T08:15:00.000Z",
+          pageType: "document",
+          content: {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "장기 기억이 좋아질수록 대화 맥락을 다시 설명하는 비용이 줄고, 반복 작업을 문맥 단위로 이어서 처리하기 쉬워진다.",
+                  },
+                ],
+              },
+              {
+                type: "bulletList",
+                content: [
+                  {
+                    type: "listItem",
+                    content: [{ type: "paragraph", content: [{ type: "text", text: "개인화된 작업 기록을 남길수록 다음 세션 진입 비용이 낮아진다." }] }],
+                  },
+                  {
+                    type: "listItem",
+                    content: [{ type: "paragraph", content: [{ type: "text", text: "기억은 편의뿐 아니라 컨텍스트 품질 관리 문제로도 봐야 한다." }] }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        user: {
+          id: "crawl-user-openai",
+          name: "OpenAI News",
+          email: "news@openai.example",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-anthropic-fable",
+        title: "Claude Fable 5 and Claude Mythos 5",
+        description: "Anthropic Newsroom의 2026년 6월 9일 발표를 바탕으로, 난도 높은 지식 작업용 모델 업데이트를 정리한 Forest 카드입니다.",
+        tags: ["anthropic", "claude", "models"],
+        likeCount: 27,
+        createdAt: "2026-06-11T16:10:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "crawl-page-anthropic-fable",
+        workspaceId: "crawl-workspace-anthropic",
+        snapshotContent: {
+          title: "Claude Fable 5 and Claude Mythos 5",
+          icon: "🪶",
+          coverImage: null,
+          updatedAt: "2026-06-11T15:45:00.000Z",
+          pageType: "document",
+          content: {
+            type: "doc",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 2 },
+                content: [{ type: "text", text: "어려운 지식 업무와 코딩에 초점" }],
+              },
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "발표 문구는 hardest knowledge work and coding problems에 초점을 맞췄다. Forest에서는 이를 장문 분석, 코드 이해, 도구 연계를 밀어주는 흐름으로 재해석했다.",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        user: {
+          id: "crawl-user-anthropic",
+          name: "Anthropic News",
+          email: "news@anthropic.example",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-anthropic-glasswing",
+        title: "Expanding Project Glasswing",
+        description: "Anthropic의 2026년 6월 2일 발표를 바탕으로, 비영리 조직 지원 확장 소식을 정리한 mock publication입니다.",
+        tags: ["anthropic", "nonprofit", "ai"],
+        likeCount: 14,
+        createdAt: "2026-06-11T10:30:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "crawl-page-anthropic-glasswing",
+        workspaceId: "crawl-workspace-anthropic",
+        snapshotContent: {
+          title: "Expanding Project Glasswing",
+          icon: "🪽",
+          coverImage: null,
+          updatedAt: "2026-06-11T10:10:00.000Z",
+          pageType: "document",
+          content: {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "약 150개 신규 조직과 15개 이상 국가로 확장한다는 발표를 참고해, 공익 조직이 AI 도구를 도입할 때 필요한 운영 체크포인트를 요약했다.",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        user: {
+          id: "crawl-user-anthropic",
+          name: "Anthropic News",
+          email: "news@anthropic.example",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-vercel-agentic-infra",
+        title: "Agentic Infrastructure",
+        description: "Vercel 블로그의 2026년 4월 9일 글을 바탕으로, 에이전트가 코드를 배포하고 검증하는 인프라 패턴을 정리한 mock note입니다.",
+        tags: ["vercel", "agents", "infrastructure"],
+        likeCount: 39,
+        createdAt: "2026-06-10T18:05:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "crawl-page-vercel-agentic",
+        workspaceId: "crawl-workspace-vercel",
+        snapshotContent: {
+          title: "Agentic Infrastructure",
+          icon: "🏗️",
+          coverImage: null,
+          updatedAt: "2026-06-10T17:30:00.000Z",
+          pageType: "document",
+          content: {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "핵심 메시지는 에이전트가 사람 대신 배포 루프에 들어오는 순간, preview URL·rollback·sandbox가 기능이 아니라 전제가 된다는 점이다.",
+                  },
+                ],
+              },
+              {
+                type: "bulletList",
+                content: [
+                  {
+                    type: "listItem",
+                    content: [{ type: "paragraph", content: [{ type: "text", text: "에이전트가 스스로 검증할 수 있는 URL surface가 필요하다." }] }],
+                  },
+                  {
+                    type: "listItem",
+                    content: [{ type: "paragraph", content: [{ type: "text", text: "운영 로그와 코드 컨텍스트가 한 시스템 안에 있어야 수정 제안이 빨라진다." }] }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        user: {
+          id: "crawl-user-vercel",
+          name: "Vercel Blog",
+          email: "blog@vercel.example",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
+        id: "forest-google-agentic-gemini",
+        title: "I/O 2026: Welcome to the agentic Gemini era",
+        description: "Google AI 블로그의 2026년 I/O 포스트를 바탕으로, 더 proactive한 Gemini 경험을 요약한 Forest 목데이터입니다.",
+        tags: ["google", "gemini", "agentic"],
+        likeCount: 23,
+        createdAt: "2026-06-10T11:50:00.000Z",
+        snapshotType: PUBLISHED_SNAPSHOT_TYPE.PAGE,
+        pageId: "crawl-page-google-gemini",
+        workspaceId: "crawl-workspace-google",
+        snapshotContent: {
+          title: "I/O 2026: Welcome to the agentic Gemini era",
+          icon: "✨",
+          coverImage: null,
+          updatedAt: "2026-06-10T11:15:00.000Z",
+          pageType: "document",
+          content: {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "Google은 agentic Gemini라는 표현으로, 사용자가 지시를 던진 뒤에도 이어서 도와주는 상시형 흐름을 강조했다.",
+                  },
+                ],
+              },
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "Forest 카드에서는 메모 정리, 비즈니스 도구, 연구 보조처럼 연속성이 중요한 use case 위주로 재구성했다.",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        user: {
+          id: "crawl-user-google",
+          name: "Google AI Blog",
+          email: "ai@google.example",
+          image: null,
+        },
+      }),
+      createMockPublishedSnapshotRow({
         id: "forest-demo-page",
         title: "Jungle Weekly Review",
         description: "한 주 동안 정리한 Grove 회고 snapshot입니다.",
@@ -817,6 +1103,15 @@ export async function listPublishedSnapshots(options: {
       },
     });
 
+    if (rows.length === 0) {
+      const publishedCount = await prisma.publishedPage.count({
+        where: { deletedAt: null },
+      });
+      if (publishedCount === 0) {
+        return runMock();
+      }
+    }
+
     return rows.map((row) => toPublishedSnapshotSummary(row, options.viewerUserId));
   }, runMock);
 }
@@ -863,6 +1158,12 @@ export async function getPublishedSnapshotDetail(
     });
 
     if (!row) {
+      const publishedCount = await prisma.publishedPage.count({
+        where: { deletedAt: null },
+      });
+      if (publishedCount === 0) {
+        return runMock();
+      }
       return null;
     }
 
@@ -1346,6 +1647,12 @@ export async function listForestTags() {
       select: { tags: true },
       take: 200,
     });
+
+    if (rows.length === 0) {
+      return Array.from(
+        new Set(getActiveMockRows().flatMap((row) => row.tags).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b));
+    }
 
     return Array.from(
       new Set(rows.flatMap((row) => row.tags).filter(Boolean))

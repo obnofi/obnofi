@@ -89,24 +89,43 @@ function sanitizeNode(
       typeof attrs.pageId === "string" ? attrs.pageId : null;
 
     if (referencedPageId && publicPageIds.has(referencedPageId)) {
-      const referencedPage = publicPageById.get(referencedPageId);
-      return {
-        type: "paragraph",
-        content: [
-          {
-            type: "text",
-            text: referencedPage
-              ? `Embedded database: ${referencedPage.title}`
-              : "Embedded database",
-          },
-        ],
-      };
+      // 공개된(또는 inline) DB는 노드를 보존해 읽기 전용 에디터가 실제 표를 렌더한다.
+      const next: Record<string, JsonValue> = {};
+      for (const [key, entry] of Object.entries(record)) {
+        next[key] = sanitizeNode(entry, publicTitleMap, publicPageIds, publicPageById);
+      }
+      return next;
     }
 
     return {
       type: "paragraph",
       content: [
         { type: "text", text: "Embedded database hidden because it is not public." },
+      ],
+    };
+  }
+
+  if (record.type === "mindMapEmbed") {
+    const attrs =
+      record.attrs && typeof record.attrs === "object"
+        ? (record.attrs as Record<string, JsonValue>)
+        : {};
+    const referencedPageId =
+      typeof attrs.pageId === "string" ? attrs.pageId : null;
+
+    if (referencedPageId && publicPageIds.has(referencedPageId)) {
+      // 공개된(또는 inline) 마인드맵은 노드를 보존해 실제 MindGrove를 렌더한다.
+      const next: Record<string, JsonValue> = {};
+      for (const [key, entry] of Object.entries(record)) {
+        next[key] = sanitizeNode(entry, publicTitleMap, publicPageIds, publicPageById);
+      }
+      return next;
+    }
+
+    return {
+      type: "paragraph",
+      content: [
+        { type: "text", text: "Embedded mind map hidden because it is not public." },
       ],
     };
   }
@@ -120,18 +139,12 @@ function sanitizeNode(
       typeof attrs.pageId === "string" ? attrs.pageId : null;
 
     if (referencedPageId && publicPageIds.has(referencedPageId)) {
-      const referencedPage = publicPageById.get(referencedPageId);
-      return {
-        type: "paragraph",
-        content: [
-          {
-            type: "text",
-            text: referencedPage
-              ? `Embedded canvas: ${referencedPage.title}`
-              : "Embedded canvas",
-          },
-        ],
-      };
+      // 공개된(또는 inline) 캔버스는 노드를 보존해 읽기 전용 에디터가 실제 Clearing을 렌더한다.
+      const next: Record<string, JsonValue> = {};
+      for (const [key, entry] of Object.entries(record)) {
+        next[key] = sanitizeNode(entry, publicTitleMap, publicPageIds, publicPageById);
+      }
+      return next;
     }
 
     return {

@@ -20,13 +20,18 @@ export default async function WorkspaceForestPage({
   ]);
 
   return (
-    <Suspense>
-      <ForestFeedClient
-        initialPublications={publications}
-        initialTags={tags}
-        initialSort={sort}
-        initialTag={tag}
-      />
-    </Suspense>
+    <div
+      data-testid="workspace-forest-scroll"
+      className="min-h-0 flex-1 overflow-y-auto"
+    >
+      <Suspense>
+        <ForestFeedClient
+          initialPublications={publications}
+          initialTags={tags}
+          initialSort={sort}
+          initialTag={tag}
+        />
+      </Suspense>
+    </div>
   );
 }
