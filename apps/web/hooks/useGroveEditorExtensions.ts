@@ -25,6 +25,7 @@ import { PageLinkMark } from "@/components/editor/extensions/PageMentionExtensio
 import { DbDiagramExtension } from "@/src/components/editor/extensions/DbDiagramExtension";
 import { SubPageBlock } from "@/components/editor/extensions/SubPageBlock";
 import { BlockActionsExtension } from "@/components/editor/extensions/BlockActionsExtension";
+import { InlineOwnedPageDeletionExtension } from "@/components/editor/extensions/InlineOwnedPageDeletionExtension";
 import { TextHighlightMark } from "@/components/editor/extensions/TextHighlightMark";
 import { TaskItem, TaskList } from "@/components/editor/extensions/TaskList";
 import {
@@ -151,6 +152,7 @@ export function createGroveEditorExtensions({
     PageLinkExtension,
     PageLinkMark.configure({ workspaceId }),
     SubPageBlock,
+    ...(editable ? [InlineOwnedPageDeletionExtension] : []),
     ...(editable ? [BlockActionsExtension] : []),
     ...(editable
       ? [

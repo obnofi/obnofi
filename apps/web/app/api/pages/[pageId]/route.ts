@@ -12,8 +12,25 @@ import { normalizeTiptapDocument } from "@/lib/normalizeTiptapDocument";
 import { jsonWithPrivateReadCache } from "@/lib/httpCache";
 import { validatePatchBody, buildPageUpdateData } from "@/lib/api/pageUpdateValidation";
 import { collectPageSubtreeIds, cascadeDeletePages } from "@/lib/api/pageDeleteUtils";
+import { getRemovedInlineOwnedPageIds } from "@/lib/api/inlineOwnedPageUtils";
 
 import { logError } from "@/lib/logger";
+
+const MAX_JUNGLE_ROW_LIMIT = 5000;
+
+function getJungleRowLimit(request: NextRequest) {
+  const rawLimit = request.nextUrl.searchParams.get("jungleLimit");
+  if (!rawLimit) {
+    return undefined;
+  }
+
+  const limit = Number(rawLimit);
+  if (!Number.isFinite(limit) || limit <= 0) {
+    return undefined;
+  }
+
+  return Math.min(Math.floor(limit), MAX_JUNGLE_ROW_LIMIT);
+}
 
 export async function GET(
   request: NextRequest,
@@ -24,6 +41,7 @@ export async function GET(
     const view = request.nextUrl.searchParams.get("view");
 
     if (view === "full") {
+      const jungleRowLimit = getJungleRowLimit(request);
       const [page, database] = await Promise.all([
         prisma.page.findUnique({ where: { id: pageId }, include: PAGE_INCLUDE }),
         prisma.database.findUnique({
@@ -31,7 +49,15 @@ export async function GET(
           include: {
             properties: { orderBy: { order: "asc" } },
             views: { orderBy: { order: "asc" } },
-            rows: { select: PAGE_SELECT_WITH_PROPERTY_VALUES },
+            rows: {
+              select: PAGE_SELECT_WITH_PROPERTY_VALUES,
+              ...(jungleRowLimit
+                ? {
+                    take: jungleRowLimit,
+                    orderBy: [{ order: "asc" as const }, { updatedAt: "desc" as const }],
+                  }
+                : {}),
+            },
           },
         }),
       ]);
@@ -81,11 +107,39 @@ export async function PATCH(
       : undefined;
     const updateData = buildPageUpdateData(body, normalizedContent);
     const shouldReturnDetailedPage = "content" in body;
+    const updatedPage = await prisma.$transaction(async (tx) => {
+      const existingPage = shouldReturnDetailedPage
+        ? await tx.page.findUnique({
+            where: { id: pageId },
+            select: { id: true, content: true },
+          })
+        : null;
 
-    const updatedPage = await prisma.page.update({
-      where: { id: pageId },
-      data: updateData,
-      select: shouldReturnDetailedPage ? PAGE_DETAIL_SELECT : PAGE_SELECT,
+      const nextPage = await tx.page.update({
+        where: { id: pageId },
+        data: updateData,
+        select: shouldReturnDetailedPage ? PAGE_DETAIL_SELECT : PAGE_SELECT,
+      });
+
+      if (shouldReturnDetailedPage && existingPage && normalizedContent) {
+        const removedInlinePageIds = getRemovedInlineOwnedPageIds(
+          existingPage.content,
+          normalizedContent
+        ).filter((removedPageId) => removedPageId !== pageId);
+
+        for (const removedPageId of removedInlinePageIds) {
+          const rootPage = await tx.page.findUnique({
+            where: { id: removedPageId },
+            select: { id: true },
+          });
+          if (!rootPage) continue;
+
+          const { pageIds, databaseIds } = await collectPageSubtreeIds(tx, removedPageId);
+          await cascadeDeletePages(tx, pageIds, databaseIds);
+        }
+      }
+
+      return nextPage;
     });
 
     return NextResponse.json(toPage(updatedPage));

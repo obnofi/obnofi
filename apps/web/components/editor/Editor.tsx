@@ -27,6 +27,7 @@ import type { PageHeadingFontSizes, PageHighlightColor } from "@obnofi/types";
 import type { MossNoteAnchor } from "@/lib/moss-notes";
 import type { ParrotListeningState } from "@/hooks/useSpeechRecognition";
 import type { Editor as TiptapEditorWithCommands } from "@tiptap/core";
+import { usePageStore } from "@/store/pageStore";
 
 declare global {
   interface Window {
@@ -57,6 +58,43 @@ interface EditorProps {
   speechListeningState?: ParrotListeningState;
   mossNoteDockRef?: Ref<MossNoteDockHandle>;
   mossNoteSurfaceRef?: RefObject<HTMLElement>;
+}
+
+type EditorJsonNode = {
+  type?: string;
+  attrs?: {
+    pageId?: string | null;
+    isInlinePage?: boolean;
+  };
+  content?: EditorJsonNode[];
+};
+
+const INLINE_OWNED_PAGE_NODE_TYPES = new Set([
+  "canvasEmbed",
+  "databaseNode",
+  "subPageEmbed",
+  "mindMapEmbed",
+]);
+
+function collectInlineOwnedPageIds(node: EditorJsonNode | null | undefined, ids: Set<string>) {
+  if (!node) {
+    return ids;
+  }
+
+  if (
+    node.type &&
+    INLINE_OWNED_PAGE_NODE_TYPES.has(node.type) &&
+    node.attrs?.pageId &&
+    node.attrs.isInlinePage !== false
+  ) {
+    ids.add(node.attrs.pageId);
+  }
+
+  node.content?.forEach((child) => {
+    collectInlineOwnedPageIds(child, ids);
+  });
+
+  return ids;
 }
 
 function isCursorChatShortcutBlocked(
@@ -122,6 +160,11 @@ export function Editor({
   const onUpdateRef = useRef(onUpdate);
   const onEditRef = useRef(onEdit);
   const jungleCursor = useJungleCursor();
+  const deletePage = usePageStore((state) => state.deletePage);
+  const previousDocumentRef = useRef<EditorJsonNode | null>(
+    (content as EditorJsonNode | null) ?? null
+  );
+  const lastDeletionKeyRef = useRef<{ key: "Backspace" | "Delete"; at: number } | null>(null);
 
   const { data: session } = useSession();
   const { ydoc, provider, isSynced, awarenessStates, localUserId, updateCursor } = useCollaboration();
@@ -245,10 +288,31 @@ export function Editor({
         "data-testid": "workspace-editor-input",
         "aria-label": "Document editor",
       },
+      handleKeyDown: (_view, event) => {
+        if (event.key === "Backspace" || event.key === "Delete") {
+          lastDeletionKeyRef.current = { key: event.key, at: Date.now() };
+        }
+        return false;
+      },
     },
     onUpdate: ({ editor }) => {
       if (isApplyingInitialContent.current) return;
       const json = editor.getJSON();
+      const previousJson = previousDocumentRef.current;
+      const lastDeletionKey = lastDeletionKeyRef.current;
+
+      if (previousJson && lastDeletionKey && Date.now() - lastDeletionKey.at < 1500) {
+        const previousPageIds = collectInlineOwnedPageIds(previousJson, new Set<string>());
+        const nextPageIds = collectInlineOwnedPageIds(json as EditorJsonNode, new Set<string>());
+
+        previousPageIds.forEach((pageId) => {
+          if (!nextPageIds.has(pageId)) {
+            void deletePage(pageId);
+          }
+        });
+      }
+
+      previousDocumentRef.current = json as EditorJsonNode;
       onUpdateRef.current?.(json);
       onEditRef.current?.();
     },
@@ -282,6 +346,15 @@ export function Editor({
   }, [editor]);
 
   useEffect(() => {
+    if (!editor) {
+      previousDocumentRef.current = (content as EditorJsonNode | null) ?? null;
+      return;
+    }
+
+    previousDocumentRef.current = editor.getJSON() as EditorJsonNode;
+  }, [content, editor, pageId, pageUpdatedAt, yjsUpdatedAt]);
+
+  useEffect(() => {
     return () => {
       const shell = editorShellRef.current;
       if (!shell) return;
@@ -302,6 +375,7 @@ export function Editor({
   });
   const {
     draft: cursorChatDraft,
+    isFadingOut: isCursorChatFadingOut,
     isOpen: isCursorChatOpen,
     maxLength: cursorChatMaxLength,
     message: cursorChatMessage,
@@ -390,6 +464,7 @@ export function Editor({
             color={jungleCursor.color}
             cursor={localCursorChatPosition}
             draft={cursorChatDraft}
+            isFadingOut={isCursorChatFadingOut}
             isEditing={isCursorChatOpen}
             maxLength={cursorChatMaxLength}
             message={cursorChatMessage}
