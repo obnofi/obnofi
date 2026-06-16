@@ -3,9 +3,12 @@
 import { useState } from "react";
 import {
   ImageIcon,
+  Hand,
   Layers3,
+  LayoutTemplate,
   MessageSquarePlus,
   MousePointer2,
+  Plus,
   RefreshCw,
   StickyNote,
   Type,
@@ -20,6 +23,7 @@ import { SHAPE_OPTIONS, LINK_OPTIONS, type ShapeTool } from "@/lib/editor/cleari
 import {
   toolButtonClass,
   iconButtonClass,
+  ClearingTemplateMenu,
   Divider,
   PenDropdown,
   ShapeDropdown,
@@ -28,6 +32,7 @@ import {
   UndoRedoGroup,
 } from "./ClearingToolbarParts";
 import { ToolbarHoverLabel } from "./ToolbarHoverLabel";
+import type { ClearingTemplateId } from "@/lib/canvas/clearingTemplates";
 
 export function ClearingToolbar({
   activeTool,
@@ -38,6 +43,7 @@ export function ClearingToolbar({
   lineStyle,
   onAddComment,
   onAddElement,
+  onApplyTemplate,
   onDrawingColorChange,
   onEmojiStampSelect,
   onLineStyleChange,
@@ -58,6 +64,7 @@ export function ClearingToolbar({
   lineStyle: LineStyle;
   onAddComment: () => void;
   onAddElement: (kind: Extract<Element["type"], "sticky" | "connector" | "vine">) => void;
+  onApplyTemplate: (templateId: ClearingTemplateId) => void;
   onDrawingColorChange: (color: string) => void;
   onEmojiStampSelect: (emoji: string) => void;
   onLineStyleChange: (style: LineStyle) => void;
@@ -74,6 +81,8 @@ export function ClearingToolbar({
   const [shapeDropdownOpen, setShapeDropdownOpen] = useState(false);
   const [linkDropdownOpen, setLinkDropdownOpen] = useState(false);
   const [penDropdownOpen, setPenDropdownOpen] = useState(false);
+  const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
+  const [activeTemplateId, setActiveTemplateId] = useState<ClearingTemplateId | null>(null);
 
   const isShapeActive = (activeTool as string).startsWith("shape-");
   const activeShapeOption = SHAPE_OPTIONS.find((o) => o.tool === lastShapeTool) ?? SHAPE_OPTIONS[0];
@@ -109,7 +118,7 @@ export function ClearingToolbar({
   };
 
   return (
-    <div className="pointer-events-auto flex max-w-[calc(100vw-32px)] items-center gap-2 overflow-visible rounded-[26px] border border-[var(--color-border)] bg-[var(--color-surface)]/92 px-3 py-3 shadow-[0_18px_50px_rgba(15,23,42,0.14)] backdrop-blur-xl">
+    <div className="pointer-events-auto flex max-w-[calc(100vw-32px)] items-center gap-1 overflow-visible rounded-[18px] border border-[var(--color-border)] bg-[var(--color-background)]/94 px-2 py-2 shadow-[0_14px_40px_rgba(15,23,42,0.14)] backdrop-blur-xl">
       <div className="flex items-center gap-1">
         <ToolbarHoverLabel label="Select">
           <button
@@ -119,6 +128,17 @@ export function ClearingToolbar({
             type="button"
           >
             <MousePointer2 className="h-4 w-4" />
+          </button>
+        </ToolbarHoverLabel>
+
+        <ToolbarHoverLabel label="Pan">
+          <button
+            className={toolButtonClass(activeTool === "pan")}
+            onClick={() => onSetTool("pan")}
+            title="Pan"
+            type="button"
+          >
+            <Hand className="h-4 w-4" />
           </button>
         </ToolbarHoverLabel>
 
@@ -300,6 +320,30 @@ export function ClearingToolbar({
             <MessageSquarePlus className="h-4 w-4" />
           </button>
         </ToolbarHoverLabel>
+        {!compact ? (
+          <ToolbarHoverLabel label="Templates">
+            <div className="relative">
+              <button
+                className={iconButtonClass()}
+                onClick={() => setTemplateDropdownOpen((open) => !open)}
+                title="Templates"
+                type="button"
+              >
+                <LayoutTemplate className="h-4 w-4" />
+              </button>
+              {templateDropdownOpen ? (
+                <ClearingTemplateMenu
+                  activeTemplateId={activeTemplateId}
+                  onApplyTemplate={(templateId) => {
+                    setActiveTemplateId(templateId);
+                    onApplyTemplate(templateId);
+                  }}
+                  onClose={() => setTemplateDropdownOpen(false)}
+                />
+              ) : null}
+            </div>
+          </ToolbarHoverLabel>
+        ) : null}
       </div>
 
       {!compact ? <Divider /> : null}
@@ -327,6 +371,19 @@ export function ClearingToolbar({
           <RefreshCw className="h-4 w-4" />
         </button>
       </ToolbarHoverLabel>
+
+      {!compact ? (
+        <ToolbarHoverLabel label="Add">
+          <button
+            className={iconButtonClass()}
+            onClick={() => setTemplateDropdownOpen((open) => !open)}
+            title="Add"
+            type="button"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </ToolbarHoverLabel>
+      ) : null}
     </div>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { Redo2, Undo2 } from "lucide-react";
+import { Check, Redo2, Undo2, X } from "lucide-react";
 import type { CanvasTool, LineStyle } from "@/store/useCanvasStore";
+import { CLEARING_TEMPLATES, type ClearingTemplateId } from "@/lib/canvas/clearingTemplates";
 import { ToolbarHoverLabel } from "./ToolbarHoverLabel";
 import {
   EMOJI_ICONS,
@@ -19,7 +20,7 @@ import {
 // ─── Style helpers ────────────────────────────────────────────────────────────
 
 export function toolButtonClass(isActive: boolean) {
-  return `flex h-11 w-11 items-center justify-center rounded-2xl border text-[var(--color-text-primary)] transition ${
+  return `flex h-8 w-8 items-center justify-center rounded-lg border text-[var(--color-text-primary)] transition ${
     isActive
       ? "border-[var(--color-accent)] bg-[var(--color-accent-subtle)] shadow-[inset_0_0_0_1px_var(--color-accent)]"
       : "border-transparent bg-transparent hover:border-[var(--color-border)] hover:bg-[var(--color-hover)]"
@@ -27,11 +28,11 @@ export function toolButtonClass(isActive: boolean) {
 }
 
 export function iconButtonClass() {
-  return "flex h-11 w-11 items-center justify-center rounded-2xl border border-transparent text-[var(--color-text-primary)] transition hover:border-[var(--color-border)] hover:bg-[var(--color-hover)]";
+  return "flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-[var(--color-text-primary)] transition hover:border-[var(--color-border)] hover:bg-[var(--color-hover)]";
 }
 
 export function Divider() {
-  return <div className="h-8 w-px bg-[var(--color-border)]" />;
+  return <div className="h-6 w-px bg-[var(--color-border)]" />;
 }
 
 // ─── PenDropdown ──────────────────────────────────────────────────────────────
@@ -58,7 +59,7 @@ export function PenDropdown({
   return (
     <>
       <div className="fixed inset-0 z-[998]" onClick={onClose} />
-      <div className="absolute bottom-full left-0 z-[999] mb-2 min-w-52 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
+      <div className="absolute bottom-full left-0 z-[999] mb-2 min-w-52 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
         <div className="mb-3 flex gap-1 rounded-xl bg-[var(--color-background)] p-1">
           <button
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm transition ${
@@ -164,7 +165,7 @@ export function ShapeDropdown({ activeTool, onSelect, onClose }: ShapeDropdownPr
   return (
     <>
       <div className="fixed inset-0 z-[998]" onClick={onClose} />
-      <div className="absolute bottom-full left-0 z-[999] mb-2 min-w-40 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
+      <div className="absolute bottom-full left-0 z-[999] mb-2 min-w-40 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
         {SHAPE_OPTIONS.map(({ tool, label, Icon }) => (
           <button
             key={tool}
@@ -198,7 +199,7 @@ export function LinkDropdown({ lineStyle, isLinkActive, onSelect, onClose }: Lin
   return (
     <>
       <div className="fixed inset-0 z-[998]" onClick={onClose} />
-      <div className="absolute bottom-full left-0 z-[999] mb-2 min-w-44 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
+      <div className="absolute bottom-full left-0 z-[999] mb-2 min-w-44 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
         {LINK_OPTIONS.map(({ style, label, Icon }) => (
           <button
             key={style}
@@ -231,7 +232,7 @@ export function EmojiStampGroup({ onEmojiStampSelect }: EmojiStampGroupProps) {
       {EMOJI_ICONS.map(({ id, Icon, label }) => (
         <ToolbarHoverLabel key={id} label={label}>
           <button
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-transparent text-[var(--color-text-primary)] transition hover:border-[var(--color-border)] hover:bg-[var(--color-hover)]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-[var(--color-text-primary)] transition hover:border-[var(--color-border)] hover:bg-[var(--color-hover)]"
             onClick={() => onEmojiStampSelect(id)}
             title={`Stamp ${label}`}
             type="button"
@@ -258,7 +259,7 @@ export function UndoRedoGroup({ canUndo, canRedo, onUndo, onRedo }: UndoRedoGrou
     <div className="flex items-center gap-1">
       <ToolbarHoverLabel label="Undo">
         <button
-          className={`flex h-11 w-11 items-center justify-center rounded-2xl border border-transparent text-[var(--color-text-primary)] transition ${
+          className={`flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-[var(--color-text-primary)] transition ${
             canUndo
               ? "hover:border-[var(--color-border)] hover:bg-[var(--color-hover)]"
               : "cursor-not-allowed opacity-30"
@@ -273,7 +274,7 @@ export function UndoRedoGroup({ canUndo, canRedo, onUndo, onRedo }: UndoRedoGrou
       </ToolbarHoverLabel>
       <ToolbarHoverLabel label="Redo">
         <button
-          className={`flex h-11 w-11 items-center justify-center rounded-2xl border border-transparent text-[var(--color-text-primary)] transition ${
+          className={`flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-[var(--color-text-primary)] transition ${
             canRedo
               ? "hover:border-[var(--color-border)] hover:bg-[var(--color-hover)]"
               : "cursor-not-allowed opacity-30"
@@ -287,5 +288,68 @@ export function UndoRedoGroup({ canUndo, canRedo, onUndo, onRedo }: UndoRedoGrou
         </button>
       </ToolbarHoverLabel>
     </div>
+  );
+}
+
+export function ClearingTemplateMenu({
+  activeTemplateId,
+  onApplyTemplate,
+  onClose,
+}: {
+  activeTemplateId: ClearingTemplateId | null;
+  onApplyTemplate: (templateId: ClearingTemplateId) => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <div className="fixed inset-0 z-[998]" onClick={onClose} />
+      <div className="absolute bottom-full left-0 z-[999] mb-3 w-56 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-3 shadow-[0_18px_48px_rgba(15,23,42,0.16)]">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-[var(--color-text-primary)]">Ahh, a fresh new file!</p>
+            <p className="mt-2 text-xs leading-4 text-[var(--color-text-placeholder)]">
+              Use the up and down keys to pick a starting layout.
+            </p>
+          </div>
+          <button
+            aria-label="Close templates"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text-primary)]"
+            type="button"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-1">
+          {CLEARING_TEMPLATES.map((template) => (
+            <button
+              key={template.id}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-[var(--color-text-primary)] transition hover:bg-[var(--color-hover)]"
+              type="button"
+              onClick={() => {
+                onApplyTemplate(template.id);
+                onClose();
+              }}
+            >
+              <span
+                className="h-3 w-3 rounded-sm"
+                style={{ background: `var(--color-${template.accent === "mist" ? "text-placeholder" : "accent"})` }}
+              />
+              <span className="min-w-0 flex-1 truncate">{template.label}</span>
+              {activeTemplateId === template.id ? <Check className="h-3.5 w-3.5 text-[var(--color-accent)]" /> : null}
+            </button>
+          ))}
+        </div>
+
+        <button
+          className="mt-3 w-full rounded-lg px-2 py-1.5 text-sm font-medium text-[var(--color-accent)] transition hover:bg-[var(--color-hover)]"
+          type="button"
+          onClick={onClose}
+        >
+          More templates
+        </button>
+      </div>
+    </>
   );
 }
