@@ -25,6 +25,8 @@ import {
   consumeParagraph,
 } from "./markdown/blockParsers";
 
+const IMAGE_LINE_PATTERN = /^!\[([^\]]*)\]\(([^)]+)\)$/;
+
 const MAX_MARKDOWN_SOURCE_CHARS = 160_000;
 const MAX_MARKDOWN_SOURCE_LINES = 4_000;
 
@@ -69,6 +71,20 @@ function parseMarkdownBlocks(lines: string[]): TiptapNode[] {
 
     if (HORIZONTAL_RULE_PATTERN.test(trimmedLine)) {
       content.push({ type: "horizontalRule" });
+      index += 1;
+      continue;
+    }
+
+    const imageLineMatch = trimmedLine.match(IMAGE_LINE_PATTERN);
+    if (imageLineMatch) {
+      content.push({
+        type: "groveImageBlock",
+        attrs: {
+          src: imageLineMatch[2],
+          alt: imageLineMatch[1],
+          caption: "",
+        },
+      });
       index += 1;
       continue;
     }

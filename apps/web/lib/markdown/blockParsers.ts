@@ -11,6 +11,8 @@ import {
   HORIZONTAL_RULE_PATTERN,
   CODE_FENCE_PATTERN,
   CODE_BLOCK_LANGUAGE_ALIASES,
+  DETAILS_OPEN_PATTERN,
+  DETAILS_CLOSE_PATTERN,
 } from "./patterns";
 
 export function createParagraphNode(text: string): TiptapNode {
@@ -35,13 +37,16 @@ export function isBlockBoundary(line: string) {
     TOGGLE_SUMMARY_PATTERN.test(line) ||
     TOGGLE_OPEN_SUMMARY_PATTERN.test(line) ||
     HORIZONTAL_RULE_PATTERN.test(line) ||
-    CODE_FENCE_PATTERN.test(line)
+    CODE_FENCE_PATTERN.test(line) ||
+    DETAILS_OPEN_PATTERN.test(line) ||
+    DETAILS_CLOSE_PATTERN.test(line)
   );
 }
 
 export function consumeParagraph(lines: string[], startIndex: number) {
   const paragraphLines: string[] = [];
   let index = startIndex;
+  let hasInlineContent = false;
 
   while (index < lines.length) {
     const line = lines[index];
@@ -52,11 +57,38 @@ export function consumeParagraph(lines: string[], startIndex: number) {
       break;
     }
     paragraphLines.push(line.trim());
+    hasInlineContent = true;
     index += 1;
   }
 
+  if (!hasInlineContent) {
+    return {
+      node: { type: "paragraph" },
+      nextIndex: index,
+    };
+  }
+
+  if (paragraphLines.length === 1) {
+    return {
+      node: createParagraphNode(paragraphLines[0]),
+      nextIndex: index,
+    };
+  }
+
+  const content: TiptapNode[] = [];
+  for (let i = 0; i < paragraphLines.length; i++) {
+    if (i > 0) {
+      content.push({ type: "hardBreak" });
+    }
+    const inlineNodes = parseInlineMarkdown(paragraphLines[i]);
+    content.push(...inlineNodes);
+  }
+
   return {
-    node: createParagraphNode(paragraphLines.join(" ")),
+    node: {
+      type: "paragraph",
+      content: content.length > 0 ? content : undefined,
+    },
     nextIndex: index,
   };
 }
@@ -111,11 +143,17 @@ export function consumeTaskList(lines: string[], startIndex: number) {
 export function consumeOrderedList(lines: string[], startIndex: number) {
   const items: TiptapNode[] = [];
   let index = startIndex;
+  let startNumber = 1;
 
   while (index < lines.length) {
     const match = lines[index].match(ORDERED_LIST_PATTERN);
     if (!match) {
       break;
+    }
+
+    const numberMatch = lines[index].match(/^(\d+)\./);
+    if (index === startIndex && numberMatch) {
+      startNumber = parseInt(numberMatch[1], 10);
     }
 
     items.push({
@@ -126,7 +164,7 @@ export function consumeOrderedList(lines: string[], startIndex: number) {
   }
 
   return {
-    node: { type: "orderedList", content: items },
+    node: { type: "orderedList", attrs: startNumber > 1 ? { start: startNumber } : {}, content: items },
     nextIndex: index,
   };
 }
