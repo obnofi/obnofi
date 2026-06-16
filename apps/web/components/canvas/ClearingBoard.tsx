@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useCollaboration } from "@/lib/collaboration/CollaborationContext";
 import { ClearingBoardCanvas } from "@/components/canvas/ClearingBoardCanvas";
@@ -62,6 +62,7 @@ export function ClearingBoard({
   } = useSelectionStore();
   const { currentUser, others, setCurrentUser } = useUserStore();
   const currentUserId = currentUser?.id ?? null;
+  const lastCollabCursorSyncRef = useRef(0);
 
   const elementLookup = useMemo(() => Object.fromEntries(elements.map((e) => [e.id, e])), [elements]);
   const propertyPanelElement = useMemo(() => {
@@ -151,10 +152,11 @@ export function ClearingBoard({
 
   const actions = useClearingActions({
     currentRoomRef: s.currentRoomRef, currentUserRef: s.currentUserRef,
+    viewportRef: s.viewportRef,
     elements, isSupabaseLive: s.isSupabaseLive, activeThreadTarget: s.activeThreadTarget,
     setComments: s.setComments, setUploadingImage: s.setUploadingImage,
     setEmbedDraftUrl: s.setEmbedDraftUrl, setTool,
-    addElement, selectSingle, setSelectedElement, updateElement,
+    addElement, selectSingle, setSelectedElement, setSelectedIds, updateElement,
     pushHistory, persistElement, elementLookup,
   });
 
@@ -271,8 +273,12 @@ export function ClearingBoard({
             onContextMenu={(x, y) => s.setContextMenu({ x, y })}
             onPointerDown={pointerHandlers.handleBoardPointerDown}
             onPointerMove={(e) => {
-              pointerHandlers.handleBoardPointerMove(e);
-              updateCursor({ type: "canvas", pageId: roomSlug, canvasPosition: s.lastScenePointRef.current, databaseCell: null });
+              const scenePoint = pointerHandlers.handleBoardPointerMove(e);
+              const now = performance.now();
+              if (scenePoint && now - lastCollabCursorSyncRef.current >= 80) {
+                lastCollabCursorSyncRef.current = now;
+                updateCursor({ type: "canvas", pageId: roomSlug, canvasPosition: scenePoint, databaseCell: null });
+              }
             }}
             onPointerUp={() => void pointerHandlers.handleBoardPointerUp()}
             onPointerLeave={() => {
@@ -295,6 +301,7 @@ export function ClearingBoard({
             onCommentPinClick={(x, y) => s.setActiveThreadTarget({ elementId: null, x, y })}
             onPathCreated={actions.handlePathCreated}
             onAddElement={actions.handleCreateElement}
+            onApplyTemplate={actions.handleApplyTemplate}
             onAddComment={actions.handleCreateComment}
             onDrawingColorChange={s.setDrawingColor}
             onEmojiStampSelect={s.setActiveEmojiStamp}

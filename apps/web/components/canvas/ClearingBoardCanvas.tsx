@@ -13,10 +13,11 @@ import { isImageDrop } from "@/lib/imageUpload";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/canvas/clearingBoardConstants";
 import { useJungleCursor } from "@/lib/cursor/jungleCursor";
 import { shouldFocusInlineBlockSurface } from "@/lib/editor/inlineBlockInteractions";
-import { useCanvasStore, type CanvasTool, type Viewport } from "@/store/useCanvasStore";
+import type { CanvasTool, LineStyle, Viewport } from "@/store/useCanvasStore";
 import { Waypoints } from "lucide-react";
 import type { Comment, Element, User } from "@obnofi/types/clearing";
 import type { ConnectorHandlePosition } from "@/components/elements/ConnectorHandles";
+import type { ClearingTemplateId } from "@/lib/canvas/clearingTemplates";
 
 type AwarenessState = {
   userId: string;
@@ -35,7 +36,7 @@ type ClearingBoardCanvasProps = {
   lastScenePointRef: RefObject<{ x: number; y: number }>;
   viewport: Viewport;
   tool: CanvasTool;
-  lineStyle: string;
+  lineStyle: LineStyle;
   elements: Element[];
   elementLookup: Record<string, Element>;
   comments: Comment[];
@@ -66,6 +67,7 @@ type ClearingBoardCanvasProps = {
   onCommentPinClick: (x: number, y: number) => void;
   onPathCreated: (element: Element) => Promise<void>;
   onAddElement: (kind: "sticky" | "connector" | "vine") => void;
+  onApplyTemplate: (templateId: ClearingTemplateId) => void;
   onAddComment: () => void;
   onDrawingColorChange: (color: string) => void;
   onEmojiStampSelect: (emoji: string) => void;
@@ -80,14 +82,14 @@ type ClearingBoardCanvasProps = {
 
 export function ClearingBoardCanvas({
   boardRef, draftConnectorApiRef, currentUserRef, currentRoomRef, lastScenePointRef: _lastScenePointRef,
-  viewport, tool, elements, elementLookup,
+  viewport, tool, lineStyle, elements, elementLookup,
   comments, selectedIds, selectionFrame, floatingStamps,
   remoteCanvasCursors, others, currentUser,
   drawingColor, drawingStrokeWidth, uploadingImage, canUndo, canRedo,
   embedded, connectorCursor,
   onDrop, onContextMenu, onPointerDown, onPointerMove, onPointerUp, onPointerLeave, onWheel,
   onElementContextMenu, onElementPointerDown, onConnectorStart, onVote, onCommentPinClick, onPathCreated,
-  onAddElement, onAddComment, onDrawingColorChange, onEmojiStampSelect,
+  onAddElement, onApplyTemplate, onAddComment, onDrawingColorChange, onEmojiStampSelect,
   onLineStyleChange, onOpenImagePicker, onRedo, onResetViewport, onSetTool,
   onStrokeWidthChange, onUndo,
 }: ClearingBoardCanvasProps) {
@@ -255,8 +257,8 @@ export function ClearingBoardCanvas({
         <div className="pointer-events-none absolute bottom-4 left-1/2 z-30 -translate-x-1/2">
           <ClearingToolbar
             activeTool={tool} canRedo={canRedo} canUndo={canUndo}
-            compact={embedded} isUploadingImage={uploadingImage} lineStyle={useCanvasStore.getState().lineStyle}
-            onAddComment={onAddComment} onAddElement={onAddElement}
+            compact={embedded} isUploadingImage={uploadingImage} lineStyle={lineStyle}
+            onAddComment={onAddComment} onAddElement={onAddElement} onApplyTemplate={onApplyTemplate}
             onDrawingColorChange={onDrawingColorChange} onEmojiStampSelect={onEmojiStampSelect}
             onLineStyleChange={onLineStyleChange}
             onOpenImagePicker={onOpenImagePicker}

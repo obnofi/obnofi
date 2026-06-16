@@ -147,9 +147,21 @@ export function useClearingBoardPointerDown({
         return;
       }
 
-      lassoStateRef.current = { startX: sp.x, startY: sp.y, currentX: sp.x, currentY: sp.y };
-      setSelectionBounds({ x: sp.x, y: sp.y, width: 0, height: 0 });
-      panStateRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, originX: viewport.x, originY: viewport.y };
+      if (tool === "pan" || event.button === 1 || event.altKey) {
+        panStateRef.current = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          originX: viewport.x,
+          originY: viewport.y,
+        };
+        return;
+      }
+
+      if (tool === "select") {
+        lassoStateRef.current = { startX: sp.x, startY: sp.y, currentX: sp.x, currentY: sp.y };
+        setSelectionBounds({ x: sp.x, y: sp.y, width: 0, height: 0 });
+      }
     },
     [
       activeEmojiStamp, addElement, boardRef, clearSelection, currentRoomRef, currentUserRef,

@@ -3,12 +3,14 @@ import { createEmbedElement } from "@/lib/embedUtils";
 import { createImageElement, uploadImageToBoard } from "@/lib/imageUpload";
 import { logClearingPersistenceError } from "@/lib/canvas/clearingBoardUtils";
 import { buildElement } from "@/lib/canvas/clearingBoardElementBuilders";
+import { buildClearingTemplateElements, type ClearingTemplateId } from "@/lib/canvas/clearingTemplates";
 
 type ActiveThreadTarget = { elementId: string | null; x: number; y: number } | null;
 
 export type ClearingActionsOptions = {
   currentRoomRef: React.MutableRefObject<Room | null>;
   currentUserRef: React.MutableRefObject<User | null>;
+  viewportRef: React.MutableRefObject<{ x: number; y: number; zoom: number }>;
   elements: Element[];
   isSupabaseLive: boolean;
   activeThreadTarget: ActiveThreadTarget;
@@ -19,6 +21,7 @@ export type ClearingActionsOptions = {
   addElement: (el: Element) => void;
   selectSingle: (id: string) => void;
   setSelectedElement: (id: string | null) => void;
+  setSelectedIds: (ids: string[]) => void;
   updateElement: (id: string, patch: Partial<Element>) => void;
   pushHistory: (snapshot?: Element[]) => void;
   persistElement: (el: Element) => Promise<void>;
@@ -28,6 +31,7 @@ export type ClearingActionsOptions = {
 export function useClearingActions({
   currentRoomRef,
   currentUserRef,
+  viewportRef,
   elements,
   isSupabaseLive,
   activeThreadTarget,
@@ -38,6 +42,7 @@ export function useClearingActions({
   addElement,
   selectSingle,
   setSelectedElement,
+  setSelectedIds,
   updateElement,
   pushHistory,
   persistElement,
@@ -53,6 +58,31 @@ export function useClearingActions({
     selectSingle(nextElement.id);
     setSelectedElement(nextElement.id);
     await persistElement(nextElement);
+  };
+
+  const handleApplyTemplate = async (templateId: ClearingTemplateId) => {
+    const activeRoom = currentRoomRef.current;
+    const activeUser = currentUserRef.current;
+    if (!activeRoom || !activeUser) return;
+
+    pushHistory();
+    const nextElements = buildClearingTemplateElements(
+      templateId,
+      activeRoom.id,
+      activeUser.id,
+      elements.length + 1,
+      {
+        x: -viewportRef.current.x / viewportRef.current.zoom + 120,
+        y: -viewportRef.current.y / viewportRef.current.zoom + 40,
+      }
+    );
+
+    nextElements.forEach((element) => addElement(element));
+    const nextIds = nextElements.map((element) => element.id);
+    setSelectedIds(nextIds);
+    setSelectedElement(nextIds[0] ?? null);
+    await Promise.all(nextElements.map((element) => persistElement(element)));
+    setTool("select");
   };
 
   const handlePathCreated = async (element: Element) => {
@@ -181,6 +211,7 @@ export function useClearingActions({
 
   return {
     handleCreateElement,
+    handleApplyTemplate,
     handlePathCreated,
     handleCreateComment,
     submitComment,
