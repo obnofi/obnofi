@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { useInView, useScrollY } from "@/lib/landing/landingHooks";
 import {
   AppWindowMockup,
@@ -11,11 +11,9 @@ import {
 import {
   LANDING_STYLES,
   LandingNav,
-  ProblemSection,
   HowItWorksSection,
   FeaturesGridSection,
   EmotionSection,
-  RolesSection,
   FeaturesMarqueeSection,
   FaqSection,
   CtaSection,
@@ -30,84 +28,75 @@ export function LandingPage() {
   const { ref: s1Ref,    inView: s1In    } = useInView(0.1);
   const { ref: s2Ref,    inView: s2In    } = useInView(0.1);
   const { ref: ctaRef,   inView: ctaIn   } = useInView(0.1);
-  const { ref: rolesRef, inView: rolesIn } = useInView(0.1);
   const { ref: faqRef,   inView: faqIn   } = useInView(0.1);
-  const { ref: problemRef, inView: problemIn } = useInView(0.1);
   const { ref: emotionRef, inView: emotionIn } = useInView(0.1);
 
   return (
     <>
       <style>{LANDING_STYLES}</style>
 
-      <div style={{ fontFamily: "var(--font-sans)" }}>
+      <div style={{ fontFamily: "'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
         <LandingNav />
 
         {/* ══ HERO ══════════════════════════════════════════════════ */}
         <section
-          className="relative flex flex-col items-center justify-center text-center px-6"
-          style={{ background: "#FFFFFF", minHeight: "100vh", paddingTop: "120px", paddingBottom: "120px" }}
+          className="relative flex items-center overflow-hidden"
+          style={{ background: "#0C1810", minHeight: "calc(100vh - 56px)" }}
         >
-          {/* parallax orbs */}
-          <div className="absolute inset-0 pointer-events-none" style={{ overflow: "hidden" }} aria-hidden>
-            <div style={{ position:"absolute", top:"-20%", left:"-8%", width:"60%", height:"75%", background:"radial-gradient(circle, rgba(46,125,69,0.13) 0%, transparent 70%)", filter:"blur(72px)", animation:"orb-1 14s ease-in-out infinite", transform:`translateY(${scrollY * 0.15}px)` }} />
-            <div style={{ position:"absolute", top:"5%", right:"-12%", width:"50%", height:"65%", background:"radial-gradient(circle, rgba(61,160,90,0.09) 0%, transparent 70%)", filter:"blur(80px)", animation:"orb-2 18s ease-in-out infinite", transform:`translateY(${scrollY * 0.08}px)` }} />
-            <div style={{ position:"absolute", bottom:"-8%", left:"22%", width:"55%", height:"60%", background:"radial-gradient(circle, rgba(46,125,69,0.1) 0%, transparent 70%)", filter:"blur(64px)", animation:"orb-3 11s ease-in-out infinite", transform:`translateY(${scrollY * -0.1}px)` }} />
-            <div style={{ position:"absolute", top:"25%", right:"18%", width:"32%", height:"45%", background:"radial-gradient(circle, rgba(51,126,169,0.07) 0%, transparent 70%)", filter:"blur(80px)", animation:"orb-4 16s ease-in-out infinite" }} />
+          {/* glow */}
+          <div className="absolute inset-0 pointer-events-none" aria-hidden>
+            <div style={{ position:"absolute", top:"10%", left:"-5%", width:"50%", height:"70%", background:"radial-gradient(circle, rgba(46,180,80,0.28) 0%, transparent 60%)", filter:"blur(90px)", animation:"orb-1 14s ease-in-out infinite" }} />
+            <div style={{ position:"absolute", bottom:"5%", right:"20%", width:"40%", height:"55%", background:"radial-gradient(circle, rgba(30,120,60,0.18) 0%, transparent 60%)", filter:"blur(80px)", animation:"orb-3 11s ease-in-out infinite" }} />
           </div>
 
-          <div ref={heroRef} className="relative z-10" style={{ maxWidth: "72ch" }}>
-            <p className={`text-sm mb-6 reveal${heroIn ? " in" : ""}`} style={{ color: "#2E7D45", letterSpacing: "0.14em", fontWeight: 600 }}>
+          {/* Left: text */}
+          <div ref={heroRef} className="relative z-10 flex-1 flex flex-col justify-center px-8 sm:px-14 lg:px-20 xl:px-28 py-20">
+            <p className={`text-xs font-semibold mb-6 reveal${heroIn ? " in" : ""}`} style={{ color: "rgba(80,210,120,0.75)", letterSpacing: "0.2em" }}>
               생각을 위한 하나의 공간
             </p>
-            <h1 className={`font-bold mb-6 leading-tight reveal reveal-delay-1${heroIn ? " in" : ""}`} style={{ fontSize: "clamp(40px, 6vw, 72px)", letterSpacing: "-0.03em", color: "#1A1A1A" }}>
-              <span style={{ color: "#2E7D45" }}>끊기지 않는 사고흐름</span>
+            <h1 className={`mb-6 leading-[1.05] reveal reveal-delay-1${heroIn ? " in" : ""}`} style={{ fontSize: "clamp(40px, 5vw, 76px)", letterSpacing: "-0.05em", color: "#FFFFFF", fontWeight: 800 }}>
+              끊기지 않는<br /><span style={{ color: "#4ADB7A" }}>사고흐름</span>
             </h1>
-            <p className={`text-lg mb-10 mx-auto reveal reveal-delay-2${heroIn ? " in" : ""}`} style={{ color: "rgba(55,53,47,0.6)", maxWidth: "48ch", lineHeight: 1.7 }}>
-              메모하고, 그리고, 연결하세요.
-              도구를 바꿀 필요 없이, 한 곳에서 전부 됩니다.
+            <p className={`mb-10 reveal reveal-delay-2${heroIn ? " in" : ""}`} style={{ color: "rgba(255,255,255,0.45)", fontSize: "clamp(15px, 1.4vw, 19px)", maxWidth: "30ch", lineHeight: 1.75 }}>
+              메모, 캔버스, 데이터베이스.<br />도구 전환 없이 한 곳에서.
             </p>
-            <div className={`flex items-center justify-center gap-3 reveal reveal-delay-3${heroIn ? " in" : ""}`}>
-              <Link href="/auth/signin" className="inline-flex items-center gap-2 font-semibold px-7 py-3.5 rounded-xl text-white" style={{ background: "#2E7D45", fontSize: "15px" }}>
-                무료로 시작하기 <ArrowRight size={16} />
-              </Link>
-              <Link href="/auth/signin" className="px-7 py-3.5 rounded-xl" style={{ color: "rgba(55,53,47,0.5)", background: "rgba(0,0,0,0.05)", fontSize: "15px" }}>
-                로그인
+            <div className={`reveal reveal-delay-3${heroIn ? " in" : ""}`}>
+              <Link href="/auth/signin" className="inline-flex items-center font-semibold px-7 py-3.5 rounded-xl text-white" style={{ background: "#2E7D45", fontSize: "15px" }}>
+                시작하기
               </Link>
             </div>
           </div>
-        </section>
 
-        {/* ══ MOCKUP ════════════════════════════════════════════════ */}
-        <section style={{ background: "#F7F7F5", padding: "120px 24px 160px" }}>
-          <div className="max-w-6xl mx-auto" style={{ animation: "float-mockup 8s ease-in-out infinite" }}>
-            <AppWindowMockup />
+          {/* Right: mockup */}
+          <div className="hidden lg:flex relative z-10 flex-1 items-center justify-center pr-8 xl:pr-16 py-16">
+            <div style={{ animation: "float-mockup 8s ease-in-out infinite", width: "100%", maxWidth: "680px", filter: "drop-shadow(0 32px 64px rgba(0,0,0,0.5))" }}>
+              <AppWindowMockup />
+            </div>
           </div>
         </section>
-
-        <ProblemSection problemRef={problemRef} problemIn={problemIn} />
 
         <HowItWorksSection howRef={howRef} howIn={howIn} />
 
         <FeaturesGridSection />
 
         {/* ══ CANVAS ════════════════════════════════════════════════ */}
-        <section style={{ background: "linear-gradient(160deg, #E8F5EC 0%, #F0FAF3 60%, #E4F4EC 100%)", minHeight: "90vh", display: "flex", alignItems: "center" }}>
+        <section style={{ background: "linear-gradient(160deg, #E8F5EC 0%, #F0FAF3 60%, #E4F4EC 100%)", display: "flex", alignItems: "center" }}>
           <div
             ref={s1Ref}
-            className={`max-w-6xl mx-auto px-6 lg:px-12 py-32 grid items-center gap-16 w-full reveal${s1In ? " in" : ""} lg:grid-cols-2`}
+            className={`max-w-6xl mx-auto px-6 lg:px-12 py-16 grid items-center gap-12 w-full reveal${s1In ? " in" : ""} lg:grid-cols-2`}
           >
             <div>
               <p className="text-xs font-semibold mb-5" style={{ color: "#2E7D45", letterSpacing: "0.14em" }}>클리어링 캔버스</p>
-              <h2 className="font-bold mb-6 leading-tight" style={{ fontSize: "clamp(32px, 4vw, 48px)", letterSpacing: "-0.03em", color: "#1F3D2A" }}>
+              <h2 className="mb-6 leading-tight" style={{ fontSize: "clamp(32px, 4vw, 52px)", letterSpacing: "-0.04em", color: "#1F3D2A", fontWeight: 800 }}>
                 아이디어를 펼치는<br />무한 캔버스
               </h2>
               <p className="text-lg leading-relaxed mb-8" style={{ color: "#3D6B50", maxWidth: "36ch" }}>
                 스티키 노트, 도형, 커넥터, 이미지를 자유롭게 배치하세요.
-                팀원이 실시간으로 어디에 있는지 커서로 확인됩니다.
+                무한히 확장되는 공간에서 생각을 시각화하세요.
               </p>
               <ul className="space-y-3">
-                {["무한 확장 가능한 캔버스", "실시간 커서 동기화", "스티키 노트와 도형", "페이지와 연결"].map((item, i) => (
+                {["무한 확장 가능한 캔버스", "스티키 노트와 도형", "커넥터로 아이디어 연결", "페이지와 연결"].map((item, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm" style={{ color: "#3D6B50" }}>
                     <Check size={14} style={{ color: "#2E7D45" }} />
                     {item}
@@ -120,15 +109,15 @@ export function LandingPage() {
         </section>
 
         {/* ══ DATABASE ══════════════════════════════════════════════ */}
-        <section style={{ background: "#FFFFFF", minHeight: "90vh", display: "flex", alignItems: "center" }}>
+        <section style={{ background: "#FFFFFF", display: "flex", alignItems: "center" }}>
           <div
             ref={s2Ref}
-            className={`max-w-6xl mx-auto px-6 lg:px-12 py-32 grid items-center gap-16 w-full reveal${s2In ? " in" : ""} lg:grid-cols-2`}
+            className={`max-w-6xl mx-auto px-6 lg:px-12 py-16 grid items-center gap-12 w-full reveal${s2In ? " in" : ""} lg:grid-cols-2`}
           >
             <DatabaseMockup />
             <div>
               <p className="text-xs font-semibold mb-5" style={{ color: "#2E7D45", letterSpacing: "0.14em" }}>언더그로스 데이터베이스</p>
-              <h2 className="font-bold mb-6 leading-tight" style={{ fontSize: "clamp(32px, 4vw, 48px)", letterSpacing: "-0.03em", color: "#37352F" }}>
+              <h2 className="mb-6 leading-tight" style={{ fontSize: "clamp(32px, 4vw, 52px)", letterSpacing: "-0.04em", color: "#111111", fontWeight: 800 }}>
                 데이터를<br />원하는 방식으로
               </h2>
               <p className="text-lg leading-relaxed mb-8" style={{ color: "#787774", maxWidth: "36ch" }}>
@@ -146,8 +135,6 @@ export function LandingPage() {
             </div>
           </div>
         </section>
-
-        <RolesSection rolesRef={rolesRef} rolesIn={rolesIn} />
 
         <FeaturesMarqueeSection />
 

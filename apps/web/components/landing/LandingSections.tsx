@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import {
-  ArrowRight,
+
   FileText,
   Database,
   Layers,
-  Users,
+
   LayoutGrid,
   PenTool,
 } from "lucide-react";
 import { SiteLogo } from "@/components/branding/SiteLogo";
-import { FeatureCard, RoleCard, FAQItem } from "@/components/landing/LandingCards";
+import { FeatureCard, FAQItem } from "@/components/landing/LandingCards";
 
 export const LANDING_STYLES = `
   @keyframes orb-1 {
@@ -81,7 +81,6 @@ export const LANDING_STYLES = `
 export const FEATURE_TAGS = [
   "블록 기반 편집",
   "슬래시 커맨드",
-  "실시간 협업",
   "AI 보조 작성",
   "음성 입력 (Parrot)",
   "무한 캔버스",
@@ -91,23 +90,19 @@ export const FEATURE_TAGS = [
   "다크 / 라이트 / 정글 테마",
   "위키 링크",
   "URL 가져오기",
+  "Forest 피드 발행",
 ];
 
 export function LandingNav() {
   return (
     <nav
-      className="sticky top-0 z-50 flex items-center justify-between px-6 lg:px-12 py-4"
-      style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(0,0,0,0.06)" }}
+      className="sticky top-0 z-50 flex items-center justify-between px-6 lg:px-12 py-3.5"
+      style={{ background: "rgba(12,24,16,0.92)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
     >
-      <SiteLogo className="h-auto w-[96px]" />
-      <div className="flex items-center gap-2">
-        <Link href="/auth/signin" className="text-sm px-4 py-2 rounded-lg hidden sm:block" style={{ color: "rgba(55,53,47,0.5)" }}>
-          로그인
-        </Link>
-        <Link href="/auth/signin" className="text-sm font-medium px-4 py-2 rounded-lg text-white" style={{ background: "#2E7D45" }}>
-          무료로 시작하기
-        </Link>
-      </div>
+      <img src="/obnofidarkmodelogo.png" alt="Obnofi" style={{ height: "28px", width: "auto" }} />
+      <Link href="/auth/signin" className="text-sm font-semibold px-5 py-2 rounded-lg" style={{ color: "rgba(255,255,255,0.75)", border: "1px solid rgba(255,255,255,0.15)" }}>
+        로그인
+      </Link>
     </nav>
   );
 }
@@ -121,19 +116,19 @@ export function HowItWorksSection({ howRef, howIn }: HowItWorksSectionProps) {
   const steps = [
     { num: "01", title: "씨앗을 심으세요", desc: "새 페이지를 만들고 블록과 슬래시 커맨드로 자유롭게 작성하세요. AI 보조 작성과 음성 입력(Parrot)으로 더 빠르게.", icon: <FileText size={20} /> },
     { num: "02", title: "구조로 엮으세요", desc: "데이터베이스, 무한 캔버스, 그래프 뷰로 흩어진 생각을 연결하고 한눈에 정리하세요.", icon: <LayoutGrid size={20} /> },
-    { num: "03", title: "함께 완성하세요", desc: "Yjs 기반 실시간 협업으로 팀원의 커서를 보며 편집하고, 공개 링크로 결과를 공유하세요.", icon: <Users size={20} /> },
+    { num: "03", title: "세상에 꺼내세요", desc: "공개 링크로 페이지를 공유하고, Forest 피드에 발행해 나만의 지식을 세상과 나누세요.", icon: <Layers size={20} /> },
   ];
 
   return (
     <section style={{ background: "#FFFFFF" }}>
       <div ref={howRef} className="max-w-6xl mx-auto px-6 lg:px-12">
-        <div className={`pt-32 pb-24 text-center reveal${howIn ? " in" : ""}`}>
+        <div className={`pt-20 pb-14 text-center reveal${howIn ? " in" : ""}`}>
           <p className="text-sm mb-4" style={{ color: "#2E7D45", letterSpacing: "0.12em", fontWeight: 600 }}>이용 방법</p>
-          <h2 className="font-bold" style={{ fontSize: "clamp(32px, 4vw, 48px)", letterSpacing: "-0.03em", color: "#1A1A1A" }}>
+          <h2 style={{ fontSize: "clamp(28px, 3.5vw, 48px)", letterSpacing: "-0.04em", color: "#111111", fontWeight: 800 }}>
             아이디어를 한곳에서 완성하세요
           </h2>
         </div>
-        <div className="grid md:grid-cols-3 gap-8 pb-32">
+        <div className="grid md:grid-cols-3 gap-8 pb-20">
           {steps.map((step, i) => (
             <div key={step.num} className={`reveal${howIn ? " in" : ""}`} style={{ transitionDelay: `${i * 0.15}s` }}>
               <div className="mb-4">
@@ -154,17 +149,17 @@ export function HowItWorksSection({ howRef, howIn }: HowItWorksSectionProps) {
 
 export function FeaturesGridSection() {
   return (
-    <section style={{ background: "#F7F7F5", padding: "140px 0" }}>
+    <section style={{ background: "#F7F7F5", padding: "80px 0" }}>
       <div className="max-w-6xl mx-auto px-6 lg:px-12">
-        <div className="text-center mb-16">
-          <p className="text-sm mb-4" style={{ color: "#2E7D45", letterSpacing: "0.12em", fontWeight: 600 }}>기능</p>
-          <h2 className="font-bold" style={{ fontSize: "clamp(32px, 4vw, 48px)", letterSpacing: "-0.03em", color: "#1A1A1A" }}>생각의 모양에 따라 골라 쓰세요</h2>
+        <div className="text-center mb-12">
+          <p className="text-sm mb-3" style={{ color: "#2E7D45", letterSpacing: "0.12em", fontWeight: 600 }}>기능</p>
+          <h2 style={{ fontSize: "clamp(28px, 3.5vw, 48px)", letterSpacing: "-0.04em", color: "#111111", fontWeight: 800 }}>생각의 모양에 따라 골라 쓰세요</h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <FeatureCard icon={<FileText size={20} />} title="글로 쓰기" description="블록 에디터로 자유롭게. 제목, 목록, 코드 블록까지." />
           <FeatureCard icon={<PenTool size={20} />} title="펼쳐서 그리기" description="무한 캔버스에 마음대로 그리고 붙이세요." />
           <FeatureCard icon={<Database size={20} />} title="연결 보기" description="내 글들이 어떻게 이어지는지 한눈에." />
-          <FeatureCard icon={<Users size={20} />} title="같이 쓰기" description="동시에 편집해도 충돌 없이. 실시간으로 함께." />
+          <FeatureCard icon={<Layers size={20} />} title="발행하기" description="공개 링크와 Forest 피드로 지식을 세상에." />
         </div>
       </div>
     </section>
@@ -199,9 +194,9 @@ interface EmotionSectionProps {
 
 export function EmotionSection({ emotionRef, emotionIn }: EmotionSectionProps) {
   return (
-    <section style={{ background: "linear-gradient(160deg, #1F3D2A 0%, #2E7D45 100%)", padding: "160px 0" }}>
+    <section style={{ background: "linear-gradient(160deg, #1F3D2A 0%, #2E7D45 100%)", padding: "100px 0" }}>
       <div ref={emotionRef} className={`max-w-3xl mx-auto px-6 lg:px-12 text-center reveal${emotionIn ? " in" : ""}`}>
-        <h2 className="font-bold mb-5" style={{ fontSize: "clamp(32px, 4.5vw, 52px)", letterSpacing: "-0.03em", color: "#FFFCED", lineHeight: 1.25 }}>
+        <h2 className="mb-5" style={{ fontSize: "clamp(32px, 4.5vw, 56px)", letterSpacing: "-0.05em", color: "#FFFFFF", lineHeight: 1.2, fontWeight: 800 }}>
           기억은 흐릿해지지만,<br />기록은 남습니다.
         </h2>
         <p className="text-lg" style={{ color: "rgba(255,252,237,0.7)" }}>
@@ -212,35 +207,10 @@ export function EmotionSection({ emotionRef, emotionIn }: EmotionSectionProps) {
   );
 }
 
-interface RolesSectionProps {
-  rolesRef: React.Ref<HTMLDivElement>;
-  rolesIn: boolean;
-}
-
-export function RolesSection({ rolesRef, rolesIn }: RolesSectionProps) {
-  return (
-    <section style={{ background: "#F7F7F5", padding: "140px 0" }}>
-      <div ref={rolesRef} className="max-w-6xl mx-auto px-6 lg:px-12">
-        <div className={`text-center mb-16 reveal${rolesIn ? " in" : ""}`}>
-          <p className="text-sm mb-4" style={{ color: "#2E7D45", letterSpacing: "0.12em", fontWeight: 600 }}>모든 역할을 위해</p>
-          <h2 className="font-bold" style={{ fontSize: "clamp(32px, 4vw, 48px)", letterSpacing: "-0.03em", color: "#1A1A1A" }}>
-            팀의 가능성을 끌어내세요
-          </h2>
-        </div>
-        <div className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-6 reveal${rolesIn ? " in" : ""}`}>
-          <RoleCard icon={<PenTool size={18} />} title="기록하는 사람을 위해" features={["블록 기반 편집기와 슬래시 커맨드", "AI 보조 작성", "음성 입력 (Parrot)", "URL 가져오기"]} />
-          <RoleCard icon={<LayoutGrid size={18} />} title="정리하는 사람을 위해" features={["6가지 데이터베이스 뷰", "필터·정렬·그룹화", "위키 링크로 페이지 연결", "관계형 데이터베이스"]} />
-          <RoleCard icon={<Layers size={18} />} title="발상하는 사람을 위해" features={["무한 캔버스 (Clearing)", "스티키 노트와 커넥터", "마인드맵 (MindGrove)", "그래프 뷰"]} />
-          <RoleCard icon={<Users size={18} />} title="함께 일하는 팀을 위해" features={["실시간 협업 커서", "공개 링크 공유", "Forest 공개 피드", "다크·라이트·정글 테마"]} />
-        </div>
-      </div>
-    </section>
-  );
-}
 
 export function FeaturesMarqueeSection() {
   return (
-    <section style={{ background: "#2E7D45", overflow: "hidden", padding: "100px 0" }}>
+    <section style={{ background: "#2E7D45", overflow: "hidden", padding: "64px 0" }}>
       <p className="text-xs font-semibold text-center mb-10" style={{ color: "rgba(255,252,237,0.5)", letterSpacing: "0.14em" }}>기능</p>
       <div style={{ maskImage: "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)" }}>
         <div className="flex gap-5 flex-shrink-0" style={{ animation: "marquee-left 36s linear infinite" }}>
@@ -266,16 +236,16 @@ interface FaqSectionProps {
 
 export function FaqSection({ faqRef, faqIn }: FaqSectionProps) {
   return (
-    <section style={{ background: "#FFFFFF", padding: "140px 0" }}>
+    <section style={{ background: "#FFFFFF", padding: "80px 0" }}>
       <div ref={faqRef} className="max-w-3xl mx-auto px-6 lg:px-12">
         <div className={`text-center mb-16 reveal${faqIn ? " in" : ""}`}>
           <p className="text-sm mb-4" style={{ color: "#2E7D45", letterSpacing: "0.12em", fontWeight: 600 }}>FAQ</p>
-          <h2 className="font-bold" style={{ fontSize: "clamp(32px, 4vw, 48px)", letterSpacing: "-0.03em", color: "#1A1A1A" }}>자주 묻는 질문</h2>
+          <h2 style={{ fontSize: "clamp(28px, 3.5vw, 44px)", letterSpacing: "-0.04em", color: "#111111", fontWeight: 800 }}>자주 묻는 질문</h2>
         </div>
         <div className={`reveal${faqIn ? " in" : ""}`}>
           <FAQItem question="데이터 소유권은 어떻게 되나요?" answer="데이터는 완전히 당신의 것입니다. 페이지와 데이터베이스를 언제든지 내보낼 수 있습니다. 종속 없이 콘텐츠에 항상 접근하고 이동할 수 있습니다." />
           <FAQItem question="어떤 보안 조치가 있나요?" answer="인증된 사용자만 자신의 워크스페이스에 접근할 수 있으며, 모든 통신은 HTTPS로 암호화됩니다. 페이지는 직접 공개 링크로 공유하기 전까지 비공개로 유지됩니다." />
-          <FAQItem question="Obnofi는 Notion과 어떻게 다른가요?" answer="Notion이 문서와 데이터베이스에 집중하는 반면, Obnofi는 FigJam 스타일 캔버스와 Obsidian 스타일 그래프 뷰를 하나의 원활한 경험으로 통합합니다 — Yjs 기반 실시간 협업도 포함됩니다." />
+          <FAQItem question="Obnofi는 Notion과 어떻게 다른가요?" answer="Notion이 문서와 데이터베이스에 집중하는 반면, Obnofi는 FigJam 스타일 캔버스와 Obsidian 스타일 그래프 뷰를 하나의 워크스페이스에서 제공합니다. 메모, 시각화, 데이터베이스를 오가며 생각의 흐름을 끊지 않는 것이 핵심입니다." />
           <FAQItem question="어떤 지원을 받을 수 있나요?" answer="문서와 커뮤니티를 통해 도움을 받을 수 있습니다. 워크스페이스 안에서 AI 채팅(Owl)으로 작성과 편집에 대한 도움도 바로 받을 수 있습니다." />
         </div>
       </div>
@@ -290,18 +260,18 @@ interface CtaSectionProps {
 
 export function CtaSection({ ctaRef, ctaIn }: CtaSectionProps) {
   return (
-    <section className="relative" style={{ background: "#F7F7F5", overflow: "hidden", minHeight: "80vh", display: "flex", alignItems: "center" }}>
+    <section className="relative" style={{ background: "#F7F7F5", overflow: "hidden", display: "flex", alignItems: "center" }}>
       <div className="absolute inset-0 pointer-events-none" aria-hidden style={{ background: "radial-gradient(ellipse 60% 70% at 50% 50%, rgba(46,125,69,0.07) 0%, transparent 70%)" }} />
       <div
         ref={ctaRef}
-        className={`relative z-10 max-w-2xl mx-auto px-6 lg:px-12 py-32 text-center w-full reveal${ctaIn ? " in" : ""}`}
+        className={`relative z-10 max-w-2xl mx-auto px-6 lg:px-12 py-20 text-center w-full reveal${ctaIn ? " in" : ""}`}
       >
-        <h2 className="font-bold mb-5" style={{ fontSize: "clamp(36px, 5vw, 56px)", letterSpacing: "-0.03em", color: "#1A1A1A" }}>
+        <h2 className="mb-5" style={{ fontSize: "clamp(36px, 5vw, 60px)", letterSpacing: "-0.05em", color: "#111111", fontWeight: 800 }}>
           나만의 두 번째 뇌를<br />만들어보세요.
         </h2>
-        <p className="text-lg mb-10" style={{ color: "rgba(55,53,47,0.5)" }}>가입 즉시 무료. 카드 번호 없음.</p>
+        <p className="text-lg mb-10" style={{ color: "rgba(55,53,47,0.5)" }}>지금 바로 시작하세요.</p>
         <Link href="/auth/signin" className="inline-flex items-center gap-2 font-semibold px-9 py-4 rounded-xl text-white" style={{ background: "#2E7D45", fontSize: "16px" }}>
-          사용하기 <ArrowRight size={18} />
+          사용하기
         </Link>
       </div>
     </section>
