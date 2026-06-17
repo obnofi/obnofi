@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Check } from "lucide-react";
-import { useInView, useScrollY } from "@/lib/landing/landingHooks";
+import { useInView } from "@/lib/landing/landingHooks";
 import {
   AppWindowMockup,
   CanvasMockup,
@@ -21,8 +21,6 @@ import {
 } from "@/components/landing/LandingSections";
 
 export function LandingPage() {
-  const scrollY = useScrollY();
-
   const { ref: heroRef,  inView: heroIn  } = useInView(0.01);
   const { ref: howRef,   inView: howIn   } = useInView(0.05);
   const { ref: s1Ref,    inView: s1In    } = useInView(0.1);
