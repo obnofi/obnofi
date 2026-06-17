@@ -7,6 +7,7 @@ import {
   useNodesState,
   type Edge,
   type Node,
+  type OnNodeDrag,
   type NodeMouseHandler,
 } from "@xyflow/react";
 import { useRouter } from "next/navigation";
@@ -208,8 +209,8 @@ export function useGraphFlowNodes({
     [router, workspaceId]
   );
 
-  const handleNodeDragStart = useCallback(
-    (_event: React.MouseEvent, node: GraphFlowNode) => {
+  const handleNodeDragStart = useCallback<OnNodeDrag<GraphFlowNode>>(
+    (_event, node) => {
       setHoveredNodeId(node.id);
       setNodes((current) =>
         current.map((n) => (n.id === node.id ? { ...n, dragging: true } : n))
@@ -218,8 +219,8 @@ export function useGraphFlowNodes({
     [setNodes]
   );
 
-  const handleNodeDrag = useCallback(
-    (_event: React.MouseEvent, node: GraphFlowNode) => {
+  const handleNodeDrag = useCallback<OnNodeDrag<GraphFlowNode>>(
+    (_event, node) => {
       setNodes((current) =>
         current.map((n) =>
           n.id === node.id ? { ...n, position: node.position, dragging: true } : n
@@ -229,8 +230,8 @@ export function useGraphFlowNodes({
     [setNodes]
   );
 
-  const handleNodeDragStop = useCallback(
-    (_event: React.MouseEvent, node: GraphFlowNode) => {
+  const handleNodeDragStop = useCallback<OnNodeDrag<GraphFlowNode>>(
+    (_event, node) => {
       setNodes((current) =>
         current.map((n) => (n.id === node.id ? { ...n, dragging: false } : n))
       );
