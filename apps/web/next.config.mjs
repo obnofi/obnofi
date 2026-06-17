@@ -16,8 +16,13 @@ const nextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       yjs: require.resolve("yjs"),
-      "@obnofi/db": path.join(workspaceRoot, "packages/db/src"),
-      "@obnofi/types": path.join(workspaceRoot, "packages/types/src"),
+      "@obnofi/db$": path.join(workspaceRoot, "packages/db/src/index.ts"),
+      "@obnofi/types$": path.join(workspaceRoot, "packages/types/src/index.ts"),
+      "@obnofi/types/database$": path.join(workspaceRoot, "packages/types/src/database.ts"),
+      "@obnofi/types/core$": path.join(workspaceRoot, "packages/types/src/core.ts"),
+      "@obnofi/types/clearing$": path.join(workspaceRoot, "packages/types/src/clearing.ts"),
+      "@obnofi/types/db-diagram$": path.join(workspaceRoot, "packages/types/src/db-diagram.ts"),
+      "@obnofi/types/ai$": path.join(workspaceRoot, "packages/types/src/ai.d.ts"),
     };
     return config;
   },
