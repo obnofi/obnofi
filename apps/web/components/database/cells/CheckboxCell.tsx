@@ -12,7 +12,7 @@ export function CheckboxCell({ value, onChange }: CheckboxCellProps) {
     <label className="flex h-full items-center justify-center px-2">
       <button
         type="button"
-        onClick={() => onChange(!value)}
+        onClick={(e) => { e.stopPropagation(); onChange(!value); }}
         className={`flex h-[18px] w-[18px] items-center justify-center rounded-[4px] border transition-colors ${
           value
             ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"

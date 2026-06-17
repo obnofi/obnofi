@@ -53,7 +53,7 @@ function SortableCard({
         transform: CSS.Transform.toString(transform),
         transition,
       }}
-      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-left shadow-sm transition hover:shadow-md"
+      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-left transition"
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <p className="text-sm font-medium text-[var(--color-text-primary)]">

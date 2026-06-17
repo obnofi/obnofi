@@ -26,7 +26,7 @@ export function MultiSelectCell({ value, options, onChange }: MultiSelectCellPro
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen((o) => !o)}
+        onClick={(e) => { e.stopPropagation(); setIsOpen((o) => !o); }}
         className="flex min-h-8 w-full items-center gap-1 rounded-md border border-transparent px-2 py-1 text-left text-[13px] transition hover:bg-[var(--color-hover)]"
       >
         <div className="flex flex-wrap items-center gap-1 flex-1">
@@ -54,7 +54,7 @@ export function MultiSelectCell({ value, options, onChange }: MultiSelectCellPro
       </button>
 
       <DropdownPortal triggerRef={triggerRef} isOpen={isOpen} onClose={() => setIsOpen(false)}>
-        <div className="min-w-[10rem] max-w-xs rounded-md border border-[var(--color-border)] bg-[var(--color-background)] py-1 shadow-lg">
+        <div className="min-w-[10rem] max-w-xs rounded-md border border-[var(--color-border)] bg-[var(--color-background)] py-1">
           {options.length === 0 ? (
             <div className="px-3 py-2 text-sm text-[var(--color-text-secondary)]">No options</div>
           ) : (

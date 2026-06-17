@@ -57,7 +57,7 @@ export function GalleryView({
             key={row.id}
             type="button"
             onClick={() => onOpenRow?.(row.id)}
-            className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] text-left transition hover:-translate-y-0.5 hover:shadow-md"
+            className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] text-left transition hover:-translate-y-0.5"
           >
             <div className="flex h-40 items-center justify-center overflow-hidden bg-[var(--color-surface)]">
               {coverUrl ? (

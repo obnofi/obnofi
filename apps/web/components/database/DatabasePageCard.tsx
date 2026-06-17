@@ -4,6 +4,11 @@ import type { Page, PropertyType, ViewType } from "@obnofi/types";
 import { DatabaseTableCard } from "@/components/database/DatabaseTableCard";
 import { useDatabasePage } from "@/hooks/useDatabasePage";
 
+type GroveSurfaceView = Extract<
+  ViewType,
+  "table" | "gallery" | "board" | "calendar" | "list" | "timeline"
+>;
+
 interface DatabaseSelectionProps {
   pages: Page[];
   selectedValue: string;
@@ -30,10 +35,8 @@ interface DatabasePageCardProps {
   editableTitle?: boolean;
   // 공개 뷰 등 읽기 전용. 모든 변형 콜백을 차단해 익명 사용자가 no-auth API로 DB를 수정하지 못하게 한다.
   readOnly?: boolean;
-  viewType?: Extract<ViewType, "table" | "gallery" | "board" | "calendar">;
-  onViewTypeChange?: (
-    viewType: Extract<ViewType, "table" | "gallery" | "board" | "calendar">
-  ) => void;
+  viewType?: GroveSurfaceView;
+  onViewTypeChange?: (viewType: GroveSurfaceView) => void;
   onSurfaceStateChange?: (snapshot: {
     columns: Array<{ id: string; name: string; type: PropertyType; width?: number }>;
     rows: string[];

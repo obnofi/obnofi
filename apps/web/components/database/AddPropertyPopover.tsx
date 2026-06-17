@@ -43,7 +43,7 @@ export function AddPropertyPopover({ onAdd }: AddPropertyPopoverProps) {
       {isOpen && (
         <>
           <div className="fixed inset-0 z-[99998]" onClick={() => setIsOpen(false)} />
-          <div className="absolute left-0 top-full z-[99999] mt-1 w-64 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-xl">
+          <div className="absolute left-0 top-full z-[99999] mt-1 w-64 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-xs font-semibold text-[var(--color-text-primary)]">속성 추가</span>
               <button type="button" onClick={() => setIsOpen(false)}>

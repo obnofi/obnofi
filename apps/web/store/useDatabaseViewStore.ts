@@ -3,7 +3,10 @@
 import { create } from "zustand";
 import type { ViewType } from "@obnofi/types/database";
 
-type GroveSurfaceView = Extract<ViewType, "table" | "gallery" | "board" | "calendar">;
+type GroveSurfaceView = Extract<
+  ViewType,
+  "table" | "gallery" | "board" | "calendar" | "list" | "timeline"
+>;
 
 interface DatabaseViewState {
   activeView: ViewType;

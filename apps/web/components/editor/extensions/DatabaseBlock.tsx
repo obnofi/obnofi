@@ -11,7 +11,10 @@ interface DatabaseBlockExtensionOptions {
   pageId?: string;
 }
 
-type GroveSurfaceView = Extract<ViewType, "table" | "gallery" | "board" | "calendar">;
+type GroveSurfaceView = Extract<
+  ViewType,
+  "table" | "gallery" | "board" | "calendar" | "list" | "timeline"
+>;
 
 interface DatabaseNodeAttrs {
   databaseId: string | null;

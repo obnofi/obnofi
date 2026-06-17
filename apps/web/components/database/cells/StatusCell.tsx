@@ -22,7 +22,7 @@ export function StatusCell({ value, options, onChange }: StatusCellProps) {
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen((o) => !o)}
+        onClick={(e) => { e.stopPropagation(); setIsOpen((o) => !o); }}
         className="flex h-8 w-full items-center justify-between gap-1 rounded-md border border-transparent px-2 text-left text-[13px] transition hover:bg-[var(--color-hover)]"
       >
         {selectedOption ? (
@@ -37,7 +37,7 @@ export function StatusCell({ value, options, onChange }: StatusCellProps) {
       </button>
 
       <DropdownPortal triggerRef={triggerRef} isOpen={isOpen} onClose={() => setIsOpen(false)}>
-        <div className="min-w-[10rem] max-w-xs rounded-md border border-[var(--color-border)] bg-[var(--color-background)] py-1 shadow-lg">
+        <div className="min-w-[10rem] max-w-xs rounded-md border border-[var(--color-border)] bg-[var(--color-background)] py-1">
           <button type="button" onClick={() => { onChange(null); setIsOpen(false); }} className="w-full px-3 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]">
             Empty
           </button>

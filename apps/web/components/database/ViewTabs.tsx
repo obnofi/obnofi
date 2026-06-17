@@ -3,6 +3,11 @@
 import { DatabasePage, PropertyType, ViewType } from "@obnofi/types";
 import { DatabaseSurface } from "@/components/database/DatabaseSurface";
 
+type GroveSurfaceView = Extract<
+  ViewType,
+  "table" | "gallery" | "board" | "calendar" | "list" | "timeline"
+>;
+
 interface ViewTabsProps {
   databasePage: DatabasePage;
   onDatabaseChange: (databasePage: DatabasePage) => void;
@@ -22,7 +27,7 @@ export function ViewTabs({
   return (
     <DatabaseSurface
       databasePage={databasePage}
-      initialViewType={"table" as Extract<ViewType, "table" | "gallery" | "board" | "calendar">}
+      initialViewType={"table" as GroveSurfaceView}
       onOpenRow={onOpenRow}
       onCreateRow={onCreateRow}
       onCreateProperty={onCreateProperty}

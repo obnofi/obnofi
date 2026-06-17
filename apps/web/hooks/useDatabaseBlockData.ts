@@ -13,7 +13,10 @@ import {
 } from "@/lib/page/pageStoreSync";
 import { useGroveCatalogStore } from "@/store/useGroveCatalogStore";
 
-type GroveSurfaceView = Extract<ViewType, "table" | "gallery" | "board" | "calendar">;
+type GroveSurfaceView = Extract<
+  ViewType,
+  "table" | "gallery" | "board" | "calendar" | "list" | "timeline"
+>;
 
 export interface DatabaseNodeAttrs {
   databaseId: string | null;
@@ -130,12 +133,24 @@ export function useDatabaseBlockData(
         createdPage.databaseId ?? optimisticDatabaseId
       );
 
+      // 사용자가 생성 중에 제목을 변경했으면 보존
+      const currentOptimisticTitle = useGroveCatalogStore.getState().grovePages[optimisticPage.id]?.title;
+      const userModifiedTitle =
+        currentOptimisticTitle && currentOptimisticTitle !== optimisticPage.title
+          ? currentOptimisticTitle
+          : null;
+      const finalDatabasePage = userModifiedTitle
+        ? { ...createdDatabasePage, title: userModifiedTitle }
+        : createdDatabasePage;
+
       replaceCachedPage(optimisticPage.id, createdPage);
       setDatabasePages((current) =>
         current.map((page) => (page.id === optimisticPage.id ? createdPage : page))
       );
-      groveCatalogStore.setGrovePage(optimisticPage.id, null);
-      groveCatalogStore.setGrovePage(createdPage.id, createdDatabasePage);
+
+      // 실 데이터를 먼저 설정한 뒤 attrs 전환 → optimistic 제거 순서로
+      // null gap이 생기면 컴포넌트가 databasePage=null을 보고 깜빡임
+      groveCatalogStore.setGrovePage(createdPage.id, finalDatabasePage);
       groveCatalogStore.markGroveLoaded(createdPage.id);
       updateDatabaseBlockAttrs({
         pageId: createdPage.id,
@@ -143,6 +158,16 @@ export function useDatabaseBlockData(
         autoCreate: false,
         isInlinePage: true,
       });
+      groveCatalogStore.setGrovePage(optimisticPage.id, null);
+
+      // 보존된 제목을 서버에도 반영
+      if (userModifiedTitle) {
+        void fetch(`/api/pages/${createdPage.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: userModifiedTitle }),
+        });
+      }
     } catch {
       removeCachedPage(optimisticPage.id);
       setDatabasePages((current) =>

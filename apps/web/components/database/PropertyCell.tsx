@@ -187,16 +187,9 @@ export function PropertyCell({
     case "created_by":
     case "last_edited_time":
     case "last_edited_by":
-      return <ComputedCell value={currentValue} options={options} />;
-
-    // Advanced types (P1+)
     case "relation":
     case "files":
-      return (
-        <div className="px-2 py-1.5 text-sm text-zinc-400">
-          {property.type} (coming soon)
-        </div>
-      );
+      return <ComputedCell value={currentValue} options={options} />;
 
     default:
       return (

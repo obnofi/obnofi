@@ -13,6 +13,11 @@ import type {
 } from "@obnofi/types";
 import { DatabaseSurface } from "@/components/database/DatabaseSurface";
 
+type GroveSurfaceView = Extract<
+  ViewType,
+  "table" | "gallery" | "board" | "calendar" | "list" | "timeline"
+>;
+
 interface DatabaseSelectionProps {
   pages: Page[];
   selectedValue: string;
@@ -30,7 +35,7 @@ interface DatabaseTableCardProps {
   onCreateProperty?: (name: string, type: PropertyType) => void;
   onCreateView?: (input: {
     name: string;
-    type: Extract<ViewType, "table" | "gallery" | "board" | "calendar">;
+    type: GroveSurfaceView;
   }) => Promise<View | undefined>;
   onUpdateView?: (
     viewId: string,
@@ -45,10 +50,8 @@ interface DatabaseTableCardProps {
     value: PropertyValueData
   ) => void;
   onTitleChange?: (title: string) => void | Promise<void>;
-  viewType?: Extract<ViewType, "table" | "gallery" | "board" | "calendar">;
-  onViewTypeChange?: (
-    viewType: Extract<ViewType, "table" | "gallery" | "board" | "calendar">
-  ) => void;
+  viewType?: GroveSurfaceView;
+  onViewTypeChange?: (viewType: GroveSurfaceView) => void;
   onSurfaceStateChange?: (snapshot: {
     columns: Array<{ id: string; name: string; type: PropertyType; width?: number }>;
     rows: string[];
@@ -100,6 +103,13 @@ export function DatabaseTableCard({
 }: DatabaseTableCardProps) {
   const [isSelectionOpen, setIsSelectionOpen] = useState(false);
   const selectionMenuRef = useRef<HTMLDivElement>(null);
+  const [draftTitle, setDraftTitle] = useState(databasePage?.title ?? "");
+
+  // 페이지 자체가 바뀔 때(pageId 전환)만 외부 title과 동기화
+  // 타이핑 중 zustand re-render로 인한 커서 리셋 방지
+  useEffect(() => {
+    setDraftTitle(databasePage?.title ?? "");
+  }, [databasePage?.id]);
   const showTopBar = Boolean(selection || headerLabel || onOpenDatabase);
   const currentState =
     state ?? (!databasePage && isLoading ? "loading" : databasePage ? "ready" : "empty");
@@ -167,7 +177,7 @@ export function DatabaseTableCard({
                 </button>
 
                 {isSelectionOpen ? (
-                  <div className="absolute right-0 top-full z-[99999] mt-1 min-w-56 rounded border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-lg">
+                  <div className="absolute right-0 top-full z-[99999] mt-1 min-w-56 rounded border border-[var(--color-border)] bg-[var(--color-surface)] py-1">
                     <button
                       type="button"
                       onClick={() => {
@@ -224,8 +234,11 @@ export function DatabaseTableCard({
                 <input
                   name="database-title"
                   type="text"
-                  value={databasePage.title}
-                  onChange={(event) => onTitleChange(event.target.value)}
+                  value={draftTitle}
+                  onChange={(event) => {
+                    setDraftTitle(event.target.value);
+                    void onTitleChange(event.target.value);
+                  }}
                   className="w-full border-none bg-transparent text-[40px] font-bold text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-placeholder)]"
                   placeholder="Untitled"
                 />

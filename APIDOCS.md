@@ -1276,6 +1276,7 @@ MossNote를 삭제합니다.
 
 - `name`이 없으면 `New ${Type}` 형식으로 생성
 - `config`가 없으면 현재 Property 목록을 기준으로 기본 config 자동 생성
+- 지원 View 타입: `table`, `list`, `gallery`, `board`, `calendar`, `timeline`
 
 성공 응답:
 
@@ -1332,17 +1333,27 @@ MossNote를 삭제합니다.
 }
 ```
 
-지원 타입은 현재 구현상 다음으로 제한됩니다.
+지원 타입:
 
 - `text`
 - `number`
 - `select`
 - `multi_select`
+- `status`
 - `date`
 - `person`
 - `checkbox`
 - `url`
 - `email`
+- `phone`
+- `files`
+- `relation`
+- `rollup`
+- `formula`
+- `created_time`
+- `created_by`
+- `last_edited_time`
+- `last_edited_by`
 
 성공 응답:
 
@@ -1366,6 +1377,11 @@ Property를 수정합니다.
 성공 응답:
 
 - 수정된 `Property` 객체
+
+동작:
+
+- `type`이 바뀌면 해당 Property의 기존 `PropertyValue`는 새 타입의 기본값으로 초기화됩니다.
+- `select`, `multi_select`, `status`로 바꾸면서 `options`를 생략하면 기본 option이 자동 보정됩니다.
 
 ### `DELETE /api/columns/[columnId]`
 

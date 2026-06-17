@@ -34,6 +34,7 @@ export const BASIC_PROPERTY_TYPES: PropertyType[] = [
   "url",
   "email",
   "phone",
+  "files",
 ];
 
 export function getPropertyTypeLabel(type: PropertyType): string {

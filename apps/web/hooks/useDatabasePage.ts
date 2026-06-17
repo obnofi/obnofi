@@ -324,14 +324,25 @@ export function useDatabasePage(
       };
 
       replaceGroveProperty(pageId, optimisticProperty);
+      if (input.type !== undefined && input.type !== currentProperty.type) {
+        const nextDefaultValue = createDefaultPropertyValue(optimisticProperty);
+        const currentRows =
+          useGroveCatalogStore.getState().grovePages[pageId]?.database.rows ?? [];
+        currentRows.forEach((row) => {
+          patchGroveCellValue(pageId, row.id, propertyId, nextDefaultValue);
+        });
+      }
       try {
         const updatedProperty = await reshapeGroveProperty(propertyId, input);
         replaceGroveProperty(pageId, updatedProperty);
       } catch {
         replaceGroveProperty(pageId, currentProperty);
+        if (input.type !== undefined && input.type !== currentProperty.type) {
+          await loadDatabasePage({ force: true });
+        }
       }
     },
-    [pageId, replaceGroveProperty]
+    [loadDatabasePage, pageId, patchGroveCellValue, replaceGroveProperty]
   );
 
   const deleteProperty = useCallback(async (propertyId: string) => {

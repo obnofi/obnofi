@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, Database, X, Loader2 } from "lucide-react";
+import { Search, Database, X } from "lucide-react";
+import { FallingLeavesLoader } from "@/components/FallingLeavesLoader";
 
 interface LinkDatabaseModalProps {
   isOpen: boolean;
@@ -148,7 +149,7 @@ export function LinkDatabaseModal({
             className="flex-1 bg-transparent text-[15px] text-[#111110] outline-none placeholder:text-zinc-400 dark:text-zinc-100"
           />
           {isLoading && (
-            <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+            <FallingLeavesLoader size="sm" className="text-zinc-400" />
           )}
           <button
             onClick={onClose}

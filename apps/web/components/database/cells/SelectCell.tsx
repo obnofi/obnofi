@@ -23,7 +23,7 @@ export function SelectCell({ value, options, onChange, allowEmpty = true }: Sele
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen((o) => !o)}
+        onClick={(e) => { e.stopPropagation(); setIsOpen((o) => !o); }}
         className="flex h-8 w-full items-center justify-between gap-1 rounded-md border border-transparent px-2 text-left text-[13px] transition hover:bg-[var(--color-hover)]"
       >
         {selectedOption ? (
@@ -40,7 +40,7 @@ export function SelectCell({ value, options, onChange, allowEmpty = true }: Sele
       </button>
 
       <DropdownPortal triggerRef={triggerRef} isOpen={isOpen} onClose={() => setIsOpen(false)}>
-        <div className="min-w-[10rem] max-w-xs rounded-md border border-[var(--color-border)] bg-[var(--color-background)] py-1 shadow-lg">
+        <div className="min-w-[10rem] max-w-xs rounded-md border border-[var(--color-border)] bg-[var(--color-background)] py-1">
           {allowEmpty && (
             <button
               type="button"

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Database, Loader2, ChevronRight } from "lucide-react";
+import { Database, ChevronRight } from "lucide-react";
+import { FallingLeavesLoader } from "@/components/FallingLeavesLoader";
 import { useUIStore } from "@/store/useUIStore";
 import { DatabasePage } from "@obnofi/types";
 import { ViewTabs } from "./ViewTabs";
@@ -111,7 +112,7 @@ export function InlineDatabaseView({
       <div
         className={`flex h-64 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] ${className}`}
       >
-        <Loader2 className="h-6 w-6 animate-spin text-[#2E7D45]" />
+        <FallingLeavesLoader size="md" />
       </div>
     );
   }

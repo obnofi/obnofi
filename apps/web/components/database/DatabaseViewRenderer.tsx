@@ -6,6 +6,8 @@ import { useGroveTable } from "@/hooks/useGroveTable";
 import { BoardView } from "@/components/database/views/BoardView";
 import { CalendarView } from "@/components/database/views/CalendarView";
 import { GalleryView } from "@/components/database/views/GalleryView";
+import { ListView } from "@/components/database/views/ListView";
+import { TimelineView } from "@/components/database/views/TimelineView";
 
 interface DatabaseViewRendererProps {
   properties: Property[];
@@ -37,6 +39,20 @@ export function DatabaseViewRenderer({
       return <CalendarView table={table} properties={properties} />;
     case "gallery":
       return <GalleryView table={table} properties={properties} />;
+    case "list":
+      return (
+        <ListView
+          properties={properties}
+          rows={table.getRowModel().rows.map((row) => row.original)}
+        />
+      );
+    case "timeline":
+      return (
+        <TimelineView
+          properties={properties}
+          rows={table.getRowModel().rows.map((row) => row.original)}
+        />
+      );
     default:
       return null;
   }

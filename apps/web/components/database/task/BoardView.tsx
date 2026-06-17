@@ -36,7 +36,7 @@ export function BoardView({ groveTasks, onOpenTask }: BoardViewProps) {
               <article
                 key={task.id}
                 onClick={() => onOpenTask?.(task)}
-                className="cursor-pointer rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3 shadow-sm transition hover:border-[var(--color-accent)]"
+                className="cursor-pointer rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3 transition hover:border-[var(--color-accent)]"
               >
                 <h3 className="text-sm font-medium text-[var(--color-text-primary)]">
                   {task.name}

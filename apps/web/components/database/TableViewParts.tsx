@@ -14,7 +14,25 @@ import { DropdownPortal } from "./DropdownPortal";
 // ---------------------------------------------------------------------------
 
 export const ADDABLE_TYPES: PropertyType[] = [
-  "text", "number", "select", "multi_select", "date", "checkbox", "url", "email", "phone", "status",
+  "text",
+  "number",
+  "select",
+  "multi_select",
+  "status",
+  "date",
+  "person",
+  "checkbox",
+  "url",
+  "email",
+  "phone",
+  "files",
+  "relation",
+  "rollup",
+  "formula",
+  "created_time",
+  "created_by",
+  "last_edited_time",
+  "last_edited_by",
 ];
 
 // ---------------------------------------------------------------------------
@@ -47,7 +65,7 @@ export function AddPropertyPopover({
 
   return (
     <DropdownPortal triggerRef={triggerRef} isOpen={true} onClose={onClose} align="right">
-      <div className="w-64 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3 shadow-xl">
+      <div className="w-64 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3">
         <div className="mb-3 flex items-center justify-between">
           <span className="text-xs font-semibold text-[var(--color-text-primary)]">속성 추가</span>
           <button type="button" onClick={onClose}>

@@ -17,7 +17,7 @@ function getVal(row: Page, propId: string) {
   )?.value;
 }
 
-export function ListView({ properties, rows, onCreateRow }: ListViewProps) {
+export function ListView({ properties, rows, onCreateRow, onOpenRow }: ListViewProps) {
   const statusProp = properties.find((p) => p.type === "select" || p.type === "status");
   const dateProp = properties.find((p) => p.type === "date");
   const tagProp = properties.find((p) => p.type === "multi_select");
@@ -48,8 +48,10 @@ export function ListView({ properties, rows, onCreateRow }: ListViewProps) {
         const dateStr = dateVal?.type === "date" ? dateVal.value : null;
 
         return (
-          <div
+          <button
             key={row.id}
+            type="button"
+            onClick={() => onOpenRow?.(row.id)}
             className="flex items-center gap-3 border-b border-[var(--color-border)] px-4 py-3 transition hover:bg-[var(--color-hover)]"
           >
             <div className="min-w-0 flex-1">
@@ -89,17 +91,19 @@ export function ListView({ properties, rows, onCreateRow }: ListViewProps) {
                 </span>
               )}
             </div>
-          </div>
+          </button>
         );
       })}
-      <button
-        type="button"
-        onClick={() => void onCreateRow?.()}
-        className="flex items-center gap-1.5 px-4 py-3 text-[13px] text-[var(--color-text-secondary)] transition hover:text-[var(--color-text-primary)]"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        New
-      </button>
+      {onCreateRow ? (
+        <button
+          type="button"
+          onClick={() => void onCreateRow()}
+          className="flex items-center gap-1.5 px-4 py-3 text-[13px] text-[var(--color-text-secondary)] transition hover:text-[var(--color-text-primary)]"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          New
+        </button>
+      ) : null}
     </div>
   );
 }

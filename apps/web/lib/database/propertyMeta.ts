@@ -43,9 +43,10 @@ export const BASIC_PROPERTY_TYPES: PropertyType[] = [
   "url",
   "email",
   "phone",
+  "files",
 ];
 
-export const DATABASE_COLUMN_TYPES = BASIC_PROPERTY_TYPES;
+export const DATABASE_COLUMN_TYPES = ALL_PROPERTY_TYPES;
 
 const DEFAULT_STATUS_OPTIONS: SelectOption[] = [
   { id: "status-todo", label: "To Do", color: "gray" },

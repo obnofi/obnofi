@@ -29,7 +29,7 @@ export function PersonCell({ value, users = [], onChange }: PersonCellProps) {
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen((o) => !o)}
+        onClick={(e) => { e.stopPropagation(); setIsOpen((o) => !o); }}
         className="flex w-full items-center gap-1 rounded border border-transparent px-2 py-1.5 text-left text-sm transition hover:bg-[var(--color-hover)]"
       >
         {selectedUser ? (
@@ -59,7 +59,7 @@ export function PersonCell({ value, users = [], onChange }: PersonCellProps) {
       </button>
 
       <DropdownPortal triggerRef={triggerRef} isOpen={isOpen} onClose={() => setIsOpen(false)}>
-        <div className="min-w-48 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-lg">
+        <div className="min-w-48 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] py-1">
           {users.length === 0 ? (
             <div className="px-3 py-2 text-sm text-[var(--color-text-secondary)]">No users available</div>
           ) : (

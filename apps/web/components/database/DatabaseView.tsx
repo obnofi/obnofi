@@ -94,7 +94,7 @@ export function DatabaseView({
               onClick={() => setViewMode("table")}
               className={`p-1.5 rounded transition-colors ${
                 viewMode === "table"
-                  ? "bg-white dark:bg-zinc-700 shadow-sm"
+                  ? "bg-white dark:bg-zinc-700"
                   : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
               }`}
             >
@@ -104,7 +104,7 @@ export function DatabaseView({
               onClick={() => setViewMode("grid")}
               className={`p-1.5 rounded transition-colors ${
                 viewMode === "grid"
-                  ? "bg-white dark:bg-zinc-700 shadow-sm"
+                  ? "bg-white dark:bg-zinc-700"
                   : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
               }`}
             >
@@ -123,7 +123,7 @@ export function DatabaseView({
           </button>
 
           {showNewMenu && (
-            <div className="absolute top-full right-0 z-[99999] mt-1 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
+            <div className="absolute top-full right-0 z-[99999] mt-1 w-40 rounded-md border border-zinc-200 bg-white py-1 dark:border-zinc-700 dark:bg-zinc-800">
               {creatablePageTypes.map((type) => (
                 <button
                   key={type}

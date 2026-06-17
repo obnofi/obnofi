@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
 import { toProperty, toPrismaPropertyType } from "@/lib/prisma-transforms";
+import {
+  createDefaultPropertyValue,
+  normalizePropertyOptions,
+} from "@/lib/database-utils";
 
 import { logError } from "@/lib/logger";
 
@@ -15,7 +19,7 @@ export async function PATCH(
 
     const existing = await prisma.property.findUnique({
       where: { id: columnId },
-      select: { id: true },
+      select: { id: true, name: true, type: true },
     });
 
     if (!existing) {
@@ -26,11 +30,30 @@ export async function PATCH(
     if ("name" in body) updateData.name = body.name;
     if ("type" in body) updateData.type = toPrismaPropertyType(body.type);
     if ("options" in body) updateData.options = body.options;
+    if ("type" in body && !("options" in body)) {
+      updateData.options = normalizePropertyOptions(
+        body.type,
+        typeof body.name === "string" ? body.name : existing.name
+      );
+    }
     if ("order" in body) updateData.order = body.order;
 
-    const updatedProperty = await prisma.property.update({
-      where: { id: columnId },
-      data: updateData,
+    const updatedProperty = await prisma.$transaction(async (tx) => {
+      const property = await tx.property.update({
+        where: { id: columnId },
+        data: updateData,
+      });
+
+      if ("type" in body && property.type !== existing.type) {
+        await tx.propertyValue.updateMany({
+          where: { propertyId: columnId },
+          data: {
+            value: createDefaultPropertyValue(toProperty(property)) as object,
+          },
+        });
+      }
+
+      return property;
     });
 
     return NextResponse.json(toProperty(updatedProperty));

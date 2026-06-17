@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
 import {
   createDefaultPropertyValue,
+  DATABASE_COLUMN_TYPES,
   normalizePropertyOptions,
 } from "@/lib/database-utils";
 import { toProperty, toPrismaPropertyType } from "@/lib/prisma-transforms";
@@ -29,19 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Database not found" }, { status: 404 });
     }
 
-    const validTypes = [
-      "text",
-      "number",
-      "select",
-      "multi_select",
-      "date",
-      "person",
-      "checkbox",
-      "url",
-      "email",
-    ];
-
-    if (!validTypes.includes(type)) {
+    if (!DATABASE_COLUMN_TYPES.includes(type)) {
       return NextResponse.json({ error: "Invalid column type" }, { status: 400 });
     }
 

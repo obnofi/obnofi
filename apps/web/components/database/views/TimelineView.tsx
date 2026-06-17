@@ -20,7 +20,7 @@ function getVal(row: Page, propId: string) {
 
 const MS_PER_DAY = 86400000;
 
-export function TimelineView({ properties, rows, onCreateRow }: TimelineViewProps) {
+export function TimelineView({ properties, rows, onCreateRow, onOpenRow }: TimelineViewProps) {
   const dateProp = properties.find((p) => p.type === "date");
   const statusProp = properties.find((p) => p.type === "select" || p.type === "status");
 
@@ -115,7 +115,12 @@ export function TimelineView({ properties, rows, onCreateRow }: TimelineViewProp
             : null;
 
           return (
-            <div key={row.id} className="flex items-center gap-3">
+            <button
+              key={row.id}
+              type="button"
+              onClick={() => onOpenRow?.(row.id)}
+              className="flex items-center gap-3 text-left"
+            >
               <div className="w-44 shrink-0 truncate text-[13px] font-medium text-[var(--color-text-primary)]">
                 {row.title || "Untitled"}
               </div>
@@ -140,17 +145,19 @@ export function TimelineView({ properties, rows, onCreateRow }: TimelineViewProp
                   </div>
                 )}
               </div>
-            </div>
+            </button>
           );
         })}
-        <button
-          type="button"
-          onClick={() => void onCreateRow?.()}
-          className="mt-1 flex items-center gap-1.5 text-[13px] text-[var(--color-text-secondary)] transition hover:text-[var(--color-text-primary)]"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          New
-        </button>
+        {onCreateRow ? (
+          <button
+            type="button"
+            onClick={() => void onCreateRow()}
+            className="mt-1 flex items-center gap-1.5 text-[13px] text-[var(--color-text-secondary)] transition hover:text-[var(--color-text-primary)]"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New
+          </button>
+        ) : null}
       </div>
     </div>
   );

@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
   Check,
+  GanttChartSquare,
   KanbanSquare,
+  List,
   LayoutGrid,
   ListFilter,
   Plus,
@@ -26,9 +28,14 @@ import { TableView } from "@/components/database/TableView";
 import { GalleryView } from "@/components/database/views/GalleryView";
 import { BoardView } from "@/components/database/views/BoardView";
 import { CalendarView } from "@/components/database/views/CalendarView";
+import { ListView } from "@/components/database/views/ListView";
+import { TimelineView } from "@/components/database/views/TimelineView";
 import { DatabaseQueryPanel } from "@/components/database/DatabaseQueryPanel";
 
-type GroveSurfaceView = Extract<ViewType, "table" | "gallery" | "board" | "calendar">;
+type GroveSurfaceView = Extract<
+  ViewType,
+  "table" | "gallery" | "board" | "calendar" | "list" | "timeline"
+>;
 
 interface GroveSurfaceSnapshot {
   columns: Array<{ id: string; name: string; type: PropertyType; width?: number }>;
@@ -71,9 +78,11 @@ const viewItems: Array<{
   icon: typeof Table2;
 }> = [
   { id: "table", label: "Table", icon: Table2 },
+  { id: "list", label: "List", icon: List },
   { id: "gallery", label: "Gallery", icon: LayoutGrid },
   { id: "board", label: "Kanban", icon: KanbanSquare },
   { id: "calendar", label: "Calendar", icon: CalendarDays },
+  { id: "timeline", label: "Timeline", icon: GanttChartSquare },
 ];
 
 export function DatabaseSurface({
@@ -299,6 +308,7 @@ export function DatabaseSurface({
   ]);
 
   const activeSort = queryState.sorting[0];
+  const surfaceRows = table.getRowModel().rows.map((row) => row.original);
   const rowCountLabel = `${table.getRowModel().rows.length} ${table.getRowModel().rows.length === 1 ? "seed" : "seeds"}`;
   const missingViewItems = viewItems.filter(
     (item) => !availableViewItems.some((availableItem) => availableItem.id === item.id)
@@ -412,7 +422,7 @@ export function DatabaseSurface({
                   Columns
                 </button>
                 {isColumnMenuOpen ? (
-                  <div className="absolute right-0 top-full z-20 mt-1 min-w-52 rounded-md bg-[var(--color-background)] py-1 shadow-lg ring-1 ring-[var(--color-border)]">
+                  <div className="absolute right-0 top-full z-20 mt-1 min-w-52 rounded-md bg-[var(--color-background)] py-1 ring-1 ring-[var(--color-border)]">
                     {properties.map((property) => {
                       const isVisible = visiblePropertyIds.includes(property.id);
                       return (
@@ -442,7 +452,7 @@ export function DatabaseSurface({
                   View
                 </button>
                 {isViewMenuOpen ? (
-                  <div className="absolute right-0 top-full z-20 mt-1 min-w-40 rounded-md bg-[var(--color-background)] py-1 shadow-lg ring-1 ring-[var(--color-border)]">
+                  <div className="absolute right-0 top-full z-20 mt-1 min-w-40 rounded-md bg-[var(--color-background)] py-1 ring-1 ring-[var(--color-border)]">
                     {missingViewItems.map((item) => {
                       const Icon = item.icon;
                       return (
@@ -508,6 +518,14 @@ export function DatabaseSurface({
             onOpenRow={onOpenRow}
           />
         ) : null}
+        {viewType === "list" ? (
+          <ListView
+            properties={visibleProperties}
+            rows={surfaceRows}
+            onCreateRow={onCreateRow}
+            onOpenRow={onOpenRow}
+          />
+        ) : null}
         {viewType === "board" ? (
           <BoardView
             table={table}
@@ -522,6 +540,14 @@ export function DatabaseSurface({
           <CalendarView
             table={table}
             properties={visibleProperties}
+            onCreateRow={onCreateRow}
+            onOpenRow={onOpenRow}
+          />
+        ) : null}
+        {viewType === "timeline" ? (
+          <TimelineView
+            properties={visibleProperties}
+            rows={surfaceRows}
             onCreateRow={onCreateRow}
             onOpenRow={onOpenRow}
           />

@@ -111,7 +111,7 @@ export function PropertyHeader({
             onClose={() => setIsMenuOpen(false)}
             align="right"
           >
-            <div className="w-56 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] py-1 shadow-lg">
+            <div className="w-56 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] py-1">
               <div className="border-b border-[var(--color-border)] px-3 py-2">
                 <span className="text-xs font-medium text-[var(--color-text-secondary)]">
                   Property type
@@ -203,7 +203,7 @@ export function PropertyHeader({
       {/* Options Editor Modal */}
       {isEditingOptions && requiresOptions(property.type) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xl">
+          <div className="w-full max-w-md rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-medium text-[var(--color-text-primary)]">
                 Edit options for &quot;{property.name}&quot;
