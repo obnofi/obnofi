@@ -23,6 +23,7 @@ type BoardElementRendererProps = {
   onContextMenu: (event: React.MouseEvent<HTMLDivElement>, elementId: string) => void;
   onPointerDown: (event: React.PointerEvent<HTMLDivElement>, elementId: string) => void;
   onConnectorStart?: (event: React.PointerEvent<HTMLButtonElement>, elementId: string, position: ConnectorHandlePosition) => void;
+  onResizeEnd?: (elementId: string, updates: { x: number; y: number; width: number; height: number }) => void;
   onVote: (elementId: string) => void;
   scale: number;
   containingSectionId?: string | null;
@@ -37,6 +38,7 @@ function BoardElementRendererInner({
   onContextMenu,
   onPointerDown,
   onConnectorStart,
+  onResizeEnd,
   onVote,
   scale,
   containingSectionId,
@@ -134,6 +136,8 @@ function BoardElementRendererInner({
           onResize={(elementId, updates) => {
             updateElement(elementId, { ...updates, updatedAt: new Date().toISOString() });
           }}
+          onResizeEnd={onResizeEnd}
+          scale={scale}
         />
       ) : null}
 
@@ -208,6 +212,7 @@ function areBoardElementRendererPropsEqual(
   if (prev.onContextMenu !== next.onContextMenu) return false;
   if (prev.onPointerDown !== next.onPointerDown) return false;
   if (prev.onConnectorStart !== next.onConnectorStart) return false;
+  if (prev.onResizeEnd !== next.onResizeEnd) return false;
   if (prev.onVote !== next.onVote) return false;
 
   // Connectors depend on the latest linked element positions to redraw smoothly.

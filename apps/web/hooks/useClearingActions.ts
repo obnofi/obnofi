@@ -10,6 +10,7 @@ type ActiveThreadTarget = { elementId: string | null; x: number; y: number } | n
 export type ClearingActionsOptions = {
   currentRoomRef: React.MutableRefObject<Room | null>;
   currentUserRef: React.MutableRefObject<User | null>;
+  boardRef: React.RefObject<HTMLDivElement | null>;
   viewportRef: React.MutableRefObject<{ x: number; y: number; zoom: number }>;
   elements: Element[];
   isSupabaseLive: boolean;
@@ -31,6 +32,7 @@ export type ClearingActionsOptions = {
 export function useClearingActions({
   currentRoomRef,
   currentUserRef,
+  boardRef,
   viewportRef,
   elements,
   isSupabaseLive,
@@ -53,7 +55,15 @@ export function useClearingActions({
     const activeUser = currentUserRef.current;
     if (!activeRoom || !activeUser) return;
     pushHistory();
+    const viewport = viewportRef.current;
     const nextElement = buildElement(kind, activeRoom.id, activeUser.id, elements.length + 1, elements);
+    if (nextElement.type !== "connector") {
+      const boardRect = boardRef.current?.getBoundingClientRect();
+      const screenX = (boardRect?.width ?? 720) / 2;
+      const screenY = Math.max(140, (boardRect?.height ?? 520) / 2 - 48);
+      nextElement.x = (screenX - viewport.x) / viewport.zoom - nextElement.width / 2;
+      nextElement.y = (screenY - viewport.y) / viewport.zoom - nextElement.height / 2;
+    }
     addElement(nextElement);
     selectSingle(nextElement.id);
     setSelectedElement(nextElement.id);

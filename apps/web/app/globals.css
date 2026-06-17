@@ -2002,10 +2002,21 @@ html.jungle {
   animation: parrotFrameGlow 3.8s cubic-bezier(0.4, 0.08, 0.2, 1) infinite;
 }
 
-.parrot-visualizer-bar {
-  transform-origin: center center;
-  animation: parrotVisualizerBounce 960ms cubic-bezier(0.42, 0, 0.3, 1) infinite;
-  transform: scaleY(var(--parrot-base-scale, 1));
+@property --parrot-bar-base {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0.3;
+}
+
+@property --parrot-bar-active {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+
+.parrot-bar {
+  transform-origin: bottom center;
+  animation: parrotBarPulse 800ms cubic-bezier(0.37, 0, 0.63, 1) infinite alternate;
 }
 
 @keyframes parrotWaveIdle {
@@ -2055,14 +2066,45 @@ html.jungle {
   }
 }
 
-@keyframes parrotVisualizerBounce {
-  0%,
-  100% {
-    transform: scaleY(var(--parrot-base-scale, 1));
-    filter: brightness(0.98);
+@keyframes parrotBarPulse {
+  from {
+    transform: scaleY(var(--parrot-bar-base, 0.3));
+    opacity: 0.75;
   }
-  50% {
-    transform: scaleY(var(--parrot-active-scale, var(--parrot-base-scale, 1)));
-    filter: brightness(1.02);
+  to {
+    transform: scaleY(var(--parrot-bar-active, 1));
+    opacity: 1;
   }
+}
+
+/* ============================================================
+   Falling Leaves Loader — Jungle System
+   ============================================================ */
+@keyframes leaf-fall-a {
+  0%   { opacity: 0; transform: translateY(-8px)  rotate(20deg)   translateX(0px);  }
+  12%  { opacity: 0.9; }
+  50%  { transform: translateY(22px)  rotate(110deg)  translateX(8px);  }
+  88%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(48px)  rotate(200deg)  translateX(2px);  }
+}
+@keyframes leaf-fall-b {
+  0%   { opacity: 0; transform: translateY(-8px)  rotate(-30deg)  translateX(0px);  }
+  12%  { opacity: 0.9; }
+  50%  { transform: translateY(22px)  rotate(-115deg) translateX(-7px); }
+  88%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(48px)  rotate(-200deg) translateX(1px);  }
+}
+@keyframes leaf-fall-c {
+  0%   { opacity: 0; transform: translateY(-8px)  rotate(10deg)   translateX(0px);  }
+  12%  { opacity: 0.9; }
+  50%  { transform: translateY(22px)  rotate(80deg)   translateX(-5px); }
+  88%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(48px)  rotate(155deg)  translateX(1px);  }
+}
+@keyframes leaf-float-sm {
+  0%   { transform: rotate(0deg)   scale(1);    }
+  25%  { transform: rotate(90deg)  scale(0.85); }
+  50%  { transform: rotate(180deg) scale(1);    }
+  75%  { transform: rotate(270deg) scale(0.85); }
+  100% { transform: rotate(360deg) scale(1);    }
 }

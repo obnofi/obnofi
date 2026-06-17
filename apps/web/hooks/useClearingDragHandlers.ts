@@ -4,6 +4,7 @@ import type { DragState, DrawState, LassoState, PanState } from "@/lib/canvas/cl
 import { getScenePoint } from "@/lib/canvas/clearingBoardUtils";
 import type { DraftConnectorApi } from "@/components/canvas/DraftConnectorLayer";
 import type { Element, Room, User } from "@obnofi/types/clearing";
+import { useElementStore } from "@/store/useElementStore";
 
 type ViewportState = { x: number; y: number; zoom: number; scale?: number };
 
@@ -216,15 +217,20 @@ export function useClearingBoardPointerUp({
       pendingDragPatchesRef.current = null;
     }
 
-    if (dragStateRef.current) {
-      const didMove = Object.entries(dragStateRef.current.groupOrigin).some(([id, origin]) => {
-        const el = elementLookup[id];
+    const dragState = dragStateRef.current;
+    dragStateRef.current = null;
+
+    if (dragState) {
+      const latestElements = useElementStore.getState().elements;
+      const latestLookup = Object.fromEntries(latestElements.map((element) => [element.id, element]));
+      const didMove = Object.entries(dragState.groupOrigin).some(([id, origin]) => {
+        const el = latestLookup[id];
         return el && (Math.abs(el.x - origin.x) > 1 || Math.abs(el.y - origin.y) > 1);
       });
-      if (didMove) pushHistory(dragStateRef.current.preDragSnapshot);
+      if (didMove) pushHistory(dragState.preDragSnapshot);
       await Promise.all(
-        Object.keys(dragStateRef.current.groupOrigin).map(async (id) => {
-          const el = elementLookup[id];
+        Object.keys(dragState.groupOrigin).map(async (id) => {
+          const el = latestLookup[id];
           if (el) await persistElement(el);
         })
       );
@@ -297,7 +303,6 @@ export function useClearingBoardPointerUp({
       lassoStateRef.current = null;
     }
 
-    dragStateRef.current = null;
     panStateRef.current = null;
   }, [
     addElement, currentRoomRef, currentUserRef, dragStateRef, dragUpdateFrameRef, draftConnectorApiRef,

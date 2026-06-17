@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState, useEffect, useRef } from "react";
 import type { ParrotListeningState } from "@/hooks/useSpeechRecognition";
 
 interface SpeechRecognitionButtonProps {
@@ -11,6 +12,9 @@ interface SpeechRecognitionButtonProps {
   onToggle: () => void;
 }
 
+// max 0.80 so all bars have room to grow
+const BAR_BASES = [0.20, 0.50, 0.80, 0.50, 0.20];
+
 export function SpeechRecognitionButton({
   isListening,
   isSupported,
@@ -18,65 +22,24 @@ export function SpeechRecognitionButton({
   speechLevel = 0,
   onToggle,
 }: SpeechRecognitionButtonProps) {
-  const isParrotActive =
-    listeningState === "listening" ||
-    listeningState === "resting" ||
-    listeningState === "error";
-  const parrotSrc = isParrotActive ? "/toolbar/parrot-on.png" : "/toolbar/parrot-off.png";
-  const normalizedSpeechLevel = Math.min(Math.max(speechLevel, 0), 1);
-  const parrotWaveHeights = [0.58, 0.9, 0.62, 0.94, 0.6];
-  const motionBoost =
-    listeningState === "resting"
-      ? 0.08
-      : 0.16 + normalizedSpeechLevel * 0.72;
-  const barOpacity =
-    listeningState === "resting" ? 0.9 : 0.72 + normalizedSpeechLevel * 0.28;
+  const normalizedLevel = Math.min(Math.max(speechLevel, 0), 1);
+  const isResting = listeningState === "resting";
 
-  if (isListening) {
-    return (
-      <div data-export-ignore="true" className="flex items-center justify-center">
-        <button
-          type="button"
-          onClick={onToggle}
-          disabled={!isSupported}
-          aria-label="Parrot 녹음 중지"
-          aria-pressed={true}
-          className={[
-            "relative flex h-[46px] w-[98px] items-center justify-center overflow-hidden rounded-full transition",
-            isSupported ? "" : "cursor-not-allowed opacity-50",
-          ].join(" ")}
-        >
-          <span className="absolute inset-0 rounded-full bg-[#338347]" />
-          <span className="absolute inset-0 rounded-full parrot-orbit-pulse opacity-50" />
-          <span className="absolute inset-0 z-10 flex items-center justify-center">
-            <span className="flex h-[24px] items-center gap-[7px]">
-            {parrotWaveHeights.map((heightScale, index) => {
-              const pulseScale = 1 + motionBoost * (index % 2 === 1 ? 1 : 0.78);
-              const nextScale = Math.min(heightScale * pulseScale, 1);
+  // keep bars mounted during exit so width-shrink and opacity-fade happen together
+  const [showBars, setShowBars] = useState(false);
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-              return (
-                <span
-                  key={`parrot-wave-${index}`}
-                  className="parrot-visualizer-bar h-[24px] w-[10px] rounded-full bg-[#F4EFE5]"
-                  style={{
-                    ["--parrot-base-scale" as string]: `${heightScale}`,
-                    ["--parrot-active-scale" as string]: `${nextScale}`,
-                    opacity: barOpacity,
-                    animationDelay: `${index * 120}ms`,
-                    animationDuration:
-                      listeningState === "resting"
-                        ? "1800ms"
-                        : `${920 - normalizedSpeechLevel * 360}ms`,
-                  }}
-                />
-              );
-            })}
-            </span>
-          </span>
-        </button>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+    if (isListening) {
+      setShowBars(true);
+    } else {
+      exitTimerRef.current = setTimeout(() => setShowBars(false), 220);
+    }
+    return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+    };
+  }, [isListening]);
 
   return (
     <div data-export-ignore="true">
@@ -84,19 +47,49 @@ export function SpeechRecognitionButton({
         type="button"
         onClick={onToggle}
         disabled={!isSupported}
-        aria-label="Parrot"
+        aria-label={isListening ? "Parrot 녹음 중지" : "Parrot 음성인식 시작"}
         aria-pressed={isListening}
         className={[
-          "relative flex h-11 min-w-11 items-center justify-center rounded-2xl px-3 text-sm transition",
-          isSupported
-              ? "text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]"
-              : "cursor-not-allowed opacity-50",
+          "flex items-center justify-center overflow-hidden rounded-full transition-all duration-200 ease-out",
+          isListening
+            ? "h-[34px] w-[72px] bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)]"
+            : "h-[34px] w-[34px] hover:bg-[var(--color-hover)]",
+          isSupported ? "" : "cursor-not-allowed opacity-50",
         ].join(" ")}
       >
-        {isListening ? (
-          <span className="absolute inset-0 rounded-2xl parrot-orbit-pulse" />
-        ) : null}
-        <Image src={parrotSrc} alt="Parrot" width={18} height={18} className="relative z-10" />
+        {showBars ? (
+          <span
+            className="flex items-end gap-[3px] transition-opacity duration-[160ms]"
+            style={{ height: "15px", opacity: isListening ? 1 : 0 }}
+          >
+            {BAR_BASES.map((base, i) => {
+              const boost = isResting ? 0.22 : 0.14 + normalizedLevel * 0.58;
+              const active = Math.min(base + boost, 1.0);
+              return (
+                <span
+                  key={i}
+                  className="parrot-bar w-[3px] rounded-full bg-white"
+                  style={{
+                    height: "15px",
+                    ["--parrot-bar-base" as string]: `${base}`,
+                    ["--parrot-bar-active" as string]: `${active}`,
+                    animationDelay: `${i * 65}ms`,
+                    animationDuration: isResting
+                      ? "1300ms"
+                      : `${700 - normalizedLevel * 200}ms`,
+                  }}
+                />
+              );
+            })}
+          </span>
+        ) : (
+          <Image
+            src="/toolbar/parrot-off.png"
+            alt="Parrot"
+            width={16}
+            height={16}
+          />
+        )}
       </button>
     </div>
   );

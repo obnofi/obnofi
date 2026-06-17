@@ -18,7 +18,7 @@ export function SectionResizeHandle({
   return (
     <div
       className={`absolute z-10 rounded-full bg-white border-2 border-[var(--color-accent)] transition-opacity ${
-        isSelected ? "opacity-100" : "opacity-0"
+        isSelected ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
       }`}
       style={{
         width: HANDLE_SIZE,

@@ -5,7 +5,8 @@ import {
   NodeViewWrapper,
   type ReactNodeViewProps,
 } from "@tiptap/react";
-import { ExternalLink, Loader2 } from "lucide-react";
+import { ExternalLink } from "lucide-react";
+import { FallingLeavesLoader } from "@/components/FallingLeavesLoader";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { usePageStore } from "@/store/pageStore";
@@ -21,7 +22,7 @@ const ClearingBoard = dynamic(
     ssr: false,
     loading: () => (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-[#2E7D45]" />
+        <FallingLeavesLoader size="md" />
       </div>
     ),
   }
@@ -130,7 +131,7 @@ export function CanvasBlockView(props: ReactNodeViewProps) {
 
         {isLoading ? (
           <div data-testid="inline-canvas-loading" className="flex h-64 items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-[#2E7D45]" />
+            <FallingLeavesLoader size="md" />
           </div>
         ) : embeddedPage ? (
           <div data-testid="inline-canvas-ready" className="h-[520px] min-h-[520px]">

@@ -7,7 +7,8 @@ import {
   ReactNodeViewRenderer,
   type ReactNodeViewProps,
 } from "@tiptap/react";
-import { Loader2, Play, RefreshCw, TerminalSquare } from "lucide-react";
+import { Play, RefreshCw, TerminalSquare } from "lucide-react";
+import { FallingLeavesLoader } from "@/components/FallingLeavesLoader";
 
 type ApiTesterMethod =
   | "GET"
@@ -152,7 +153,7 @@ function ApiTesterBlockView(props: ReactNodeViewProps) {
             disabled={!canRun || isRunning}
           >
             {isRunning ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <FallingLeavesLoader size="sm" className="text-[var(--color-text-primary)]" />
             ) : (
               <Play className="h-4 w-4" />
             )}

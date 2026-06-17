@@ -8,7 +8,10 @@ import { type ViewType } from "@obnofi/types";
 import { useDatabaseBlockData, type DatabaseNodeAttrs } from "@/hooks/useDatabaseBlockData";
 import { preventInlineBlockDrag } from "@/lib/editor/inlineBlockInteractions";
 
-type GroveSurfaceView = Extract<ViewType, "table" | "gallery" | "board" | "calendar">;
+type GroveSurfaceView = Extract<
+  ViewType,
+  "table" | "gallery" | "board" | "calendar" | "list" | "timeline"
+>;
 
 interface GroveSurfaceSnapshot {
   columns: DatabaseNodeAttrs["columns"];

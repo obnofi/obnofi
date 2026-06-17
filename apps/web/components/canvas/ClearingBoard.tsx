@@ -152,6 +152,7 @@ export function ClearingBoard({
 
   const actions = useClearingActions({
     currentRoomRef: s.currentRoomRef, currentUserRef: s.currentUserRef,
+    boardRef: s.boardRef,
     viewportRef: s.viewportRef,
     elements, isSupabaseLive: s.isSupabaseLive, activeThreadTarget: s.activeThreadTarget,
     setComments: s.setComments, setUploadingImage: s.setUploadingImage,
@@ -169,6 +170,23 @@ export function ClearingBoard({
       s.setContextMenu({ x: event.clientX, y: event.clientY });
     },
     [s, selectSingle, setSelectedElement]
+  );
+
+  const handleElementResizeEnd = useCallback(
+    (elementId: string, updates: { x: number; y: number; width: number; height: number }) => {
+      const target = useElementStore.getState().elements.find((element) => element.id === elementId);
+      if (!target) return;
+
+      const nextElement = {
+        ...target,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+
+      updateElement(elementId, nextElement);
+      void persistElement(nextElement);
+    },
+    [persistElement, updateElement]
   );
 
   const commitClearingTitle = useCallback(() => {
@@ -297,6 +315,7 @@ export function ClearingBoard({
             onElementContextMenu={handleElementContextMenu}
             onElementPointerDown={pointerHandlers.handleElementPointerDown}
             onConnectorStart={pointerHandlers.handleConnectorHandleStart}
+            onElementResizeEnd={handleElementResizeEnd}
             onVote={actions.handleVote}
             onCommentPinClick={(x, y) => s.setActiveThreadTarget({ elementId: null, x, y })}
             onPathCreated={actions.handlePathCreated}

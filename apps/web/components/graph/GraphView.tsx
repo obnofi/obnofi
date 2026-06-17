@@ -13,7 +13,8 @@ import {
   type EdgeTypes,
   type NodeTypes,
 } from "@xyflow/react";
-import { Loader2, Orbit, RefreshCw } from "lucide-react";
+import { Orbit, RefreshCw } from "lucide-react";
+import { FallingLeavesLoader } from "@/components/FallingLeavesLoader";
 import { GraphNode, type GraphCanvasNodeData } from "@/components/graph/GraphNode";
 import { GraphEdge } from "@/components/graph/GraphEdge";
 import { useGraphStore } from "@/components/graph/graphStore";
@@ -214,7 +215,7 @@ function GraphViewCanvas({ workspaceId }: GraphViewProps) {
 
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-[var(--color-accent)]" />
+            <FallingLeavesLoader size="md" />
           </div>
         ) : error ? (
           <div className="flex h-full items-center justify-center px-6 text-center">

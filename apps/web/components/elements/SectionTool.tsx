@@ -11,11 +11,15 @@ export function SectionTool({
   element,
   isSelected,
   onResize,
+  onResizeEnd,
+  scale,
 }: {
   element: SectionElement;
   isSelected: boolean;
   onPointerDown: (event: React.PointerEvent<HTMLDivElement>, elementId: string) => void;
   onResize?: (elementId: string, updates: { x: number; y: number; width: number; height: number }) => void;
+  onResizeEnd?: (elementId: string, updates: { x: number; y: number; width: number; height: number }) => void;
+  scale: number;
 }) {
   const titleRef = useRef<HTMLDivElement>(null);
   const [draftTitle, setDraftTitle] = useState(element.content.title);
@@ -24,6 +28,7 @@ export function SectionTool({
   const [activeHandle, setActiveHandle] = useState<ResizeHandle | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const resizeStartRef = useRef<{ x: number; y: number; width: number; height: number; clientX: number; clientY: number } | null>(null);
+  const latestResizeRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
   const { updateElement } = useElementStore();
 
   useEffect(() => {
@@ -46,6 +51,7 @@ export function SectionTool({
     event.preventDefault();
     setIsResizing(true);
     setActiveHandle(handle);
+    event.currentTarget.setPointerCapture(event.pointerId);
     resizeStartRef.current = {
       x: element.x,
       y: element.y,
@@ -60,8 +66,9 @@ export function SectionTool({
     if (!isResizing || !resizeStartRef.current || !activeHandle) return;
 
     const start = resizeStartRef.current;
-    const deltaX = event.clientX - start.clientX;
-    const deltaY = event.clientY - start.clientY;
+    const safeScale = scale || 1;
+    const deltaX = (event.clientX - start.clientX) / safeScale;
+    const deltaY = (event.clientY - start.clientY) / safeScale;
 
     let newX = start.x;
     let newY = start.y;
@@ -82,14 +89,20 @@ export function SectionTool({
       case "e": newWidth = Math.max(minWidth, start.width + deltaX); break;
     }
 
-    onResize?.(element.id, { x: newX, y: newY, width: newWidth, height: newHeight });
-  }, [isResizing, activeHandle, element.id, onResize]);
+    const updates = { x: newX, y: newY, width: newWidth, height: newHeight };
+    latestResizeRef.current = updates;
+    onResize?.(element.id, updates);
+  }, [isResizing, activeHandle, element.id, onResize, scale]);
 
   const handleResizeEnd = useCallback(() => {
+    if (latestResizeRef.current) {
+      onResizeEnd?.(element.id, latestResizeRef.current);
+    }
     setIsResizing(false);
     setActiveHandle(null);
     resizeStartRef.current = null;
-  }, []);
+    latestResizeRef.current = null;
+  }, [element.id, onResizeEnd]);
 
   useEffect(() => {
     if (isResizing) {

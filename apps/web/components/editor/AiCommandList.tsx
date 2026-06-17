@@ -10,8 +10,8 @@ import {
   Languages,
   HelpCircle,
   Code,
-  Loader2,
 } from "lucide-react";
+import { FallingLeavesLoader } from "@/components/FallingLeavesLoader";
 import { AiCommandItem } from "@obnofi/types/ai";
 import { Editor } from "@tiptap/react";
 
@@ -215,7 +215,7 @@ export function AiCommandList({
           >
             <div className="flex-shrink-0 w-8 h-8 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
               {isSelected && isLoading ? (
-                <Loader2 className="w-4 h-4 text-zinc-600 dark:text-zinc-400 animate-spin" />
+                <FallingLeavesLoader size="sm" className="text-zinc-600 dark:text-zinc-400" />
               ) : Icon ? (
                 <Icon className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
               ) : null}

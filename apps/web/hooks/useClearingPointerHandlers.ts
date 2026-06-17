@@ -80,6 +80,7 @@ export function useClearingPointerHandlers(opts: ClearingPointerHandlerOptions) 
       if (!boardRef.current) return;
       const element = elementLookup[elementId];
       if (!element) return;
+      event.currentTarget.setPointerCapture(event.pointerId);
       setPropertyPanelElementId(null);
 
       const selectedConnector = selectedElementId ? elementLookup[selectedElementId] : null;

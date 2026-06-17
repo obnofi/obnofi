@@ -63,6 +63,7 @@ type ClearingBoardCanvasProps = {
   onElementContextMenu: (event: React.MouseEvent<HTMLDivElement>, elementId: string) => void;
   onElementPointerDown: (event: React.PointerEvent<HTMLDivElement>, elementId: string) => void;
   onConnectorStart: (event: React.PointerEvent<HTMLButtonElement>, elementId: string, position: ConnectorHandlePosition) => void;
+  onElementResizeEnd: (elementId: string, updates: { x: number; y: number; width: number; height: number }) => void;
   onVote: (elementId: string) => void;
   onCommentPinClick: (x: number, y: number) => void;
   onPathCreated: (element: Element) => Promise<void>;
@@ -88,7 +89,7 @@ export function ClearingBoardCanvas({
   drawingColor, drawingStrokeWidth, uploadingImage, canUndo, canRedo,
   embedded, connectorCursor,
   onDrop, onContextMenu, onPointerDown, onPointerMove, onPointerUp, onPointerLeave, onWheel,
-  onElementContextMenu, onElementPointerDown, onConnectorStart, onVote, onCommentPinClick, onPathCreated,
+  onElementContextMenu, onElementPointerDown, onConnectorStart, onElementResizeEnd, onVote, onCommentPinClick, onPathCreated,
   onAddElement, onApplyTemplate, onAddComment, onDrawingColorChange, onEmojiStampSelect,
   onLineStyleChange, onOpenImagePicker, onRedo, onResetViewport, onSetTool,
   onStrokeWidthChange, onUndo,
@@ -134,6 +135,7 @@ export function ClearingBoardCanvas({
 
       <div
         ref={boardRef}
+        data-clearing-interactive="true"
         className="absolute inset-0 overflow-hidden outline-none"
         tabIndex={embedded ? 0 : -1}
         style={{ cursor: jungleCursor.cursorCss }}
@@ -157,6 +159,7 @@ export function ClearingBoardCanvas({
         }}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
         onPointerLeave={onPointerLeave}
         onWheel={onWheel}
       >
@@ -207,6 +210,7 @@ export function ClearingBoardCanvas({
                 onContextMenu={onElementContextMenu}
                 onPointerDown={onElementPointerDown}
                 onConnectorStart={onConnectorStart}
+                onResizeEnd={onElementResizeEnd}
                 onVote={onVote}
                 scale={viewport.scale}
               />
