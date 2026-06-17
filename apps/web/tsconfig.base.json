@@ -16,8 +16,8 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@obnofi/db": ["../../packages/db/src"],
-      "@obnofi/types": ["../../packages/types/src"]
+      "@obnofi/db": ["./packages/db/src"],
+      "@obnofi/types": ["./packages/types/src"]
     }
   },
   "exclude": ["node_modules"]

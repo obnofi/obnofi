@@ -55,10 +55,10 @@ importers:
         version: 6.1.20(@fullcalendar/core@6.1.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@obnofi/db':
         specifier: workspace:*
-        version: link:../../packages/db
+        version: link:packages/db
       '@obnofi/types':
         specifier: workspace:*
-        version: link:../../packages/types
+        version: link:packages/types
       '@prisma/client':
         specifier: ^6.19.3
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
@@ -199,7 +199,7 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  ../../packages/db:
+  packages/db:
     dependencies:
       '@prisma/client':
         specifier: ^6.19.3
@@ -209,7 +209,7 @@ importers:
         specifier: ^6.19.3
         version: 6.19.3(typescript@5.9.3)
 
-  ../../packages/types: {}
+  packages/types: {}
 
 packages:
 
