@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import Image from "next/image";
 import type { Editor } from "@tiptap/react";
 import { Crosshair, StickyNote } from "lucide-react";
 import { SpeechRecognitionButton } from "@/components/editor/SpeechRecognitionButton";
@@ -10,6 +9,7 @@ import { setJungleCursorVariant, useJungleCursor } from "@/lib/cursor/jungleCurs
 import { useCanvasStore } from "@/store/useCanvasStore";
 import type { ParrotListeningState } from "@/hooks/useSpeechRecognition";
 import { ToolbarHoverLabel } from "./ToolbarHoverLabel";
+import { ToolbarMaskedIcon } from "./ToolbarMaskedIcon";
 
 interface GroveInsertionToolbarProps {
   editor?: Editor | null;
@@ -30,16 +30,13 @@ type ToolbarItem = {
   onClick: () => void;
   disabled?: boolean;
   active?: boolean;
-  iconOnlyToggle?: boolean;
 };
 
 function ToolbarAnimalIcon({
-  alt,
   active = false,
   offSrc,
   onSrc,
 }: {
-  alt: string;
   active?: boolean;
   offSrc?: string;
   onSrc: string;
@@ -47,13 +44,10 @@ function ToolbarAnimalIcon({
   const src = active || !offSrc ? onSrc : offSrc;
 
   return (
-    <Image
+    <ToolbarMaskedIcon
       src={src}
-      alt={alt}
       width={25}
       height={19}
-      className="h-[19px] w-auto shrink-0 object-contain"
-      unoptimized
     />
   );
 }
@@ -118,7 +112,6 @@ export function GroveInsertionToolbar({
       disabled: !canInsert,
       icon: (
         <ToolbarAnimalIcon
-          alt="Monkey"
           onSrc="/toolbar/monkey-on.png"
           offSrc="/toolbar/monkey-off.png"
         />
@@ -135,7 +128,6 @@ export function GroveInsertionToolbar({
       disabled: !canInsert,
       icon: (
         <ToolbarAnimalIcon
-          alt="Elephant"
           onSrc="/toolbar/elephant-on.png"
           offSrc="/toolbar/elephant-off.png"
         />
@@ -148,10 +140,8 @@ export function GroveInsertionToolbar({
       onClick: handleOwlAi,
       disabled: !canInsert,
       active: isOwlOpen,
-      iconOnlyToggle: true,
       icon: (
         <ToolbarAnimalIcon
-          alt="Owl"
           onSrc="/toolbar/owl-on.png"
           offSrc="/toolbar/owl-off.png"
         />
@@ -229,7 +219,6 @@ export function GroveInsertionToolbar({
                   ].join(" ")}
                 >
                   <ToolbarAnimalIcon
-                    alt="Cursor"
                     active={jungleCursor.variant === "highlighting"}
                     onSrc="/toolbar/cursor-highlighting.png"
                     offSrc="/toolbar/cursor-off.png"
@@ -248,7 +237,7 @@ export function GroveInsertionToolbar({
                 />
               </ToolbarHoverLabel>
             ) : null}
-            {items.map(({ id, label, tooltip, icon, onClick, disabled, active, iconOnlyToggle }) => (
+            {items.map(({ id, label, tooltip, icon, onClick, disabled, active }) => (
               <ToolbarHoverLabel key={id} label={label}>
                 <button
                   type="button"
@@ -260,8 +249,8 @@ export function GroveInsertionToolbar({
                   title={tooltip}
                   className={[
                     "flex h-11 min-w-11 items-center justify-center gap-2 rounded-2xl px-3 text-sm text-[var(--color-text-primary)] transition",
-                    active && !iconOnlyToggle
-                      ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent)] shadow-[inset_0_0_0_1px_var(--color-accent)]"
+                    active
+                      ? "bg-[var(--color-accent-subtle)] shadow-[inset_0_0_0_1px_var(--color-accent)]"
                       : "hover:bg-[var(--color-hover)]",
                     disabled ? "cursor-not-allowed opacity-40 hover:bg-transparent" : "",
                   ].join(" ")}

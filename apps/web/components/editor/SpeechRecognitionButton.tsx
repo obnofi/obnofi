@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import type { ParrotListeningState } from "@/hooks/useSpeechRecognition";
+import { ToolbarMaskedIcon } from "@/components/toolbar/ToolbarMaskedIcon";
 
 interface SpeechRecognitionButtonProps {
   isListening: boolean;
@@ -53,7 +53,7 @@ export function SpeechRecognitionButton({
           "flex items-center justify-center overflow-hidden rounded-full transition-all duration-200 ease-out",
           isListening
             ? "h-[34px] w-[72px] bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)]"
-            : "h-[34px] w-[34px] hover:bg-[var(--color-hover)]",
+            : "h-[34px] w-[34px] text-[var(--color-text-primary)] hover:bg-[var(--color-hover)]",
           isSupported ? "" : "cursor-not-allowed opacity-50",
         ].join(" ")}
       >
@@ -83,9 +83,8 @@ export function SpeechRecognitionButton({
             })}
           </span>
         ) : (
-          <Image
+          <ToolbarMaskedIcon
             src="/toolbar/parrot-off.png"
-            alt="Parrot"
             width={16}
             height={16}
           />
