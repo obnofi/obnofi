@@ -33,3 +33,8 @@ export const PAGE_SELECT_WITH_PROPERTY_VALUES = {
   ...PAGE_SELECT,
   propertyValues: true,
 } as const;
+
+export const PAGE_DATABASE_ROW_SELECT = {
+  ...PAGE_SELECT_WITH_PROPERTY_VALUES,
+  content: true,
+} as const;

@@ -53,6 +53,9 @@ export function useGroveSideTabPage(pageId: string | null, isOpen: boolean) {
   const patchGroveSeedTitle = useGroveCatalogStore(
     (state) => state.patchGroveSeedTitle
   );
+  const patchGroveSeedContent = useGroveCatalogStore(
+    (state) => state.patchGroveSeedContent
+  );
   const patchGroveCellValue = useGroveCatalogStore(
     (state) => state.patchGroveCellValue
   );
@@ -231,11 +234,41 @@ export function useGroveSideTabPage(pageId: string | null, isOpen: boolean) {
       return;
     }
 
-    await fetch(`/api/pages/${page.id}`, {
+    const parentDatabasePageId = database?.pageId ?? null;
+    setSideTabPageState((current) => ({
+      ...current,
+      page:
+        current.page?.id === page.id
+          ? { ...current.page, content: nextContent }
+          : current.page,
+    }));
+
+    if (parentDatabasePageId) {
+      patchGroveSeedContent(parentDatabasePageId, page.id, nextContent);
+    }
+
+    const response = await fetch(`/api/pages/${page.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: nextContent }),
     });
+    if (!response.ok) {
+      return;
+    }
+
+    const savedPage = (await response.json()) as Page;
+    setSideTabPageState((current) => ({
+      ...current,
+      page: current.page?.id === savedPage.id ? savedPage : current.page,
+      rowPropertyValues:
+        current.page?.id === savedPage.id
+          ? savedPage.propertyValues ?? current.rowPropertyValues
+          : current.rowPropertyValues,
+    }));
+
+    if (parentDatabasePageId && savedPage.content) {
+      patchGroveSeedContent(parentDatabasePageId, savedPage.id, savedPage.content);
+    }
   };
 
   const handlePropertyValueChange = async (

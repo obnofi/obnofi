@@ -1059,6 +1059,7 @@ MossNote를 삭제합니다.
 
 - `columns`는 `properties`의 레거시 alias입니다.
 - row는 별도 모델이 아니라 `parentDatabaseId`가 설정된 `Page`입니다.
+- Database row 응답은 갤러리 대표 이미지 추출을 위해 Page `content`를 포함합니다.
 
 ### `POST /api/databases`
 
@@ -1096,7 +1097,7 @@ MossNote를 삭제합니다.
 
 - `properties` 오름차순
 - `views` 오름차순
-- `rows`와 각 row의 `propertyValues`
+- `rows`와 각 row의 `content`, `propertyValues`
 
 성공 응답:
 
@@ -1159,6 +1160,7 @@ MossNote를 삭제합니다.
   "id": "row_page_id",
   "title": "Untitled",
   "type": "document",
+  "content": { "type": "doc", "content": [{ "type": "paragraph" }] },
   "parentDatabaseId": "database_id",
   "propertyValues": [
     {

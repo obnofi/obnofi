@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
 import {
-  PAGE_SELECT_WITH_PROPERTY_VALUES,
+  PAGE_DATABASE_ROW_SELECT,
   toDatabase,
   toProperty,
   toView,
@@ -65,7 +65,7 @@ export async function GET(
         views: { orderBy: { order: "asc" } },
         rows: {
           where: { parentDatabaseId: databaseId },
-          select: PAGE_SELECT_WITH_PROPERTY_VALUES,
+          select: PAGE_DATABASE_ROW_SELECT,
           ...(jungleRowLimit
             ? {
                 take: jungleRowLimit,

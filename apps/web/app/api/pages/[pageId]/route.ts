@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
 import {
   PAGE_DETAIL_SELECT,
+  PAGE_DATABASE_ROW_SELECT,
   PAGE_INCLUDE,
   PAGE_SELECT,
-  PAGE_SELECT_WITH_PROPERTY_VALUES,
   toPage,
   toDatabase,
 } from "@/lib/prisma-transforms";
@@ -50,7 +50,7 @@ export async function GET(
             properties: { orderBy: { order: "asc" } },
             views: { orderBy: { order: "asc" } },
             rows: {
-              select: PAGE_SELECT_WITH_PROPERTY_VALUES,
+              select: PAGE_DATABASE_ROW_SELECT,
               ...(jungleRowLimit
                 ? {
                     take: jungleRowLimit,

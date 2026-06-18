@@ -3,38 +3,13 @@
 import type { Table } from "@tanstack/react-table";
 import { ImageIcon, Plus } from "lucide-react";
 import { Page, Property } from "@obnofi/types";
-import { getPropertyValueData } from "@/hooks/useGroveTable";
+import { getGalleryCoverUrl } from "@/lib/database/galleryCover";
 
 interface GalleryViewProps {
   table: Table<Page>;
   properties: Property[];
   onCreateRow?: () => void | Promise<void>;
   onOpenRow?: (rowId: string) => void;
-}
-
-function getCoverUrl(row: Page, properties: Property[]) {
-  const coverProperty = properties.find(
-    (property) => property.type === "files" || property.type === "url"
-  );
-
-  if (!coverProperty) {
-    return null;
-  }
-
-  const value = getPropertyValueData(row, coverProperty.id);
-  if (!value) {
-    return null;
-  }
-
-  if (value.type === "files") {
-    return value.files[0]?.url ?? null;
-  }
-
-  if (value.type === "url") {
-    return value.value || null;
-  }
-
-  return null;
 }
 
 export function GalleryView({
@@ -50,7 +25,7 @@ export function GalleryView({
     <div className="grid h-full content-start gap-4 overflow-auto p-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
       {rows.map((rowModel) => {
         const row = rowModel.original;
-        const coverUrl = getCoverUrl(row, properties);
+        const coverUrl = getGalleryCoverUrl(row, properties);
 
         return (
           <button
@@ -70,7 +45,7 @@ export function GalleryView({
               ) : (
                 <div className="flex flex-col items-center gap-2 text-[var(--color-text-placeholder)]">
                   <ImageIcon className="h-6 w-6" />
-                  <span className="text-xs">No cover field</span>
+                  <span className="text-xs">No image</span>
                 </div>
               )}
             </div>

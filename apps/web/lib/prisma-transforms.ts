@@ -49,6 +49,7 @@ export function toPrismaViewType(t: string): PrismaViewType {
 export {
   PAGE_INCLUDE,
   PAGE_DETAIL_SELECT,
+  PAGE_DATABASE_ROW_SELECT,
   PAGE_SELECT,
   PAGE_GRAPH_SELECT,
   PAGE_SELECT_WITH_PROPERTY_VALUES,

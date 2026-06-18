@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@obnofi/db";
 import {
-  PAGE_SELECT_WITH_PROPERTY_VALUES,
+  PAGE_DATABASE_ROW_SELECT,
   toDatabase,
   toPrismaViewType,
 } from "@/lib/prisma-transforms";
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
           views: { orderBy: { order: "asc" } },
           rows: {
             where: { parentDatabaseId: existingDb.id },
-            select: PAGE_SELECT_WITH_PROPERTY_VALUES,
+            select: PAGE_DATABASE_ROW_SELECT,
           },
         },
       });
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
         include: {
           properties: { orderBy: { order: "asc" } },
           views: { orderBy: { order: "asc" } },
-          rows: { select: PAGE_SELECT_WITH_PROPERTY_VALUES },
+          rows: { select: PAGE_DATABASE_ROW_SELECT },
         },
       });
     });

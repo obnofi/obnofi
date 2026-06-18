@@ -3,13 +3,13 @@ import type { Prisma } from "@obnofi/db";
 import { prisma } from "@obnofi/db";
 import { createDefaultPropertyValue } from "@/lib/database-utils";
 import {
-  PAGE_SELECT_WITH_PROPERTY_VALUES,
+  PAGE_DATABASE_ROW_SELECT,
   toPage,
   toProperty,
   toPropertyValue,
 } from "@/lib/prisma-transforms";
 
-const ROW_CREATE_SELECT = PAGE_SELECT_WITH_PROPERTY_VALUES satisfies Prisma.PageSelect;
+const ROW_CREATE_SELECT = PAGE_DATABASE_ROW_SELECT satisfies Prisma.PageSelect;
 
 import { logError } from "@/lib/logger";
 
