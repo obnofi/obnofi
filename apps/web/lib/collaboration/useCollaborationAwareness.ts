@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { WebsocketProvider } from "y-websocket";
 import type {
   AwarenessState as CursorAwarenessState,
@@ -39,6 +39,7 @@ export function useCollaborationAwareness(provider: WebsocketProvider | null): {
   const [awarenessStates, setAwarenessStates] = useState<
     Array<CursorAwarenessState & { clientId: number; image?: string | null }>
   >([]);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!provider) {
@@ -158,11 +159,25 @@ export function useCollaborationAwareness(provider: WebsocketProvider | null): {
       setAwarenessStates(nextAwarenessStates);
     };
 
+    const scheduleUpdate = () => {
+      if (rafRef.current != null) return;
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        update();
+      });
+    };
+
     setCollaborators([]);
     setAwarenessStates([]);
-    provider.awareness.on("change", update);
+    provider.awareness.on("change", scheduleUpdate);
     update();
-    return () => provider.awareness.off("change", update);
+    return () => {
+      provider.awareness.off("change", scheduleUpdate);
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
   }, [provider]);
 
   return { collaborators, awarenessCount, awarenessStates };

@@ -37,6 +37,8 @@ export function usePageCursorTracking({
   const pageCursorFrameRef = useRef<number | null>(null);
   const pendingPageCursorRef = useRef<{ x: number; y: number } | null>(null);
   const lastSentPageCursorRef = useRef<{ x: number; y: number } | null>(null);
+  const lastFlushTimeRef = useRef<number>(0);
+  const CURSOR_INTERVAL_MS = 50;
   const [localPageCursor, setLocalPageCursor] = useState<{ x: number; y: number } | null>(null);
 
   // Cleanup RAF on unmount
@@ -64,9 +66,16 @@ export function usePageCursorTracking({
   const flushPageCursor = useCallback(() => {
     pageCursorFrameRef.current = null;
     const nextPosition = pendingPageCursorRef.current;
-    pendingPageCursorRef.current = null;
     if (!pageId || !nextPosition) return;
 
+    const now = Date.now();
+    const elapsed = now - lastFlushTimeRef.current;
+    if (elapsed < CURSOR_INTERVAL_MS) {
+      pageCursorFrameRef.current = requestAnimationFrame(flushPageCursor);
+      return;
+    }
+
+    pendingPageCursorRef.current = null;
     const rounded = {
       x: Math.round(nextPosition.x),
       y: Math.round(nextPosition.y),
@@ -76,6 +85,7 @@ export function usePageCursorTracking({
       return;
     }
 
+    lastFlushTimeRef.current = now;
     lastSentPageCursorRef.current = rounded;
     updateCursor({
       type: "page",
