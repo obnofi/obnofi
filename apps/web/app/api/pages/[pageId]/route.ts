@@ -140,7 +140,7 @@ export async function PATCH(
       }
 
       return nextPage;
-    });
+    }, { maxWait: 15000, timeout: 30000 });
 
     return NextResponse.json(toPage(updatedPage));
   } catch (e: unknown) {
