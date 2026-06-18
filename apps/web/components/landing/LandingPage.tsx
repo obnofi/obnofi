@@ -46,7 +46,7 @@ export function LandingPage() {
               "linear-gradient(rgba(12, 24, 16, 0.2), rgba(12, 24, 16, 0.36)), url('/landing-jungle-flow.png')",
             backgroundPosition: "center",
             backgroundSize: "cover",
-            minHeight: "calc(100svh - 112px)",
+            minHeight: "100svh",
           }}
         >
           <div ref={heroRef} className="relative z-10 flex flex-col items-center">
