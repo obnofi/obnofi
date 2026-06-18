@@ -10,7 +10,7 @@ interface FallingLeavesLoaderProps {
 
 const LEAVES = [
   { anim: "leaf-fall-a", delay: "0s",    dur: "1.4s", x: -10, color: "#2E7D45", sizeMd: 20, sizeLg: 26 },
-  { anim: "leaf-fall-b", delay: "0.45s", dur: "1.2s", x: 2,   color: "#5FAD75", sizeMd: 14, sizeLg: 18 },
+  { anim: "leaf-fall-b", delay: "0.45s", dur: "1.2s", x: 2,   color: "#5FAD75", sizeMd: 10, sizeLg: 13 },
   { anim: "leaf-fall-c", delay: "0.9s",  dur: "1.5s", x: 12,  color: "#A8D5B5", sizeMd: 17, sizeLg: 22 },
 ];
 

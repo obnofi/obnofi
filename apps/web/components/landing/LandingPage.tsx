@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { useInView } from "@/lib/landing/landingHooks";
 import {
-  AppWindowMockup,
   CanvasMockup,
   DatabaseMockup,
 } from "@/components/landing/LandingMockups";
@@ -19,6 +18,7 @@ import {
   CtaSection,
   LandingFooter,
 } from "@/components/landing/LandingSections";
+import { ScrollFallingLeaves } from "@/components/landing/ScrollFallingLeaves";
 
 export function LandingPage() {
   const { ref: heroRef,  inView: heroIn  } = useInView(0.01);
@@ -33,43 +33,35 @@ export function LandingPage() {
     <>
       <style>{LANDING_STYLES}</style>
 
+      <ScrollFallingLeaves />
       <div style={{ fontFamily: "'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
         <LandingNav />
 
         {/* ══ HERO ══════════════════════════════════════════════════ */}
         <section
-          className="relative flex items-center overflow-hidden"
-          style={{ background: "#0C1810", minHeight: "calc(100vh - 56px)" }}
+          className="relative flex items-center justify-center overflow-hidden px-6 py-20 text-center"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(12, 24, 16, 0.2), rgba(12, 24, 16, 0.36)), url('/landing-jungle-flow.png')",
+            backgroundPosition: "center",
+            backgroundSize: "cover",
+            minHeight: "calc(100svh - 112px)",
+          }}
         >
-          {/* glow */}
-          <div className="absolute inset-0 pointer-events-none" aria-hidden>
-            <div style={{ position:"absolute", top:"10%", left:"-5%", width:"50%", height:"70%", background:"radial-gradient(circle, rgba(46,180,80,0.28) 0%, transparent 60%)", filter:"blur(90px)", animation:"orb-1 14s ease-in-out infinite" }} />
-            <div style={{ position:"absolute", bottom:"5%", right:"20%", width:"40%", height:"55%", background:"radial-gradient(circle, rgba(30,120,60,0.18) 0%, transparent 60%)", filter:"blur(80px)", animation:"orb-3 11s ease-in-out infinite" }} />
-          </div>
-
-          {/* Left: text */}
-          <div ref={heroRef} className="relative z-10 flex-1 flex flex-col justify-center px-8 sm:px-14 lg:px-20 xl:px-28 py-20">
-            <p className={`text-xs font-semibold mb-6 reveal${heroIn ? " in" : ""}`} style={{ color: "rgba(80,210,120,0.75)", letterSpacing: "0.2em" }}>
-              생각을 위한 하나의 공간
-            </p>
-            <h1 className={`mb-6 leading-[1.05] reveal reveal-delay-1${heroIn ? " in" : ""}`} style={{ fontSize: "clamp(40px, 5vw, 76px)", letterSpacing: "-0.05em", color: "#FFFFFF", fontWeight: 800 }}>
-              끊기지 않는<br /><span style={{ color: "#4ADB7A" }}>사고흐름</span>
+          <div ref={heroRef} className="relative z-10 flex flex-col items-center">
+            <h1 className={`mb-8 max-w-4xl text-5xl font-bold leading-tight text-white sm:text-6xl lg:text-7xl reveal${heroIn ? " in" : ""}`} style={{ letterSpacing: 0, textShadow: "0 4px 28px rgba(0,0,0,0.45)" }}>
+              <span className="whitespace-nowrap">끊기지않는</span>{" "}
+              <span className="whitespace-nowrap">사고흐름</span>
             </h1>
-            <p className={`mb-10 reveal reveal-delay-2${heroIn ? " in" : ""}`} style={{ color: "rgba(255,255,255,0.45)", fontSize: "clamp(15px, 1.4vw, 19px)", maxWidth: "30ch", lineHeight: 1.75 }}>
-              메모, 캔버스, 데이터베이스.<br />도구 전환 없이 한 곳에서.
-            </p>
-            <div className={`reveal reveal-delay-3${heroIn ? " in" : ""}`}>
-              <Link href="/auth/signin" className="inline-flex items-center font-semibold px-7 py-3.5 rounded-xl text-white" style={{ background: "#2E7D45", fontSize: "15px" }}>
-                시작하기
+            <div className={`reveal reveal-delay-1${heroIn ? " in" : ""}`}>
+              <Link
+                href="/auth/signin"
+                className="inline-flex min-h-11 items-center justify-center px-7 py-3 text-sm font-semibold text-white transition-colors"
+                style={{ background: "var(--color-accent)", borderRadius: "var(--radius-md)" }}
+              >
+                로그인
               </Link>
-            </div>
-          </div>
-
-          {/* Right: mockup */}
-          <div className="hidden lg:flex relative z-10 flex-1 items-center justify-center pr-8 xl:pr-16 py-16">
-            <div style={{ animation: "float-mockup 8s ease-in-out infinite", width: "100%", maxWidth: "680px", filter: "drop-shadow(0 32px 64px rgba(0,0,0,0.5))" }}>
-              <AppWindowMockup />
             </div>
           </div>
         </section>
